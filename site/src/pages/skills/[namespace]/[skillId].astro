@@ -2,6 +2,7 @@
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import RiskBadge from "../../../components/RiskBadge.astro";
 import index from "../../../../../.exchange/generated/index.json";
+import scannerRunsTable from "../../../../../.exchange/generated/tables/scanner_runs.json";
 
 export function getStaticPaths() {
   return index.skills.map((skill) => ({
@@ -11,6 +12,7 @@ export function getStaticPaths() {
 }
 
 const { skill } = Astro.props;
+const scannerRuns = scannerRunsTable.rows.filter((row) => skill.scanner_run_ids.includes(row.id));
 ---
 
 <BaseLayout title={skill.display_id}>
@@ -32,8 +34,36 @@ const { skill } = Astro.props;
   <section class="card">
     <h2>Assessment</h2>
     <p><strong>Reason:</strong> {skill.risk_reason}</p>
-    <p><strong>Scan mode:</strong> {skill.scan_mode}</p>
+    <p><strong>Scan modes:</strong> {skill.scan_modes.join(", ")}</p>
     <p><strong>Content hash:</strong> <code>{skill.content_hash}</code></p>
     <p><a href={skill.download_path}>Download zip</a></p>
+  </section>
+
+  <section class="card">
+    <h2>Scanner Runs</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Scanner</th>
+          <th>Mode</th>
+          <th>Native Severity</th>
+          <th>Score</th>
+          <th>Display Risk</th>
+          <th>Report</th>
+        </tr>
+      </thead>
+      <tbody>
+        {scannerRuns.map((run) => (
+          <tr>
+            <td>{run.scanner_name} {run.scanner_version}</td>
+            <td>{run.scan_mode}</td>
+            <td>{run.native_severity || "Unknown"}</td>
+            <td>{run.native_score ?? "n/a"}</td>
+            <td>{run.display_risk}</td>
+            <td><code>{run.native_report_path}</code></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   </section>
 </BaseLayout>

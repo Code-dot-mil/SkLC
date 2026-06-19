@@ -4,17 +4,20 @@ from typing import Any
 
 
 def assess_report(report: dict[str, Any]) -> dict[str, Any]:
-    findings = report.get("findings")
-    if not isinstance(findings, list):
+    issues = report.get("issues")
+    risk_assessment = report.get("risk_assessment")
+    metadata = report.get("metadata") or {}
+    if not isinstance(issues, list) or not isinstance(risk_assessment, dict):
         return {"risk": "Unknown", "reason": "malformed_report", "confidence_flags": []}
 
-    severities = {str(item.get("severity", "")).lower() for item in findings if isinstance(item, dict)}
-    mode = str(report.get("mode") or report.get("scan_mode") or "").lower()
-    confidence_flags = ["Low confidence"] if mode in {"static-only", "static_only", "no-llm"} else []
+    severities = {str(item.get("severity", "")).lower() for item in issues if isinstance(item, dict)}
+    report_severity = str(risk_assessment.get("severity", "")).lower()
+    llm_requested = bool(metadata.get("llm_requested", True))
+    confidence_flags = ["Low confidence"] if not llm_requested else []
 
-    if severities & {"critical", "high"}:
+    if severities & {"critical", "high"} or report_severity in {"critical", "high"}:
         return {"risk": "High", "reason": "critical_or_high_finding", "confidence_flags": confidence_flags}
-    if "medium" in severities:
+    if "medium" in severities or report_severity == "medium":
         return {"risk": "Medium", "reason": "medium_finding", "confidence_flags": confidence_flags}
     return {
         "risk": "Low",

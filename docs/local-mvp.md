@@ -13,13 +13,20 @@ uv run --extra test pytest
 Generate a mock MR assessment:
 
 ```sh
-uv run python -m skill_exchange.cli mock-mr-scan --mr 1 --scanner fixture --fixture skillspector-clean.json
+uv run python -m skill_exchange.cli mock-mr-scan --mr 1 --scan-mode static-only
 ```
 
-Generate official local exchange evidence:
+Generate official local exchange evidence for both static-only and LLM-assisted SkillSpector configurations:
 
 ```sh
-uv run python -m skill_exchange.cli publish-local --scanner fixture --fixture skillspector-clean.json
+uv run python -m skill_exchange.cli publish-local
+```
+
+Generate only one configuration when needed:
+
+```sh
+uv run python -m skill_exchange.cli publish-local --scan-mode static-only
+uv run python -m skill_exchange.cli publish-local --scan-mode llm-assisted
 ```
 
 Build the static site:
@@ -34,8 +41,17 @@ npm --prefix site run build
 - `.gitlab-mock/mr/<id>.md.jsonl` records mock MR and pipeline events.
 - `.gitlab-mock/mr-artifacts/<id>/<run-id>/comment.md` is the reviewer-facing assessment comment.
 - `.exchange/generated/index.json` is the exchange data contract.
+- `.exchange/generated/tables/scanner_runs.json` records scanner executions.
+- `.exchange/generated/tables/scanner_artifacts.json` points to native scanner output, summaries, and BOE files.
+- `.exchange/generated/tables/scanner_findings.json` stores scanner findings while preserving each native finding object.
 - `.exchange/generated/boe/` stores official local BOE records.
 - `.exchange/generated/zips/` stores runtime skill zip downloads.
+
+## SkillSpector
+
+The local harness runs a real SkillSpector binary. Put `skillspector` on `PATH`, or set `SKILLSPECTOR_BIN` to the binary from your local fork before running scan or publish commands.
+
+For LLM-assisted scans against M-DevChat, provide M-DevChat environment variables in the shell running the command. The harness maps the non-secret M-DevChat endpoint and model variables into the OpenAI-compatible environment expected by SkillSpector. It does not print the API key.
 
 ## Boundaries
 

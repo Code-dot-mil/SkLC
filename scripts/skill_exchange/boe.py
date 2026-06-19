@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from .models import SkillPackage, ValidationResult
+
+
+def report_metadata(report: dict[str, Any]) -> dict[str, Any]:
+    metadata = report.get("metadata")
+    return metadata if isinstance(metadata, dict) else {}
 
 
 def write_boe(
@@ -23,8 +29,9 @@ def write_boe(
     skillspector_path = boe_dir / "skillspector.json"
     summary_path = boe_dir / "summary.json"
     boe_path = boe_dir / "boe.json"
+    metadata = report_metadata(report)
 
-    skillspector_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    shutil.copyfile(report_path, skillspector_path)
     summary = {
         "risk": assessment["risk"],
         "risk_reason": assessment["reason"],
@@ -39,8 +46,11 @@ def write_boe(
         "skill_path": skill.path.as_posix(),
         "skill_content_hash": skill.content_hash,
         "scan_cache_key": scan_key,
-        "scanner": report.get("scanner", {"name": "skillspector", "version": "unknown"}),
-        "scan_mode": report.get("mode", "unknown"),
+        "scanner": {
+            "name": "skillspector",
+            "version": metadata.get("skillspector_version", "unknown"),
+        },
+        "scan_mode": "static-only" if metadata.get("llm_requested") is False else "llm-assisted",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "risk": assessment["risk"],
         "risk_reason": assessment["reason"],

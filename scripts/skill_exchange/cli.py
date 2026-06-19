@@ -10,8 +10,10 @@ from .git_mock import append_event
 from .policy import load_exchange_policy
 from .risk import assess_report
 from .skills import discover_skills
-from .skillspector import load_fixture_report, run_skillspector
+from .skillspector import run_skillspector
 from .validation import validate_skill
+
+SCAN_MODES = ("static-only", "llm-assisted")
 
 
 def main() -> None:
@@ -20,13 +22,10 @@ def main() -> None:
 
     scan = subcommands.add_parser("mock-mr-scan")
     scan.add_argument("--mr", required=True)
-    scan.add_argument("--scanner", choices=["fixture", "real"], default="fixture")
-    scan.add_argument("--fixture", default="skillspector-clean.json")
-    scan.add_argument("--no-llm", action="store_true", default=True)
+    scan.add_argument("--scan-mode", choices=SCAN_MODES, default="static-only")
 
     publish = subcommands.add_parser("publish-local")
-    publish.add_argument("--scanner", choices=["fixture", "real"], default="fixture")
-    publish.add_argument("--fixture", default="skillspector-clean.json")
+    publish.add_argument("--scan-mode", choices=SCAN_MODES, action="append")
 
     args = parser.parse_args()
     if args.command == "mock-mr-scan":
@@ -36,8 +35,7 @@ def main() -> None:
             skills_root=Path("skills"),
             exchange_dir=Path(".exchange"),
             generated_dir=Path(".exchange/generated"),
-            scanner=args.scanner,
-            fixture=args.fixture,
+            scan_modes=tuple(args.scan_mode or SCAN_MODES),
         )
         print(json.dumps(result, indent=2, sort_keys=True))
 
@@ -56,12 +54,7 @@ def mock_mr_scan(args: argparse.Namespace) -> None:
     for skill in skills:
         validation = validate_skill(skill, policy)
         report_path = artifact_root / "skillspector" / skill.metadata.namespace / skill.metadata.skill_id / "report.json"
-        if args.scanner == "fixture":
-            report = load_fixture_report(args.fixture)
-            report_path.parent.mkdir(parents=True, exist_ok=True)
-            report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-        else:
-            report = run_skillspector(skill.path, report_path, no_llm=args.no_llm)
+        report = run_skillspector(skill.path, report_path, no_llm=args.scan_mode == "static-only")
         assessment = assess_report(report)
         validation_rows.append(
             {

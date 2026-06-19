@@ -1,5 +1,0 @@
-{
-  "scanner": {"name": "skillspector", "version": "fixture"},
-  "mode": "static-only",
-  "findings": []
-}

@@ -1,15 +1,18 @@
-import json
-from pathlib import Path
-
 from skill_exchange.risk import assess_report
 
 
-def _load(name: str) -> dict:
-    return json.loads((Path("tests/fixtures/reports") / name).read_text())
-
-
 def test_clean_static_report_is_low_with_low_confidence():
-    assessment = assess_report(_load("skillspector-clean.json"))
+    assessment = assess_report(
+        {
+            "risk_assessment": {"score": 0, "severity": "LOW", "recommendation": "SAFE"},
+            "issues": [],
+            "metadata": {
+                "skillspector_version": "2.1.5",
+                "llm_requested": False,
+                "llm_available": False,
+            },
+        }
+    )
 
     assert assessment["risk"] == "Low"
     assert assessment["confidence_flags"] == ["Low confidence"]
@@ -17,14 +20,26 @@ def test_clean_static_report_is_low_with_low_confidence():
 
 
 def test_medium_report_is_medium():
-    assessment = assess_report(_load("skillspector-medium.json"))
+    assessment = assess_report(
+        {
+            "risk_assessment": {"score": 45, "severity": "MEDIUM", "recommendation": "REVIEW"},
+            "issues": [{"id": "EA3", "severity": "MEDIUM"}],
+            "metadata": {"llm_requested": True, "llm_available": True},
+        }
+    )
 
     assert assessment["risk"] == "Medium"
     assert assessment["confidence_flags"] == []
 
 
 def test_high_report_is_high():
-    assessment = assess_report(_load("skillspector-high.json"))
+    assessment = assess_report(
+        {
+            "risk_assessment": {"score": 85, "severity": "HIGH", "recommendation": "BLOCK"},
+            "issues": [{"id": "E2", "severity": "HIGH"}],
+            "metadata": {"llm_requested": True, "llm_available": True},
+        }
+    )
 
     assert assessment["risk"] == "High"
     assert assessment["confidence_flags"] == []

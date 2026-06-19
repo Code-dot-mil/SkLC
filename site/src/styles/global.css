@@ -102,3 +102,21 @@ body {
 a {
   color: #1d4ed8;
 }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  border-bottom: 1px solid #d8dee9;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+code {
+  overflow-wrap: anywhere;
+}

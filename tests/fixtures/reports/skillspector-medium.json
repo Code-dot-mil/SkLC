@@ -1,7 +1,0 @@
-{
-  "scanner": {"name": "skillspector", "version": "fixture"},
-  "mode": "llm-assisted",
-  "findings": [
-    {"id": "EA3", "severity": "medium", "title": "Scope creep"}
-  ]
-}

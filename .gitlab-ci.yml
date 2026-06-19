@@ -1,0 +1,181 @@
+stages:
+  - lint
+  - test
+  - audit
+  - review
+  - publish
+  - deploy
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+variables:
+  GIT_DEPTH: "0"
+  PYTHON_IMAGE_REGISTRY: "ghcr.io"
+  PYTHON_IMAGE_REPOSITORY: "astral-sh/uv"
+  PYTHON_IMAGE_TAG: "python3.12-bookworm-slim"
+  PYTHON_IMAGE: "$PYTHON_IMAGE_REGISTRY/$PYTHON_IMAGE_REPOSITORY:$PYTHON_IMAGE_TAG"
+  NODE_IMAGE_REGISTRY: "docker.io"
+  NODE_IMAGE_REPOSITORY: "library/node"
+  NODE_IMAGE_TAG: "22-bookworm-slim"
+  NODE_IMAGE: "$NODE_IMAGE_REGISTRY/$NODE_IMAGE_REPOSITORY:$NODE_IMAGE_TAG"
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.uv-cache"
+  NPM_CACHE_DIR: "$CI_PROJECT_DIR/.npm"
+  PYTHON_AUDIT_COMMAND: "uv run --with pip-audit pip-audit --progress-spinner off"
+  NPM_AUDIT_LEVEL: "high"
+  PAGES_RUNNER_TAG: "pages-no-cui"
+  SKILLSPECTOR_INSTALL_COMMAND: ""
+  SKILL_EXCHANGE_REVIEW_SCAN_MODE: "static-only"
+  SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS: "true"
+  SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR: "false"
+  SKILL_EXCHANGE_POST_REVIEW_COMMENT: "false"
+  SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE: "GITLAB_TOKEN"
+  SKILL_EXCHANGE_REVIEW_TOKEN_HEADER: ""
+  SKILL_EXCHANGE_PUBLISH_SCAN_MODES: "static-only"
+  EXCHANGE_PUBLISH_COMMIT: "false"
+  EXCHANGE_PUBLISH_PUSH: "true"
+  EXCHANGE_PUBLISH_BRANCH: "$CI_DEFAULT_BRANCH"
+  EXCHANGE_PUBLISH_USERNAME: "oauth2"
+  EXCHANGE_PUBLISH_PUSH_URL: ""
+  EXCHANGE_PUBLISH_TOKEN: ""
+  EXCHANGE_BOT_GIT_NAME: "skill-exchange-bot"
+  EXCHANGE_BOT_GIT_EMAIL: "skill-exchange-bot@example.invalid"
+  EXCHANGE_PUBLISH_COMMIT_MESSAGE: "chore: update generated exchange evidence"
+
+.site_code_changes: &site_code_changes
+  - ".gitlab-ci.yml"
+  - ".exchange/*.json"
+  - ".exchange/*.yaml"
+  - "pyproject.toml"
+  - "scripts/**/*"
+  - "site/**/*"
+  - "tests/**/*"
+  - "uv.lock"
+
+.site_code_rules: &site_code_rules
+  - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    changes: *site_code_changes
+  - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
+    changes: *site_code_changes
+
+.python_job:
+  image: "$PYTHON_IMAGE"
+  before_script:
+    - uv --version
+    - uv sync --extra test
+  cache:
+    key: "uv-$CI_COMMIT_REF_SLUG"
+    paths:
+      - ".uv-cache/"
+
+.node_job:
+  image: "$NODE_IMAGE"
+  before_script:
+    - node --version
+    - npm --version
+    - npm ci --prefix site --cache "$NPM_CACHE_DIR" --prefer-offline
+  cache:
+    key: "npm-$CI_COMMIT_REF_SLUG"
+    paths:
+      - ".npm/"
+
+lint:python:
+  extends: .python_job
+  stage: lint
+  rules: *site_code_rules
+  script:
+    - uv run python -m compileall scripts tests
+    - uv run python -c "import yaml; yaml.safe_load(open('.gitlab-ci.yml'))"
+
+lint:site:
+  extends: .node_job
+  stage: lint
+  rules: *site_code_rules
+  script:
+    - npm --prefix site run typecheck
+
+test:python:
+  extends: .python_job
+  stage: test
+  rules: *site_code_rules
+  script:
+    - uv run pytest
+
+test:site:
+  extends: .node_job
+  stage: test
+  rules: *site_code_rules
+  script:
+    - npm --prefix site run build
+
+audit:python:
+  extends: .python_job
+  stage: audit
+  rules: *site_code_rules
+  script:
+    - $PYTHON_AUDIT_COMMAND
+
+audit:site:
+  extends: .node_job
+  stage: audit
+  rules: *site_code_rules
+  script:
+    - npm audit --prefix site --audit-level "$NPM_AUDIT_LEVEL"
+
+review:skills:
+  extends: .python_job
+  stage: review
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "skills/**/*"
+  before_script:
+    - uv --version
+    - uv sync --extra test
+    - if [ -n "$SKILLSPECTOR_INSTALL_COMMAND" ]; then sh -c "$SKILLSPECTOR_INSTALL_COMMAND"; fi
+    - if ! command -v skillspector >/dev/null 2>&1 && [ -z "${SKILLSPECTOR_BIN:-}" ]; then echo "Set SKILLSPECTOR_BIN or SKILLSPECTOR_INSTALL_COMMAND, or use an image with skillspector on PATH."; exit 2; fi
+  script:
+    - uv run python -m skill_exchange.ci review --artifacts-dir review-artifacts
+  artifacts:
+    when: always
+    expire_in: "1 week"
+    paths:
+      - "review-artifacts/"
+
+publish:exchange:
+  extends: .python_job
+  stage: publish
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  before_script:
+    - uv --version
+    - uv sync --extra test
+    - if [ -n "$SKILLSPECTOR_INSTALL_COMMAND" ]; then sh -c "$SKILLSPECTOR_INSTALL_COMMAND"; fi
+    - if ! command -v skillspector >/dev/null 2>&1 && [ -z "${SKILLSPECTOR_BIN:-}" ]; then echo "Set SKILLSPECTOR_BIN or SKILLSPECTOR_INSTALL_COMMAND, or use an image with skillspector on PATH."; exit 2; fi
+  script:
+    - uv run python -m skill_exchange.ci publish --result-path publish-result.json
+  artifacts:
+    when: always
+    expire_in: "1 week"
+    paths:
+      - ".exchange/generated/"
+      - "publish-result.json"
+
+pages:
+  extends: .node_job
+  stage: deploy
+  tags:
+    - "$PAGES_RUNNER_TAG"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
+  script:
+    - npm --prefix site run build
+    - rm -rf public
+    - cp -R site/dist public
+  artifacts:
+    paths:
+      - "public/"

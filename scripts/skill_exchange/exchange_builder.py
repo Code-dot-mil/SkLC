@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +14,7 @@ from .boe import write_boe
 from .policy import load_exchange_policy
 from .risk import assess_report
 from .skills import discover_skills
-from .skillspector import run_skillspector, skillspector_llm_config
+from .skillspector import run_skillspector, skillspector_llm_config, skillspector_version
 from .validation import validate_skill
 from .zipper import write_skill_zip
 
@@ -40,6 +42,7 @@ def build_exchange(
     scanner_finding_rows: list[dict[str, Any]] = [
         row for row in existing_table_rows(generated_dir, "scanner_findings") if row.get("scanner_run_id") in historical_run_ids
     ]
+    cached_scanner_runs = latest_scanner_runs_by_cache_key(scanner_run_rows)
     reused_scans = 0
 
     for skill in skills:
@@ -49,16 +52,29 @@ def build_exchange(
         first_observed = skill_first_observed(skill)
         for mode in scan_modes:
             no_llm = mode == "static-only"
+            scanner_version = skillspector_version()
+            scanner_config = scanner_cache_config(mode)
+            scan_key = make_scan_key(
+                namespace=skill.metadata.namespace,
+                skill_id=skill.metadata.skill_id,
+                content_hash=skill.content_hash,
+                scanner_version=scanner_version,
+                mode=mode,
+                scanner_config=scanner_config,
+            )
+            cached_scanner_run = cached_scanner_runs.get(scan_key)
+            cached_report = read_cached_report(cached_scanner_run) if cached_scanner_run else None
+            if cached_scanner_run and cached_report:
+                reused_scans += 1
+                skill_scanner_runs.append(cached_scanner_run)
+                continue
+
             report_source = generated_dir / "tmp" / skill.metadata.namespace / skill.metadata.skill_id / mode / "report.json"
             report = run_skillspector(skill.path, report_source, no_llm=no_llm)
             last_scanned = datetime.now(timezone.utc).isoformat()
 
-            scan_key = make_scan_key(skill.content_hash, report)
             run_id = make_run_id(scan_key, last_scanned)
-            existing_boe_path = boe_path_for(generated_dir, skill, scan_key)
             assessment = assess_report(report)
-            if existing_boe_path.exists():
-                reused_scans += 1
             boe_path = write_boe(
                 root=generated_dir,
                 skill=skill,
@@ -85,9 +101,12 @@ def build_exchange(
                 native_report_path=run_artifacts["native_report_path"],
                 summary_path=run_artifacts["summary_path"],
                 last_scanned=last_scanned,
+                scanner_version=scanner_version,
+                scanner_config=scanner_config,
             )
             skill_scanner_runs.append(scanner_run)
             scanner_run_rows.append(scanner_run)
+            cached_scanner_runs[scan_key] = scanner_run
             scanner_artifact_rows.extend(scanner_artifact_rows_for(scanner_run))
             scanner_finding_rows.extend(scanner_finding_rows_for(scanner_run["id"], report))
         zip_path = write_skill_zip(skill, generated_dir / "zips")
@@ -142,12 +161,47 @@ def build_exchange(
     return {"skills_written": len(records), "reused_scans": reused_scans}
 
 
-def make_scan_key(content_hash: str, report: dict[str, Any]) -> str:
-    metadata = report.get("metadata", {})
-    name = "skillspector"
-    version = metadata.get("skillspector_version", "unknown") if isinstance(metadata, dict) else "unknown"
-    mode = scan_mode(report)
-    return f"{content_hash}--{name}-{version}--{mode}"
+def make_scan_key(
+    *,
+    namespace: str,
+    skill_id: str,
+    content_hash: str,
+    scanner_version: str,
+    mode: str,
+    scanner_config: dict[str, Any],
+) -> str:
+    config_label = scanner_config_label(scanner_config)
+    config_hash = scanner_config_hash(scanner_config)
+    return f"{namespace}--{skill_id}--{content_hash}--skillspector-{scanner_version}--{mode}--{config_label}--{config_hash}"
+
+
+def scanner_config_label(scanner_config: dict[str, Any]) -> str:
+    if scanner_config.get("scan_mode") != "llm-assisted":
+        return "no-llm"
+    provider = safe_key_part(scanner_config.get("llm_provider") or "unknown-provider")
+    model = safe_key_part(scanner_config.get("llm_model") or "unknown-model")
+    return f"{provider}-{model}"
+
+
+def safe_key_part(value: Any) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value)).strip("-") or "unknown"
+
+
+def scanner_config_hash(scanner_config: dict[str, Any]) -> str:
+    encoded = json.dumps(scanner_config, sort_keys=True, separators=(",", ":"))
+    return sha256(encoded.encode()).hexdigest()[:16]
+
+
+def scanner_cache_config(mode: str) -> dict[str, Any]:
+    config: dict[str, Any] = {
+        "native_output_format": "skillspector-json-v2",
+        "scan_mode": mode,
+    }
+    if mode == "llm-assisted":
+        llm_config = skillspector_llm_config()
+        config["llm_provider"] = llm_config["provider"]
+        config["llm_model"] = llm_config["model"]
+    return config
 
 
 def make_run_id(scan_key: str, last_scanned: str) -> str:
@@ -173,6 +227,8 @@ def scanner_run_row(
     native_report_path: Path,
     summary_path: Path,
     last_scanned: str,
+    scanner_version: str,
+    scanner_config: dict[str, Any],
 ) -> dict[str, Any]:
     metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
     risk_assessment = report.get("risk_assessment") if isinstance(report.get("risk_assessment"), dict) else {}
@@ -188,7 +244,8 @@ def scanner_run_row(
         "last_scanned": last_scanned,
         "scanner_name": "skillspector",
         "scanner_type": "security",
-        "scanner_version": metadata.get("skillspector_version", "unknown"),
+        "scanner_version": metadata.get("skillspector_version") or scanner_version,
+        "scanner_config_hash": scanner_config_hash(scanner_config),
         "scan_mode": mode,
         "llm_provider": llm_config["provider"],
         "llm_model": llm_config["model"],
@@ -284,6 +341,31 @@ def existing_table_rows(generated_dir: Path, name: str) -> list[dict[str, Any]]:
     payload = json.loads(path.read_text())
     rows = payload.get("rows")
     return rows if isinstance(rows, list) else []
+
+
+def latest_scanner_runs_by_cache_key(scanner_runs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    cached: dict[str, dict[str, Any]] = {}
+    for row in scanner_runs:
+        cache_key = row.get("scan_cache_key")
+        if not cache_key:
+            continue
+        existing = cached.get(cache_key)
+        if not existing or str(row.get("last_scanned") or "") > str(existing.get("last_scanned") or ""):
+            cached[cache_key] = row
+    return cached
+
+
+def read_cached_report(scanner_run: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not scanner_run:
+        return None
+    path_value = scanner_run.get("native_report_path")
+    if not path_value:
+        return None
+    path = Path(path_value)
+    if not path.exists():
+        return None
+    report = json.loads(path.read_text())
+    return report if isinstance(report, dict) else None
 
 
 def write_run_artifacts(

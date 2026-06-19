@@ -5,6 +5,7 @@ import os
 import posixpath
 import shutil
 import subprocess
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,21 @@ def run_skillspector(skill_path: Path, output_path: Path, *, no_llm: bool = True
 
     output = completed.stderr or completed.stdout or f"skillspector exited {completed.returncode}"
     raise RuntimeError(output)
+
+
+def skillspector_version() -> str:
+    try:
+        return version("skillspector")
+    except PackageNotFoundError:
+        pass
+
+    binary = shutil.which("skillspector")
+    if not binary:
+        return "unknown"
+
+    completed = subprocess.run([binary, "--version"], text=True, capture_output=True, check=False)
+    output = (completed.stdout or completed.stderr).strip()
+    return output.split()[-1] if output else "unknown"
 
 
 def skillspector_env() -> dict[str, str]:

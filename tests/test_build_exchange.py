@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from skill_exchange.exchange_builder import build_exchange, scanner_finding_rows_for
+from skill_exchange.exchange_builder import aggregate_assessment, build_exchange, scanner_finding_rows_for
 
 
 def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
@@ -101,3 +101,30 @@ def test_scanner_finding_rows_preserve_native_details_for_display():
             },
         }
     ]
+
+
+def test_aggregate_assessment_uses_latest_llm_assisted_scan_without_static_confidence_flag():
+    assessment = aggregate_assessment(
+        [
+            {
+                "scan_mode": "static-only",
+                "last_scanned": "2026-06-19T21:00:00+00:00",
+                "display_risk": "High",
+                "display_risk_reason": "Critical or high severity finding detected.",
+                "confidence_flags": ["Low confidence"],
+            },
+            {
+                "scan_mode": "llm-assisted",
+                "last_scanned": "2026-06-19T21:01:00+00:00",
+                "display_risk": "Low",
+                "display_risk_reason": "No medium, high, or critical findings detected.",
+                "confidence_flags": [],
+            },
+        ]
+    )
+
+    assert assessment == {
+        "risk": "Low",
+        "reason": "No medium, high, or critical findings detected.",
+        "confidence_flags": [],
+    }

@@ -308,17 +308,18 @@ def write_run_artifacts(
 
 
 def aggregate_assessment(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
-    rank = {"Unknown": 0, "Low": 1, "Medium": 2, "High": 3}
-    selected = max(scanner_runs, key=lambda row: rank.get(row["display_risk"], 0))
-    flags = []
-    for row in scanner_runs:
-        for flag in row["confidence_flags"]:
-            if flag not in flags:
-                flags.append(flag)
+    mode_rank = {"static-only": 0, "llm-assisted": 1}
+    selected = max(
+        scanner_runs,
+        key=lambda row: (
+            row.get("last_scanned") or "",
+            mode_rank.get(row.get("scan_mode"), 0),
+        ),
+    )
     return {
         "risk": selected["display_risk"],
         "reason": selected["display_risk_reason"],
-        "confidence_flags": flags,
+        "confidence_flags": selected["confidence_flags"],
     }
 
 

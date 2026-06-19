@@ -49,7 +49,7 @@ export default function ScannerFindings({
     () => [...scannerRuns].sort((left, right) => Date.parse(right.last_scanned || "") - Date.parse(left.last_scanned || "")),
     [scannerRuns]
   );
-  const defaultRun = sortedRuns.find((run) => scannerFindings.some((finding) => finding.scanner_run_id === run.id)) || sortedRuns[0];
+  const defaultRun = sortedRuns[0];
   const [selectedRunId, setSelectedRunId] = useState(defaultRun?.id || "");
   const [severity, setSeverity] = useState("all");
   const selectedRun = sortedRuns.find((run) => run.id === selectedRunId) || sortedRuns[0];

@@ -26,6 +26,15 @@ body {
   font-size: 2rem;
 }
 
+.metadata-strip {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  color: #4b5563;
+  font-size: 0.92rem;
+}
+
 .muted {
   color: #5f6675;
 }
@@ -150,19 +159,25 @@ body {
   display: none;
 }
 
-#tab-overview:checked ~ .tab-list label[for="tab-overview"],
+#tab-files:checked ~ .tab-list label[for="tab-files"],
 #tab-skill-md:checked ~ .tab-list label[for="tab-skill-md"],
+#tab-file-list:checked ~ .tab-list label[for="tab-file-list"],
 #tab-assessment:checked ~ .tab-list label[for="tab-assessment"] {
   background: #ffffff;
   border-color: #d8dee9;
   color: #171923;
 }
 
-#tab-overview:checked ~ .tab-panels #panel-overview,
+#tab-files:checked ~ .tab-panels #panel-files,
 #tab-skill-md:checked ~ .tab-panels #panel-skill-md,
+#tab-file-list:checked ~ .tab-panels #panel-file-list,
 #tab-assessment:checked ~ .tab-panels #panel-assessment {
   display: grid;
   gap: 16px;
+}
+
+.inner-tabs {
+  gap: 12px;
 }
 
 .controls {

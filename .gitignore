@@ -5,6 +5,7 @@ site/dist/
 site/.astro/
 site/public/downloads/
 site/node_modules/
+.superpowers/
 .DS_Store
 .pytest_cache/
 __pycache__/

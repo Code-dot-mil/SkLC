@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +24,9 @@ def write_boe(
     assessment: dict[str, Any],
     validation: ValidationResult,
     report_path: Path,
+    source_commit_sha: str | None = None,
+    scan_timestamp: str | None = None,
+    scanner_config: dict[str, Any] | None = None,
 ) -> Path:
     boe_dir = root / "boe" / skill.metadata.namespace / skill.metadata.skill_id / skill.content_hash / scan_key
     boe_dir.mkdir(parents=True, exist_ok=True)
@@ -30,6 +34,7 @@ def write_boe(
     summary_path = boe_dir / "summary.json"
     boe_path = boe_dir / "boe.json"
     metadata = report_metadata(report)
+    scanner_config = scanner_config or {}
 
     shutil.copyfile(report_path, skillspector_path)
     summary = {
@@ -44,6 +49,7 @@ def write_boe(
         "skill_id": skill.metadata.skill_id,
         "display_id": skill.metadata.display_id,
         "skill_path": skill.path.as_posix(),
+        "source_commit_sha": source_commit_sha,
         "skill_content_hash": skill.content_hash,
         "scan_cache_key": scan_key,
         "scanner": {
@@ -51,7 +57,14 @@ def write_boe(
             "version": metadata.get("skillspector_version", "unknown"),
         },
         "scan_mode": "static-only" if metadata.get("llm_requested") is False else "llm-assisted",
+        "provider": scanner_config.get("llm_provider"),
+        "model": scanner_config.get("llm_model"),
+        "scan_timestamp": scan_timestamp,
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "pipeline": {
+            "id": os.environ.get("CI_PIPELINE_ID"),
+            "job_id": os.environ.get("CI_JOB_ID"),
+        },
         "risk": assessment["risk"],
         "risk_reason": assessment["reason"],
         "confidence_flags": assessment["confidence_flags"],

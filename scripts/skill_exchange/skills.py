@@ -7,6 +7,9 @@ from typing import Any
 from .frontmatter import parse_frontmatter
 from .models import SkillMetadata, SkillPackage
 
+MAX_SKILL_FILES = 500
+MAX_SKILL_FILE_BYTES = 5 * 1024 * 1024
+
 
 def discover_skills(skills_root: Path) -> list[SkillPackage]:
     if not skills_root.exists():
@@ -32,13 +35,28 @@ def discover_skills(skills_root: Path) -> list[SkillPackage]:
 
 def hash_skill_package(skill_dir: Path) -> str:
     digest = hashlib.sha256()
-    for path in sorted(p for p in skill_dir.rglob("*") if p.is_file()):
+    for path in package_files(skill_dir):
         rel = path.relative_to(skill_dir).as_posix()
         digest.update(rel.encode("utf-8"))
         digest.update(b"\0")
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def package_files(skill_dir: Path) -> list[Path]:
+    files: list[Path] = []
+    for path in sorted(skill_dir.rglob("*")):
+        if path.is_symlink():
+            raise ValueError(f"skill package must not contain symlink: {path.relative_to(skill_dir).as_posix()}")
+        if not path.is_file():
+            continue
+        if path.stat().st_size > MAX_SKILL_FILE_BYTES:
+            raise ValueError(f"skill package file is too large: {path.relative_to(skill_dir).as_posix()}")
+        files.append(path)
+        if len(files) > MAX_SKILL_FILES:
+            raise ValueError(f"skill package contains more than {MAX_SKILL_FILES} files")
+    return files
 
 
 def _metadata_from_frontmatter(namespace: str, skill_id: str, frontmatter: dict[str, Any]) -> SkillMetadata:

@@ -4,13 +4,19 @@ const className = `risk recommendation-${String(recommendation).toLowerCase().re
 
 function formatRecommendation(value) {
   if (value === "DO_NOT_INSTALL") {
-    return "Do Not Install";
+    return "Avoid installing";
   }
   if (value === "CAUTION") {
-    return "Caution";
+    return "Use caution";
+  }
+  if (value === "REVIEW") {
+    return "Use caution";
   }
   if (value === "SAFE") {
-    return "Safe";
+    return "Safe to use";
+  }
+  if (value === "BLOCK") {
+    return "Avoid installing";
   }
   return value;
 }

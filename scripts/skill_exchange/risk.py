@@ -7,6 +7,12 @@ def assess_report(report: dict[str, Any]) -> dict[str, Any]:
     issues = report.get("issues")
     risk_assessment = report.get("risk_assessment")
     metadata = report.get("metadata") or {}
+    if isinstance(metadata, dict) and metadata.get("scan_error"):
+        return {
+            "risk": "Unknown",
+            "reason": f"scanner_failed: {metadata['scan_error']}",
+            "confidence_flags": [],
+        }
     if not isinstance(issues, list) or not isinstance(risk_assessment, dict):
         return {
             "risk": "Unknown",

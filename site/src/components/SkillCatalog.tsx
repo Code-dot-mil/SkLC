@@ -7,16 +7,35 @@ type Skill = {
   category?: string;
   tags: string[];
   recommendation: string;
+  recommendation_label?: string;
+  risk?: string;
+  risk_reason?: string;
   confidence_flags: string[];
   last_updated: string;
   last_scanned: string;
+  owner?: string;
+  scanner_provenance?: {
+    name?: string;
+    version?: string;
+    scan_mode?: string;
+    provider?: string;
+    model?: string;
+  };
 };
 
-function RecommendationPills({ recommendation, flags }: { recommendation: string; flags: string[] }) {
+function RecommendationPills({
+  recommendation,
+  label,
+  flags,
+}: {
+  recommendation: string;
+  label?: string;
+  flags: string[];
+}) {
   return (
     <span className="pill-row">
       <span className={`risk recommendation-${recommendation.toLowerCase().replaceAll("_", "-")}`}>
-        {formatRecommendation(recommendation)}
+        {label || formatRecommendation(recommendation)}
       </span>
       {flags.map((flag) => (
         <span className="risk flag" key={flag}>
@@ -64,72 +83,134 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
   }, [category, query, recommendation, skills, sort]);
 
   return (
-    <section>
-      <div className="controls">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills" />
-        <select value={recommendation} onChange={(event) => setRecommendation(event.target.value)}>
-          <option value="all">All recommendations</option>
-          <option value="DO_NOT_INSTALL">Do Not Install</option>
-          <option value="CAUTION">Caution</option>
-          <option value="SAFE">Safe</option>
-          <option value="Unknown">Unknown</option>
-        </select>
-        <select value={category} onChange={(event) => setCategory(event.target.value)}>
-          <option value="all">All categories</option>
-          {categories.map((item) => (
-            <option value={item} key={item}>{item}</option>
-          ))}
-        </select>
-        <select value={sort} onChange={(event) => setSort(event.target.value)}>
-          <option value="name">Sort by name</option>
-          <option value="recommendation">Sort by recommendation</option>
-          <option value="last_updated">Sort by last updated</option>
-          <option value="last_scanned">Sort by last scanned</option>
-        </select>
+    <section className="catalog-shell">
+      <div className="catalog-summary">
+        <div>
+          <p className="eyebrow">Skill catalog</p>
+          <h2>Assessed skills for mission work</h2>
+        </div>
+        <p>{filtered.length} of {skills.length} skills shown</p>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Skill</th>
-            <th>Description</th>
-            <th>Recommendation</th>
-            <th>Category</th>
-            <th>Last Updated</th>
-            <th>Last Scanned</th>
-          </tr>
-        </thead>
-        <tbody>
+
+      <div className="controls catalog-controls">
+        <label>
+          <span>Search</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Skill name, purpose, tag" />
+        </label>
+        <label>
+          <span>Recommendation</span>
+          <select value={recommendation} onChange={(event) => setRecommendation(event.target.value)}>
+            <option value="all">All recommendations</option>
+            <option value="DO_NOT_INSTALL">Avoid installing</option>
+            <option value="CAUTION">Use caution</option>
+            <option value="REVIEW">Use caution</option>
+            <option value="SAFE">Safe to use</option>
+            <option value="Unknown">Unknown</option>
+          </select>
+        </label>
+        <label>
+          <span>Category</span>
+          <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <option value="all">All categories</option>
+            {categories.map((item) => (
+              <option value={item} key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Sort</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value)}>
+            <option value="name">Name</option>
+            <option value="recommendation">Recommendation</option>
+            <option value="last_updated">Last updated</option>
+            <option value="last_scanned">Last scanned</option>
+          </select>
+        </label>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="empty-state">
+          <h3>No skills match those filters.</h3>
+          <p>Clear the search or choose a broader recommendation/category filter.</p>
+        </div>
+      ) : (
+        <div className="skill-grid">
           {filtered.map((skill) => (
-            <tr key={skill.display_id}>
-              <td>
-                <a href={`/skills/${skill.display_id}/`}>{skill.display_id}</a>
-              </td>
-              <td>{skill.description}</td>
-              <td>
-                <RecommendationPills recommendation={skill.recommendation} flags={skill.confidence_flags} />
-              </td>
-              <td>{skill.category || "uncategorized"}</td>
-              <td>{formatDate(skill.last_updated)}</td>
-              <td>{formatDate(skill.last_scanned)}</td>
-            </tr>
+            <article className="skill-card" key={skill.display_id}>
+              <div className="skill-card-topline">
+                <RecommendationPills
+                  recommendation={skill.recommendation}
+                  label={skill.recommendation_label}
+                  flags={skill.confidence_flags}
+                />
+                <span className="category-chip">{skill.category || "uncategorized"}</span>
+              </div>
+              <h3><a href={`/skills/${skill.display_id}/`}>{skill.display_id}</a></h3>
+              <p>{skill.description}</p>
+              {skill.tags.length > 0 && (
+                <div className="tag-row">
+                  {skill.tags.map((tag) => (
+                    <span className="tag" key={tag}>{tag}</span>
+                  ))}
+                </div>
+              )}
+              <dl className="trust-list compact">
+                <div>
+                  <dt>Risk</dt>
+                  <dd>{skill.risk || recommendationToRisk(skill.recommendation)}</dd>
+                </div>
+                <div>
+                  <dt>Last scanned</dt>
+                  <dd>{formatDate(skill.last_scanned)}</dd>
+                </div>
+                <div>
+                  <dt>Owner</dt>
+                  <dd>{skill.owner || "Not declared"}</dd>
+                </div>
+                <div>
+                  <dt>Scanner</dt>
+                  <dd>{skill.scanner_provenance?.name || "SkillSpector"}</dd>
+                </div>
+              </dl>
+              <a className="card-action" href={`/skills/${skill.display_id}/`}>View skill instructions</a>
+            </article>
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
     </section>
   );
 }
 
 function formatRecommendation(value: string) {
   if (value === "DO_NOT_INSTALL") {
-    return "Do Not Install";
+    return "Avoid installing";
   }
   if (value === "CAUTION") {
-    return "Caution";
+    return "Use caution";
+  }
+  if (value === "REVIEW") {
+    return "Use caution";
   }
   if (value === "SAFE") {
-    return "Safe";
+    return "Safe to use";
+  }
+  if (value === "BLOCK") {
+    return "Avoid installing";
   }
   return value;
+}
+
+function recommendationToRisk(value: string) {
+  if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
+    return "High";
+  }
+  if (value === "CAUTION" || value === "REVIEW") {
+    return "Medium";
+  }
+  if (value === "SAFE") {
+    return "Low";
+  }
+  return "Unknown";
 }
 
 function formatDate(value: string) {

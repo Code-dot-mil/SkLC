@@ -44,12 +44,17 @@ def build_exchange(
     ]
     cached_scanner_runs = latest_scanner_runs_by_cache_key(scanner_run_rows)
     reused_scans = 0
+    invalid_skills: list[str] = []
 
     for skill in skills:
         validation = validate_skill(skill, policy)
+        if validation.errors:
+            invalid_skills.append(skill.metadata.display_id)
+            continue
         skill_scanner_runs: list[dict[str, Any]] = []
         last_updated = skill_last_updated(skill)
         first_observed = skill_first_observed(skill)
+        latest_source_commit_sha = skill_latest_source_commit_sha(skill)
         for mode in scan_modes:
             no_llm = mode == "static-only"
             scanner_version = skillspector_version()
@@ -70,7 +75,14 @@ def build_exchange(
                 continue
 
             report_source = generated_dir / "tmp" / skill.metadata.namespace / skill.metadata.skill_id / mode / "report.json"
-            report = run_skillspector(skill.path, report_source, no_llm=no_llm)
+            scan_status = "completed"
+            try:
+                report = run_skillspector(skill.path, report_source, no_llm=no_llm)
+            except Exception as exc:
+                scan_status = "failed"
+                report = scanner_failure_report(mode=mode, scanner_version=scanner_version, error=exc)
+                report_source.parent.mkdir(parents=True, exist_ok=True)
+                report_source.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
             last_scanned = datetime.now(timezone.utc).isoformat()
 
             run_id = make_run_id(scan_key, last_scanned)
@@ -83,6 +95,9 @@ def build_exchange(
                 assessment=assessment,
                 validation=validation,
                 report_path=report_source,
+                source_commit_sha=latest_source_commit_sha,
+                scan_timestamp=last_scanned,
+                scanner_config=scanner_config,
             )
             run_artifacts = write_run_artifacts(
                 generated_dir=generated_dir,
@@ -103,6 +118,8 @@ def build_exchange(
                 last_scanned=last_scanned,
                 scanner_version=scanner_version,
                 scanner_config=scanner_config,
+                status=scan_status,
+                canonical_boe_path=boe_path,
             )
             skill_scanner_runs.append(scanner_run)
             scanner_run_rows.append(scanner_run)
@@ -113,6 +130,7 @@ def build_exchange(
         detail_path = generated_dir / "skills" / f"{skill.metadata.namespace}--{skill.metadata.skill_id}.json"
         detail_path.parent.mkdir(parents=True, exist_ok=True)
         aggregate = aggregate_assessment(skill_scanner_runs)
+        selected_run = select_scanner_run(skill_scanner_runs)
         last_scanned = max(row["last_scanned"] for row in skill_scanner_runs)
 
         record = {
@@ -133,13 +151,18 @@ def build_exchange(
             "source_url": source_url(site_config, skill.path.as_posix()),
             "last_updated": last_updated,
             "first_observed": first_observed,
+            "latest_source_commit_sha": latest_source_commit_sha,
             "last_scanned": last_scanned,
+            "risk": aggregate["risk"],
+            "risk_reason": aggregate["reason"],
             "recommendation": aggregate["recommendation"],
+            "recommendation_label": aggregate["recommendation_label"],
             "confidence_flags": aggregate["confidence_flags"],
             "scan_mode": aggregate["scan_mode"],
             "scan_modes": [row["scan_mode"] for row in skill_scanner_runs],
+            "scanner_provenance": scanner_provenance(selected_run),
             "scanner_run_ids": [row["id"] for row in skill_scanner_runs],
-            "boe_path": skill_scanner_runs[-1]["boe_path"],
+            "boe_path": selected_run.get("canonical_boe_path") or selected_run["boe_path"],
             "detail_path": detail_path.as_posix(),
             "zip_path": zip_path.as_posix(),
             "download_path": f"/downloads/{zip_path.name}",
@@ -158,7 +181,18 @@ def build_exchange(
     write_table(generated_dir, "scanner_findings", scanner_finding_rows)
     index = {"schema_version": "skill-exchange-index/v0", "skills": records}
     (generated_dir / "index.json").write_text(json.dumps(index, indent=2, sort_keys=True) + "\n")
-    return {"skills_written": len(records), "reused_scans": reused_scans}
+    return {"skills_written": len(records), "reused_scans": reused_scans, "invalid_skills": invalid_skills}
+
+
+def scanner_failure_report(*, mode: str, scanner_version: str, error: Exception) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "llm_requested": mode != "static-only",
+            "skillspector_version": scanner_version,
+            "scan_error": str(error),
+        },
+        "scanner_error": str(error),
+    }
 
 
 def make_scan_key(
@@ -229,6 +263,8 @@ def scanner_run_row(
     last_scanned: str,
     scanner_version: str,
     scanner_config: dict[str, Any],
+    status: str = "completed",
+    canonical_boe_path: Path | None = None,
 ) -> dict[str, Any]:
     metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
     risk_assessment = report.get("risk_assessment") if isinstance(report.get("risk_assessment"), dict) else {}
@@ -253,7 +289,8 @@ def scanner_run_row(
         "native_report_path": native_report_path.as_posix(),
         "summary_path": summary_path.as_posix(),
         "boe_path": boe_path.as_posix(),
-        "status": "completed",
+        "canonical_boe_path": (canonical_boe_path or boe_path).as_posix(),
+        "status": status,
         "native_score": risk_assessment.get("score"),
         "native_severity": risk_assessment.get("severity"),
         "native_recommendation": risk_assessment.get("recommendation"),
@@ -392,20 +429,47 @@ def write_run_artifacts(
 
 
 def aggregate_assessment(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
+    selected = select_scanner_run(scanner_runs)
+    recommendation = selected["native_recommendation"] or "Unknown"
+    return {
+        "risk": selected["display_risk"],
+        "reason": selected["display_risk_reason"],
+        "recommendation": recommendation,
+        "recommendation_label": recommendation_label(recommendation),
+        "scan_mode": selected["scan_mode"],
+        "confidence_flags": selected["confidence_flags"],
+    }
+
+
+def select_scanner_run(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
     mode_rank = {"static-only": 0, "llm-assisted": 1}
-    selected = max(
+    return max(
         scanner_runs,
         key=lambda row: (
             row.get("last_scanned") or "",
             mode_rank.get(row.get("scan_mode"), 0),
         ),
     )
+
+
+def recommendation_label(recommendation: str) -> str:
+    labels = {
+        "SAFE": "Safe to use",
+        "CAUTION": "Use caution",
+        "REVIEW": "Use caution",
+        "DO_NOT_INSTALL": "Avoid installing",
+        "BLOCK": "Avoid installing",
+    }
+    return labels.get(recommendation, recommendation or "Unknown")
+
+
+def scanner_provenance(scanner_run: dict[str, Any]) -> dict[str, Any]:
     return {
-        "risk": selected["display_risk"],
-        "reason": selected["display_risk_reason"],
-        "recommendation": selected["native_recommendation"] or "Unknown",
-        "scan_mode": selected["scan_mode"],
-        "confidence_flags": selected["confidence_flags"],
+        "name": scanner_run.get("scanner_name"),
+        "version": scanner_run.get("scanner_version"),
+        "scan_mode": scanner_run.get("scan_mode"),
+        "provider": scanner_run.get("llm_provider"),
+        "model": scanner_run.get("llm_model"),
     }
 
 
@@ -454,6 +518,16 @@ def skill_last_updated(skill) -> str:
 
     newest_mtime = max(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
     return datetime.fromtimestamp(newest_mtime, tz=timezone.utc).isoformat()
+
+
+def skill_latest_source_commit_sha(skill) -> str:
+    completed = subprocess.run(
+        ["git", "log", "-1", "--format=%H", "--", skill.path.as_posix()],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return completed.stdout.strip()
 
 
 def skill_first_observed(skill) -> str:

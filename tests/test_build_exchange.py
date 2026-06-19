@@ -2,12 +2,31 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+import pytest
+
 from skill_exchange import exchange_builder
 from skill_exchange.exchange_builder import aggregate_assessment, build_exchange, make_scan_key, scanner_finding_rows_for
 
 
-def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
+def _fake_clean_report(*, llm_requested: bool = False, recommendation: str = "SAFE") -> dict:
+    return {
+        "metadata": {"llm_requested": llm_requested, "skillspector_version": "2.1.5"},
+        "risk_assessment": {"score": 0, "severity": "LOW", "recommendation": recommendation},
+        "issues": [],
+    }
+
+
+def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     generated = tmp_path / "generated"
+
+    def fake_run_skillspector(skill_path, output_path, *, no_llm):
+        report = _fake_clean_report(llm_requested=not no_llm)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report))
+        return report
+
+    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
+    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
 
     result = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
@@ -19,9 +38,10 @@ def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
     assert result["skills_written"] == 1
     index = json.loads((generated / "index.json").read_text())
     assert index["skills"][0]["display_id"] == "ai4sdlc/sample-skill"
-    assert "risk" not in index["skills"][0]
-    assert "risk_reason" not in index["skills"][0]
+    assert index["skills"][0]["risk"] == "Low"
+    assert index["skills"][0]["risk_reason"] == "No medium, high, or critical findings detected."
     assert index["skills"][0]["recommendation"] == "SAFE"
+    assert index["skills"][0]["recommendation_label"] == "Safe to use"
     assert "Low confidence" in index["skills"][0]["confidence_flags"]
     assert index["skills"][0]["skill_files"] == [{"path": "SKILL.md", "size_bytes": 290}]
     assert "# Sample Skill" in index["skills"][0]["skill_md_content"]
@@ -29,7 +49,16 @@ def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
     assert datetime.fromisoformat(index["skills"][0]["last_updated"])
     assert datetime.fromisoformat(index["skills"][0]["first_observed"])
     assert datetime.fromisoformat(index["skills"][0]["last_scanned"])
+    assert len(index["skills"][0]["latest_source_commit_sha"]) in {0, 40}
     assert index["skills"][0]["scan_mode"] == "static-only"
+    assert index["skills"][0]["scanner_provenance"] == {
+        "name": "skillspector",
+        "version": "2.1.5",
+        "scan_mode": "static-only",
+        "provider": None,
+        "model": None,
+    }
+    assert "/boe/" in index["skills"][0]["boe_path"]
     assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
     scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
     scanner_artifacts = json.loads((generated / "tables" / "scanner_artifacts.json").read_text())
@@ -56,6 +85,78 @@ def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
     assert len(scanner_runs["rows"]) == 1
     assert len(index["skills"][0]["scanner_run_ids"]) == 1
     assert index["skills"][0]["scanner_run_ids"][0] == scanner_runs["rows"][0]["id"]
+
+
+def test_build_exchange_blocks_invalid_required_metadata(monkeypatch, tmp_path: Path):
+    skill_dir = tmp_path / "skills" / "team" / "broken-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        """---
+name: wrong-name
+description: ""
+metadata:
+  ai4sdlc.category: testing
+---
+
+# Broken
+"""
+    )
+    generated = tmp_path / "generated"
+    calls = 0
+
+    def fake_run_skillspector(skill_path, output_path, *, no_llm):
+        nonlocal calls
+        calls += 1
+        return _fake_clean_report()
+
+    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
+
+    result = build_exchange(
+        skills_root=tmp_path / "skills",
+        exchange_dir=Path(".exchange"),
+        generated_dir=generated,
+        scan_modes=("static-only",),
+    )
+
+    assert result["skills_written"] == 0
+    assert result["invalid_skills"] == ["team/broken-skill"]
+    assert calls == 0
+    assert json.loads((generated / "index.json").read_text())["skills"] == []
+    assert not (generated / "zips" / "team--broken-skill.zip").exists()
+
+
+def test_build_exchange_records_unknown_when_scanner_fails(monkeypatch, tmp_path: Path):
+    exchange_dir = tmp_path / "exchange"
+    exchange_dir.mkdir()
+    (exchange_dir / "categories.yaml").write_text("categories:\n  - id: testing\n    label: Testing\n")
+    (exchange_dir / "tags.yaml").write_text("tags:\n  - tests\n  - example\n")
+    (exchange_dir / "display-policy.yaml").write_text(
+        "show_unknown_risk: true\nshow_confidence_flags: true\ndefault_sort: name\n"
+    )
+    generated = tmp_path / "generated"
+
+    def failing_run_skillspector(skill_path, output_path, *, no_llm):
+        raise RuntimeError("scanner unavailable")
+
+    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
+    monkeypatch.setattr(exchange_builder, "run_skillspector", failing_run_skillspector)
+
+    result = build_exchange(
+        skills_root=Path("tests/fixtures/skills"),
+        exchange_dir=exchange_dir,
+        generated_dir=generated,
+        scan_modes=("static-only",),
+    )
+
+    index = json.loads((generated / "index.json").read_text())
+    scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())["rows"]
+    assert result["skills_written"] == 1
+    assert index["skills"][0]["risk"] == "Unknown"
+    assert index["skills"][0]["recommendation"] == "Unknown"
+    assert index["skills"][0]["recommendation_label"] == "Unknown"
+    assert "scanner_failed" in index["skills"][0]["risk_reason"]
+    assert scanner_runs[0]["status"] == "failed"
+    assert scanner_runs[0]["display_risk"] == "Unknown"
 
 
 def test_build_exchange_reuses_cached_scan_without_running_skillspector(monkeypatch, tmp_path: Path):
@@ -206,6 +307,14 @@ def test_aggregate_assessment_uses_latest_llm_assisted_scan_without_static_confi
         "risk": "Low",
         "reason": "No medium, high, or critical findings detected.",
         "recommendation": "SAFE",
+        "recommendation_label": "Safe to use",
         "scan_mode": "llm-assisted",
         "confidence_flags": [],
     }
+
+
+def test_recommendation_labels_are_plain_language():
+    assert exchange_builder.recommendation_label("SAFE") == "Safe to use"
+    assert exchange_builder.recommendation_label("CAUTION") == "Use caution"
+    assert exchange_builder.recommendation_label("DO_NOT_INSTALL") == "Avoid installing"
+    assert exchange_builder.recommendation_label("Unknown") == "Unknown"

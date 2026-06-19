@@ -120,7 +120,7 @@ export default function ScannerFindings({
               <th>Score</th>
               <th>Risk</th>
               <th>Findings</th>
-              <th>Download Results</th>
+              <th>Evidence</th>
             </tr>
           </thead>
           <tbody>
@@ -131,22 +131,21 @@ export default function ScannerFindings({
               const findingCount = scannerFindings.filter((finding) => finding.scanner_run_id === run.id).length;
               const selected = run.id === selectedRun.id;
               return (
-                <tr
-                  className={selected ? "selected-row" : ""}
-                  key={run.id}
-                  tabIndex={0}
-                  onClick={() => {
-                    setSelectedRunId(run.id);
-                    setSeverity("all");
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      setSelectedRunId(run.id);
-                      setSeverity("all");
-                    }
-                  }}
-                >
-                  <td>{run.scanner_name} {run.scanner_version}</td>
+                <tr className={selected ? "selected-row" : ""} key={run.id}>
+                  <td>
+                    <button
+                      className="row-select"
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => {
+                        setSelectedRunId(run.id);
+                        setSeverity("all");
+                      }}
+                    >
+                      {selected ? "Selected" : "Select"}
+                    </button>{" "}
+                    {run.scanner_name} {run.scanner_version}
+                  </td>
                   <td>{formatDate(run.last_scanned)}</td>
                   <td><ModePill run={run} /></td>
                   <td>
@@ -211,12 +210,12 @@ export default function ScannerFindings({
           <ModePill run={selectedRun} />
         </div>
         <p>
-          <strong>Selected Run Risk Level:</strong>{" "}
+          <strong>Scanner risk:</strong>{" "}
           <RiskPills risk={selectedRun.display_risk || "Unknown"} flags={selectedRun.confidence_flags || []} />
         </p>
         <div className="controls">
           <select value={severity} onChange={(event) => setSeverity(event.target.value)}>
-            <option value="all">All risk levels</option>
+            <option value="all">All finding severities</option>
             {severities.map((item) => (
               <option value={item} key={item}>
                 {item}

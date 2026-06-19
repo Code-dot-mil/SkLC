@@ -1,0 +1,16 @@
+risk_levels:
+  high:
+    finding_severities: ["critical", "high"]
+  medium:
+    finding_severities: ["medium"]
+  low:
+    finding_severities: []
+unknown_reasons:
+  - no_official_boe
+  - scanner_failed
+  - model_unavailable
+  - malformed_report
+  - scan_key_mismatch
+confidence_flags:
+  static_only:
+    - Low confidence

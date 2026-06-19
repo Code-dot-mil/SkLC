@@ -1,0 +1,13 @@
+.exchange/generated/**
+!.exchange/generated/.gitkeep
+.gitlab-mock/mr/**
+!.gitlab-mock/mr/.gitkeep
+.gitlab-mock/mr-artifacts/**
+!.gitlab-mock/mr-artifacts/.gitkeep
+site/dist/
+site/public/downloads/
+site/node_modules/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.venv/

@@ -46,6 +46,7 @@ def build_exchange(
         validation = validate_skill(skill, policy)
         skill_scanner_runs: list[dict[str, Any]] = []
         last_updated = skill_last_updated(skill)
+        first_observed = skill_first_observed(skill)
         for mode in scan_modes:
             no_llm = mode == "static-only"
             report_source = generated_dir / "tmp" / skill.metadata.namespace / skill.metadata.skill_id / mode / "report.json"
@@ -112,10 +113,11 @@ def build_exchange(
             "source_path": skill.path.as_posix(),
             "source_url": source_url(site_config, skill.path.as_posix()),
             "last_updated": last_updated,
+            "first_observed": first_observed,
             "last_scanned": last_scanned,
-            "risk": aggregate["risk"],
-            "risk_reason": aggregate["reason"],
+            "recommendation": aggregate["recommendation"],
             "confidence_flags": aggregate["confidence_flags"],
+            "scan_mode": aggregate["scan_mode"],
             "scan_modes": [row["scan_mode"] for row in skill_scanner_runs],
             "scanner_run_ids": [row["id"] for row in skill_scanner_runs],
             "boe_path": skill_scanner_runs[-1]["boe_path"],
@@ -128,7 +130,7 @@ def build_exchange(
         detail_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
         skill_rows.append(record)
 
-        if record["risk"] != "Unknown" or policy.show_unknown_risk:
+        if aggregate["risk"] != "Unknown" or policy.show_unknown_risk:
             records.append(record)
 
     write_table(generated_dir, "skills", skill_rows)
@@ -319,6 +321,8 @@ def aggregate_assessment(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "risk": selected["display_risk"],
         "reason": selected["display_risk_reason"],
+        "recommendation": selected["native_recommendation"] or "Unknown",
+        "scan_mode": selected["scan_mode"],
         "confidence_flags": selected["confidence_flags"],
     }
 
@@ -368,6 +372,21 @@ def skill_last_updated(skill) -> str:
 
     newest_mtime = max(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
     return datetime.fromtimestamp(newest_mtime, tz=timezone.utc).isoformat()
+
+
+def skill_first_observed(skill) -> str:
+    completed = subprocess.run(
+        ["git", "log", "--reverse", "--format=%cI", "--", skill.path.as_posix()],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    timestamp = completed.stdout.splitlines()[0].strip() if completed.stdout.splitlines() else ""
+    if timestamp:
+        return timestamp
+
+    oldest_mtime = min(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
+    return datetime.fromtimestamp(oldest_mtime, tz=timezone.utc).isoformat()
 
 
 def boe_path_for(generated_dir: Path, skill, scan_key: str) -> Path:

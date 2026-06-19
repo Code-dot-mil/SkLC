@@ -71,6 +71,26 @@ body {
   color: #374151;
 }
 
+.recommendation-do-not-install {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.recommendation-caution {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.recommendation-safe {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.recommendation-unknown {
+  background: #e5e7eb;
+  color: #374151;
+}
+
 .flag {
   background: #e0f2fe;
   color: #075985;
@@ -92,6 +112,57 @@ body {
 .card h2 {
   margin: 0 0 8px;
   font-size: 1.05rem;
+}
+
+.tabs {
+  display: grid;
+  gap: 16px;
+}
+
+.tab-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tab-list {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #d8dee9;
+  overflow-x: auto;
+}
+
+.tab-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  color: #4b5563;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab-panel {
+  display: none;
+}
+
+#tab-overview:checked ~ .tab-list label[for="tab-overview"],
+#tab-skill-md:checked ~ .tab-list label[for="tab-skill-md"],
+#tab-assessment:checked ~ .tab-list label[for="tab-assessment"] {
+  background: #ffffff;
+  border-color: #d8dee9;
+  color: #171923;
+}
+
+#tab-overview:checked ~ .tab-panels #panel-overview,
+#tab-skill-md:checked ~ .tab-panels #panel-skill-md,
+#tab-assessment:checked ~ .tab-panels #panel-assessment {
+  display: grid;
+  gap: 16px;
 }
 
 .controls {
@@ -128,6 +199,10 @@ td {
   vertical-align: top;
 }
 
+.metadata-table {
+  margin-bottom: 16px;
+}
+
 code {
   overflow-wrap: anywhere;
 }
@@ -145,6 +220,28 @@ pre {
 summary {
   cursor: pointer;
   font-weight: 700;
+}
+
+.markdown-body {
+  display: grid;
+  gap: 10px;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  margin: 8px 0 0;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body pre {
+  margin: 0;
+}
+
+.markdown-body span {
+  color: inherit;
 }
 
 .file-list {
@@ -221,6 +318,22 @@ summary {
   padding: 0 6px;
   border-radius: 6px;
   font-size: 0.75rem;
+}
+
+.centered-action {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+
+.link-button {
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .hash-cell {

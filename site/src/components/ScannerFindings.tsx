@@ -52,7 +52,10 @@ export default function ScannerFindings({
   const defaultRun = sortedRuns[0];
   const [selectedRunId, setSelectedRunId] = useState(defaultRun?.id || "");
   const [severity, setSeverity] = useState("all");
+  const [showOlderRuns, setShowOlderRuns] = useState(false);
   const selectedRun = sortedRuns.find((run) => run.id === selectedRunId) || sortedRuns[0];
+  const displayedRuns = showOlderRuns ? sortedRuns : sortedRuns.slice(0, 1);
+  const olderRunCount = Math.max(sortedRuns.length - 1, 0);
   const severities = useMemo(
     () =>
       Array.from(
@@ -121,7 +124,7 @@ export default function ScannerFindings({
             </tr>
           </thead>
           <tbody>
-            {sortedRuns.map((run) => {
+            {displayedRuns.map((run) => {
               const nativeReport = scannerArtifacts.find(
                 (artifact) => artifact.scanner_run_id === run.id && artifact.artifact_kind === "native_report"
               );
@@ -181,6 +184,25 @@ export default function ScannerFindings({
             })}
           </tbody>
         </table>
+        {olderRunCount > 0 && (
+          <div className="centered-action">
+            <button
+              className="link-button"
+              type="button"
+              onClick={() => {
+                setShowOlderRuns((current) => {
+                  if (current) {
+                    setSelectedRunId(sortedRuns[0].id);
+                    setSeverity("all");
+                  }
+                  return !current;
+                });
+              }}
+            >
+              {showOlderRuns ? "Hide older scanner runs" : "View older scanner runs"}
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card">

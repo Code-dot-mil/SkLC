@@ -1,0 +1,20 @@
+---
+const { recommendation, flags = [] } = Astro.props;
+const className = `risk recommendation-${String(recommendation).toLowerCase().replaceAll("_", "-")}`;
+
+function formatRecommendation(value) {
+  if (value === "DO_NOT_INSTALL") {
+    return "Do Not Install";
+  }
+  if (value === "CAUTION") {
+    return "Caution";
+  }
+  if (value === "SAFE") {
+    return "Safe";
+  }
+  return value;
+}
+---
+
+<span class={className}>{formatRecommendation(recommendation)}</span>
+{flags.map((flag) => <span class="risk flag">{flag}</span>)}

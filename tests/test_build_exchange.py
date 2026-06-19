@@ -18,13 +18,17 @@ def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
     assert result["skills_written"] == 1
     index = json.loads((generated / "index.json").read_text())
     assert index["skills"][0]["display_id"] == "ai4sdlc/sample-skill"
-    assert index["skills"][0]["risk"] == "Low"
+    assert "risk" not in index["skills"][0]
+    assert "risk_reason" not in index["skills"][0]
+    assert index["skills"][0]["recommendation"] == "SAFE"
     assert "Low confidence" in index["skills"][0]["confidence_flags"]
     assert index["skills"][0]["skill_files"] == [{"path": "SKILL.md", "size_bytes": 290}]
     assert "# Sample Skill" in index["skills"][0]["skill_md_content"]
     assert index["skills"][0]["source_url"].endswith("/tree/main/tests/fixtures/skills/ai4sdlc/sample-skill")
     assert datetime.fromisoformat(index["skills"][0]["last_updated"])
+    assert datetime.fromisoformat(index["skills"][0]["first_observed"])
     assert datetime.fromisoformat(index["skills"][0]["last_scanned"])
+    assert index["skills"][0]["scan_mode"] == "static-only"
     assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
     scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
     scanner_artifacts = json.loads((generated / "tables" / "scanner_artifacts.json").read_text())
@@ -111,6 +115,7 @@ def test_aggregate_assessment_uses_latest_llm_assisted_scan_without_static_confi
                 "last_scanned": "2026-06-19T21:00:00+00:00",
                 "display_risk": "High",
                 "display_risk_reason": "Critical or high severity finding detected.",
+                "native_recommendation": "DO_NOT_INSTALL",
                 "confidence_flags": ["Low confidence"],
             },
             {
@@ -118,6 +123,7 @@ def test_aggregate_assessment_uses_latest_llm_assisted_scan_without_static_confi
                 "last_scanned": "2026-06-19T21:01:00+00:00",
                 "display_risk": "Low",
                 "display_risk_reason": "No medium, high, or critical findings detected.",
+                "native_recommendation": "SAFE",
                 "confidence_flags": [],
             },
         ]
@@ -126,5 +132,7 @@ def test_aggregate_assessment_uses_latest_llm_assisted_scan_without_static_confi
     assert assessment == {
         "risk": "Low",
         "reason": "No medium, high, or critical findings detected.",
+        "recommendation": "SAFE",
+        "scan_mode": "llm-assisted",
         "confidence_flags": [],
     }

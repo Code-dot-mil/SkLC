@@ -1,7 +1,9 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import RiskBadge from "../../../components/RiskBadge.astro";
+import RecommendationBadge from "../../../components/RecommendationBadge.astro";
 import ScannerFindings from "../../../components/ScannerFindings";
+import { createMarkdownProcessor, parseFrontmatter } from "@astrojs/markdown-remark";
+import { visit } from "unist-util-visit";
 import index from "../../../../../.exchange/generated/index.json";
 import scannerRunsTable from "../../../../../.exchange/generated/tables/scanner_runs.json";
 import scannerFindingsTable from "../../../../../.exchange/generated/tables/scanner_findings.json";
@@ -21,7 +23,58 @@ const scannerRuns = scannerRunsTable.rows
 const scannerRunIds = new Set(scannerRuns.map((run) => run.id));
 const scannerFindings = scannerFindingsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
 const scannerArtifacts = scannerArtifactsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
+const markdownProcessor = await createMarkdownProcessor({
+  rehypePlugins: [disableMarkdownLinks],
+});
+const parsedSkillMarkdown = parseFrontmatter(skill.skill_md_content);
+const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmatter);
+const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
 
+function disableMarkdownLinks() {
+  return (tree) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName !== "a") {
+        return;
+      }
+      node.tagName = "span";
+      delete node.properties?.href;
+      delete node.properties?.target;
+      delete node.properties?.rel;
+    });
+  };
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "Unknown";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function formatFrontmatterValue(value) {
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+  return String(value ?? "");
+}
+
+function flattenFrontmatterRows(value, prefix = "") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return prefix ? [[prefix, value]] : [];
+  }
+
+  return Object.entries(value)
+    .flatMap(([key, childValue]) => {
+      const rowKey = prefix ? `${prefix}.${key}` : key;
+      if (childValue && typeof childValue === "object" && !Array.isArray(childValue)) {
+        return flattenFrontmatterRows(childValue, rowKey);
+      }
+      return [[rowKey, childValue]];
+    });
+}
 ---
 
 <BaseLayout title={skill.display_id}>
@@ -29,39 +82,86 @@ const scannerArtifacts = scannerArtifactsTable.rows.filter((row) => scannerRunId
     <p><a href="/">Back to catalog</a></p>
     <h1>{skill.display_id}</h1>
     <p class="muted">{skill.description}</p>
-    <p><strong>Overall Risk Level:</strong> <RiskBadge risk={skill.risk} flags={skill.confidence_flags} /></p>
+    <p><strong>Recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} /></p>
   </header>
 
-  <section class="card">
-    <h2>Metadata</h2>
-    <p><strong>Description:</strong> {skill.description}</p>
-    <p><strong>Category:</strong> {skill.category || "Uncategorized"}</p>
-    <p><strong>Tags:</strong> {skill.tags.join(", ") || "None"}</p>
-    <p><strong>Owner:</strong> {skill.owner || "Not declared"}</p>
-    {skill.upstream_url && <p><strong>Upstream:</strong> <a href={skill.upstream_url}>{skill.upstream_url}</a></p>}
-    {skill.source_url && <p><strong>Source:</strong> <a href={skill.source_url}>View source</a></p>}
-  </section>
+  <section class="tabs">
+    <input class="tab-radio" type="radio" id="tab-overview" name="detail-tabs" checked />
+    <input class="tab-radio" type="radio" id="tab-skill-md" name="detail-tabs" />
+    <input class="tab-radio" type="radio" id="tab-assessment" name="detail-tabs" />
 
-  <section class="card">
-    <h2>Assessment</h2>
-    <p><strong>Reason:</strong> {skill.risk_reason}</p>
-    <p><strong>Scan modes:</strong> {skill.scan_modes.join(", ")}</p>
-    <p><strong>Content hash:</strong> <code>{skill.content_hash}</code></p>
-    <p><a href={skill.download_path}>Download zip</a></p>
-  </section>
+    <div class="tab-list" role="tablist" aria-label="Skill details">
+      <label class="tab-label" id="tab-overview-label" for="tab-overview" role="tab" aria-controls="panel-overview">Overview</label>
+      <label class="tab-label" id="tab-skill-md-label" for="tab-skill-md" role="tab" aria-controls="panel-skill-md">SKILL.md</label>
+      <label class="tab-label" id="tab-assessment-label" for="tab-assessment" role="tab" aria-controls="panel-assessment">Assessment</label>
+    </div>
 
-  <section class="card">
-    <h2>Files</h2>
-    <ul class="file-list">
-      {skill.skill_files.map((file) => (
-        <li><code>{file.path}</code> <span class="muted">{file.size_bytes} bytes</span></li>
-      ))}
-    </ul>
-    <details>
-      <summary>View SKILL.md</summary>
-      <pre><code>{skill.skill_md_content}</code></pre>
-    </details>
-  </section>
+    <div class="tab-panels">
+      <section class="tab-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview-label">
+        <section class="card">
+          <h2>Metadata</h2>
+          <p><strong>Description:</strong> {skill.description}</p>
+          <p><strong>Category:</strong> {skill.category || "Uncategorized"}</p>
+          <p><strong>Tags:</strong> {skill.tags.join(", ") || "None"}</p>
+          <p><strong>Owner:</strong> {skill.owner || "Not declared"}</p>
+          <p><strong>Last updated:</strong> {formatDate(skill.last_updated)}</p>
+          <p><strong>First observed:</strong> {formatDate(skill.first_observed)}</p>
+          {skill.upstream_url && <p><strong>Upstream:</strong> <a href={skill.upstream_url}>{skill.upstream_url}</a></p>}
+          {skill.source_url && <p><strong>Source:</strong> <a href={skill.source_url}>View source</a></p>}
+        </section>
 
-  <ScannerFindings scannerRuns={scannerRuns} scannerFindings={scannerFindings} scannerArtifacts={scannerArtifacts} client:load />
+        <section class="card">
+          <h2>Assessment</h2>
+          <p><strong>Latest recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} /></p>
+          <p><strong>Scan mode:</strong> {skill.scan_mode}</p>
+          <p><strong>Content hash:</strong> <code>{skill.content_hash}</code></p>
+          <p><a href={skill.download_path}>Download zip</a></p>
+        </section>
+
+        <section class="card">
+          <h2>Files</h2>
+          <ul class="file-list">
+            {skill.skill_files.map((file) => (
+              <li><code>{file.path}</code> <span class="muted">{file.size_bytes} bytes</span></li>
+            ))}
+          </ul>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="panel-skill-md" role="tabpanel" aria-labelledby="tab-skill-md-label">
+        <section class="card">
+          <h2>SKILL.md</h2>
+          {skillFrontmatterRows.length > 0 && (
+            <table class="metadata-table">
+              <thead>
+                <tr>
+                  <th>Frontmatter</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {skillFrontmatterRows.map(([key, value]) => (
+                  <tr>
+                    <td><code>{key}</code></td>
+                    <td>{formatFrontmatterValue(value)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <div class="markdown-body" set:html={renderedSkillMarkdown.code} />
+        </section>
+      </section>
+
+      <section class="tab-panel" id="panel-assessment" role="tabpanel" aria-labelledby="tab-assessment-label">
+        <section class="card">
+          <h2>Overview</h2>
+          <p><strong>Latest recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} /></p>
+          <p><strong>Scan mode:</strong> {skill.scan_mode}</p>
+          <p><strong>Last scanned:</strong> {formatDate(skill.last_scanned)}</p>
+        </section>
+        <ScannerFindings scannerRuns={scannerRuns} scannerFindings={scannerFindings} scannerArtifacts={scannerArtifacts} client:load />
+      </section>
+    </div>
+  </section>
 </BaseLayout>

@@ -6,16 +6,18 @@ type Skill = {
   description: string;
   category?: string;
   tags: string[];
-  risk: string;
+  recommendation: string;
   confidence_flags: string[];
   last_updated: string;
   last_scanned: string;
 };
 
-function RiskPills({ risk, flags }: { risk: string; flags: string[] }) {
+function RecommendationPills({ recommendation, flags }: { recommendation: string; flags: string[] }) {
   return (
     <span className="pill-row">
-      <span className={`risk risk-${risk.toLowerCase()}`}>{risk}</span>
+      <span className={`risk recommendation-${recommendation.toLowerCase().replaceAll("_", "-")}`}>
+        {formatRecommendation(recommendation)}
+      </span>
       {flags.map((flag) => (
         <span className="risk flag" key={flag}>
           {flag}
@@ -27,7 +29,7 @@ function RiskPills({ risk, flags }: { risk: string; flags: string[] }) {
 
 export default function SkillCatalog({ skills }: { skills: Skill[] }) {
   const [query, setQuery] = useState("");
-  const [risk, setRisk] = useState("all");
+  const [recommendation, setRecommendation] = useState("all");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("name");
 
@@ -38,15 +40,18 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const riskRank: Record<string, number> = { High: 3, Medium: 2, Low: 1, Unknown: 0 };
+    const recommendationRank: Record<string, number> = { DO_NOT_INSTALL: 3, CAUTION: 2, SAFE: 1, Unknown: 0 };
     return skills.filter((skill) => {
-      const riskMatches = risk === "all" || skill.risk === risk;
+      const recommendationMatches = recommendation === "all" || skill.recommendation === recommendation;
       const categoryMatches = category === "all" || (skill.category || "uncategorized") === category;
       const text = [skill.display_id, skill.name, skill.description, skill.category, ...skill.tags].join(" ").toLowerCase();
-      return riskMatches && categoryMatches && (!normalized || text.includes(normalized));
+      return recommendationMatches && categoryMatches && (!normalized || text.includes(normalized));
     }).sort((left, right) => {
-      if (sort === "risk") {
-        return (riskRank[right.risk] ?? 0) - (riskRank[left.risk] ?? 0) || left.display_id.localeCompare(right.display_id);
+      if (sort === "recommendation") {
+        return (
+          (recommendationRank[right.recommendation] ?? 0) - (recommendationRank[left.recommendation] ?? 0) ||
+          left.display_id.localeCompare(right.display_id)
+        );
       }
       if (sort === "last_updated") {
         return Date.parse(right.last_updated || "") - Date.parse(left.last_updated || "") || left.display_id.localeCompare(right.display_id);
@@ -56,17 +61,17 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
       }
       return left.display_id.localeCompare(right.display_id);
     });
-  }, [category, query, risk, skills, sort]);
+  }, [category, query, recommendation, skills, sort]);
 
   return (
     <section>
       <div className="controls">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills" />
-        <select value={risk} onChange={(event) => setRisk(event.target.value)}>
-          <option value="all">All risk levels</option>
-          <option value="High">High</option>
-          <option value="Medium">Medium</option>
-          <option value="Low">Low</option>
+        <select value={recommendation} onChange={(event) => setRecommendation(event.target.value)}>
+          <option value="all">All recommendations</option>
+          <option value="DO_NOT_INSTALL">Do Not Install</option>
+          <option value="CAUTION">Caution</option>
+          <option value="SAFE">Safe</option>
           <option value="Unknown">Unknown</option>
         </select>
         <select value={category} onChange={(event) => setCategory(event.target.value)}>
@@ -77,7 +82,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
         </select>
         <select value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="name">Sort by name</option>
-          <option value="risk">Sort by risk</option>
+          <option value="recommendation">Sort by recommendation</option>
           <option value="last_updated">Sort by last updated</option>
           <option value="last_scanned">Sort by last scanned</option>
         </select>
@@ -87,7 +92,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
           <tr>
             <th>Skill</th>
             <th>Description</th>
-            <th>Risk</th>
+            <th>Recommendation</th>
             <th>Category</th>
             <th>Last Updated</th>
             <th>Last Scanned</th>
@@ -101,7 +106,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
               </td>
               <td>{skill.description}</td>
               <td>
-                <RiskPills risk={skill.risk} flags={skill.confidence_flags} />
+                <RecommendationPills recommendation={skill.recommendation} flags={skill.confidence_flags} />
               </td>
               <td>{skill.category || "uncategorized"}</td>
               <td>{formatDate(skill.last_updated)}</td>
@@ -112,6 +117,19 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
       </table>
     </section>
   );
+}
+
+function formatRecommendation(value: string) {
+  if (value === "DO_NOT_INSTALL") {
+    return "Do Not Install";
+  }
+  if (value === "CAUTION") {
+    return "Caution";
+  }
+  if (value === "SAFE") {
+    return "Safe";
+  }
+  return value;
 }
 
 function formatDate(value: string) {

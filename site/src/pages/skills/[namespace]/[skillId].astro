@@ -1,0 +1,39 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import RiskBadge from "../../../components/RiskBadge.astro";
+import index from "../../../../../.exchange/generated/index.json";
+
+export function getStaticPaths() {
+  return index.skills.map((skill) => ({
+    params: { namespace: skill.namespace, skillId: skill.skill_id },
+    props: { skill },
+  }));
+}
+
+const { skill } = Astro.props;
+---
+
+<BaseLayout title={skill.display_id}>
+  <header class="header">
+    <p><a href="/">Back to catalog</a></p>
+    <h1>{skill.display_id}</h1>
+    <p class="muted">{skill.description}</p>
+    <p><RiskBadge risk={skill.risk} flags={skill.confidence_flags} /></p>
+  </header>
+
+  <section class="card">
+    <h2>Metadata</h2>
+    <p><strong>Category:</strong> {skill.category || "Uncategorized"}</p>
+    <p><strong>Tags:</strong> {skill.tags.join(", ") || "None"}</p>
+    <p><strong>Owner:</strong> {skill.owner || "Not declared"}</p>
+    {skill.upstream_url && <p><strong>Upstream:</strong> <a href={skill.upstream_url}>{skill.upstream_url}</a></p>}
+  </section>
+
+  <section class="card">
+    <h2>Assessment</h2>
+    <p><strong>Reason:</strong> {skill.risk_reason}</p>
+    <p><strong>Scan mode:</strong> {skill.scan_mode}</p>
+    <p><strong>Content hash:</strong> <code>{skill.content_hash}</code></p>
+    <p><a href={skill.download_path}>Download zip</a></p>
+  </section>
+</BaseLayout>

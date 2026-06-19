@@ -5,6 +5,7 @@
 .gitlab-mock/mr-artifacts/**
 !.gitlab-mock/mr-artifacts/.gitkeep
 site/dist/
+site/.astro/
 site/public/downloads/
 site/node_modules/
 .pytest_cache/

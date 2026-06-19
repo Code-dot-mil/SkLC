@@ -1,0 +1,7 @@
+---
+const { risk, flags = [] } = Astro.props;
+const className = `risk risk-${String(risk).toLowerCase()}`;
+---
+
+<span class={className}>{risk}</span>
+{flags.map((flag) => <span class="risk flag">{flag}</span>)}

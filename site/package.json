@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "prebuild": "node scripts/copy-downloads.mjs",
+    "build": "astro build",
+    "dev": "astro dev --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@astrojs/react": "4.0.0",
+    "astro": "5.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  }
+}

@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .exchange_builder import build_exchange
 from .git_mock import append_event
 from .policy import load_exchange_policy
 from .risk import assess_report
@@ -23,9 +24,22 @@ def main() -> None:
     scan.add_argument("--fixture", default="skillspector-clean.json")
     scan.add_argument("--no-llm", action="store_true", default=True)
 
+    publish = subcommands.add_parser("publish-local")
+    publish.add_argument("--scanner", choices=["fixture", "real"], default="fixture")
+    publish.add_argument("--fixture", default="skillspector-clean.json")
+
     args = parser.parse_args()
     if args.command == "mock-mr-scan":
         mock_mr_scan(args)
+    if args.command == "publish-local":
+        result = build_exchange(
+            skills_root=Path("skills"),
+            exchange_dir=Path(".exchange"),
+            generated_dir=Path(".exchange/generated"),
+            scanner=args.scanner,
+            fixture=args.fixture,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
 
 
 def mock_mr_scan(args: argparse.Namespace) -> None:

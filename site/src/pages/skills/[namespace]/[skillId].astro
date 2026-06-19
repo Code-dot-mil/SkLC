@@ -82,7 +82,25 @@ function flattenFrontmatterRows(value, prefix = "") {
     <p><a href="/">Back to catalog</a></p>
     <h1>{skill.display_id}</h1>
     <p class="muted">{skill.description}</p>
-    <p><strong>Recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} /></p>
+    <p class="recommendation-line">
+      <strong>Recommendation:</strong>
+      <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} />
+      <button class="icon-button compact-circle" type="button" data-dialog-target="recommendation-dialog" aria-label="How recommendation is calculated">i</button>
+    </p>
+    <dialog id="recommendation-dialog">
+      <form method="dialog">
+        <button class="dialog-close" aria-label="Close">Close</button>
+      </form>
+      <h2>Recommendation</h2>
+      <p>
+        The recommendation is taken from the most recent scanner run for this skill content and scanner configuration.
+        SkillSpector calculates a native risk score and severity from its findings, then maps that assessment to a recommendation.
+      </p>
+      <p>
+        Low risk maps to Safe, medium risk maps to Caution, and high or critical risk maps to Do Not Install.
+        LLM-assisted scans use the configured provider and model, while static-only scans skip LLM review and may carry lower-confidence flags.
+      </p>
+    </dialog>
     <div class="metadata-strip">
       <span><strong>Last updated:</strong> {formatDate(skill.last_updated)}</span>
       <span><strong>First observed:</strong> {formatDate(skill.first_observed)}</span>
@@ -163,4 +181,14 @@ function flattenFrontmatterRows(value, prefix = "") {
       </section>
     </div>
   </section>
+  <script>
+    document.querySelectorAll("[data-dialog-target]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const dialog = document.getElementById(button.getAttribute("data-dialog-target") || "");
+        if (dialog instanceof HTMLDialogElement) {
+          dialog.showModal();
+        }
+      });
+    });
+  </script>
 </BaseLayout>

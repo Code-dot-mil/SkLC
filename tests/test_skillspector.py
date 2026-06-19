@@ -36,13 +36,31 @@ def test_run_skillspector_fails_without_report(monkeypatch, tmp_path: Path):
         skillspector.run_skillspector(tmp_path, tmp_path / "report.json")
 
 
-def test_skillspector_llm_config_uses_sanitized_mdevchat_env(monkeypatch):
-    monkeypatch.setenv("MDEVCHAT_API_KEY", "secret-value")
-    monkeypatch.setenv("MDEVCHAT_BASE_URL", "https://mdevchat.example/openai/")
-    monkeypatch.setenv("MDEVCHAT_LLM_MODEL", "gpt-5")
+def test_skillspector_env_maps_generic_llm_env(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "secret-value")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://llm.example/v1")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.delenv("SKILLSPECTOR_PROVIDER", raising=False)
     monkeypatch.delenv("SKILLSPECTOR_MODEL", raising=False)
 
+    env = skillspector.skillspector_env()
     config = skillspector.skillspector_llm_config()
 
+    assert env["OPENAI_API_KEY"] == "secret-value"
+    assert env["OPENAI_BASE_URL"] == "https://llm.example/v1"
     assert config == {"provider": "openai", "model": "gpt-5"}
+
+
+def test_mitre_specific_llm_env_names_are_not_committed():
+    root = Path(__file__).resolve().parents[1]
+    old_prefix = "MDEV" + "CHAT"
+    checked_paths = [
+        root / "scripts" / "skill_exchange" / "skillspector.py",
+        root / "docs" / "ci.md",
+        root / "docs" / "local-mvp.md",
+    ]
+
+    assert all(old_prefix not in path.read_text() for path in checked_paths)

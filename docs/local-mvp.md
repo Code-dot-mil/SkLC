@@ -51,7 +51,7 @@ npm --prefix site run build
 
 The local harness runs a real SkillSpector binary. Put `skillspector` on `PATH`, or set `SKILLSPECTOR_BIN` to the binary from your local fork before running scan or publish commands.
 
-For LLM-assisted scans against M-DevChat, provide M-DevChat environment variables in the shell running the command. The harness maps the non-secret M-DevChat endpoint and model variables into the OpenAI-compatible environment expected by SkillSpector. It does not print the API key.
+For LLM-assisted scans, provide provider credentials and endpoint variables in the shell running the command. The harness maps `SKILL_EXCHANGE_LLM_API_KEY`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, and `SKILL_EXCHANGE_LLM_PROVIDER` into the OpenAI-compatible and SkillSpector-native environment expected by SkillSpector. You can also set SkillSpector-native variables directly. The harness does not print the API key.
 
 ## Boundaries
 

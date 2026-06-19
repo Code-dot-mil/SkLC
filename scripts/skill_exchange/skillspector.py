@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import posixpath
 import shutil
 import subprocess
 from importlib.metadata import PackageNotFoundError, version
@@ -57,17 +56,22 @@ def skillspector_version() -> str:
 
 def skillspector_env() -> dict[str, str]:
     env = os.environ.copy()
-    if "MDEVCHAT_API_KEY" not in env:
-        return env
 
-    base_url = env.get("MDEVCHAT_BASE_URL", "").strip()
-    model = env.get("MDEVCHAT_LLM_MODEL", "").strip()
-    if base_url and model and not env.get("OPENAI_BASE_URL"):
-        env["OPENAI_BASE_URL"] = posixpath.join(base_url.rstrip("/"), "deployments", model) + "/"
+    api_key = env.get("SKILL_EXCHANGE_LLM_API_KEY", "").strip()
+    base_url = env.get("SKILL_EXCHANGE_LLM_BASE_URL", "").strip()
+    model = env.get("SKILL_EXCHANGE_LLM_MODEL", "").strip()
+    provider = env.get("SKILL_EXCHANGE_LLM_PROVIDER", "").strip()
+
+    if api_key and not env.get("OPENAI_API_KEY"):
+        env["OPENAI_API_KEY"] = api_key
+    if base_url and not env.get("OPENAI_BASE_URL"):
+        env["OPENAI_BASE_URL"] = base_url
     if model and not env.get("SKILLSPECTOR_MODEL"):
         env["SKILLSPECTOR_MODEL"] = model
-    env.setdefault("SKILLSPECTOR_PROVIDER", "openai")
-    env.setdefault("OPENAI_API_KEY", "unused")
+    if provider and not env.get("SKILLSPECTOR_PROVIDER"):
+        env["SKILLSPECTOR_PROVIDER"] = provider
+    elif (api_key or base_url or model) and not env.get("SKILLSPECTOR_PROVIDER"):
+        env["SKILLSPECTOR_PROVIDER"] = "openai"
     return env
 
 

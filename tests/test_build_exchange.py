@@ -1,7 +1,8 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
-from skill_exchange.exchange_builder import build_exchange
+from skill_exchange.exchange_builder import build_exchange, scanner_finding_rows_for
 
 
 def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
@@ -19,6 +20,11 @@ def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
     assert index["skills"][0]["display_id"] == "ai4sdlc/sample-skill"
     assert index["skills"][0]["risk"] == "Low"
     assert "Low confidence" in index["skills"][0]["confidence_flags"]
+    assert index["skills"][0]["skill_files"] == [{"path": "SKILL.md", "size_bytes": 290}]
+    assert "# Sample Skill" in index["skills"][0]["skill_md_content"]
+    assert index["skills"][0]["source_url"].endswith("/tree/main/tests/fixtures/skills/ai4sdlc/sample-skill")
+    assert datetime.fromisoformat(index["skills"][0]["last_updated"])
+    assert datetime.fromisoformat(index["skills"][0]["last_scanned"])
     assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
     scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
     scanner_artifacts = json.loads((generated / "tables" / "scanner_artifacts.json").read_text())
@@ -26,7 +32,11 @@ def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
     assert scanner_runs["rows"][0]["scanner_name"] == "skillspector"
     assert scanner_runs["rows"][0]["native_output_format"] == "skillspector-json-v2"
     assert scanner_runs["rows"][0]["native_report_path"].endswith("/skillspector.json")
-    assert any(row["artifact_kind"] == "native_report" for row in scanner_artifacts["rows"])
+    assert scanner_runs["rows"][0]["scan_cache_key"]
+    assert scanner_runs["rows"][0]["content_hash"] == index["skills"][0]["content_hash"]
+    assert scanner_runs["rows"][0]["last_scanned"] == index["skills"][0]["last_scanned"]
+    native_artifact = next(row for row in scanner_artifacts["rows"] if row["artifact_kind"] == "native_report")
+    assert native_artifact["download_path"].endswith("/skillspector.json")
     assert scanner_findings["rows"] == []
 
     second = build_exchange(
@@ -36,3 +46,58 @@ def test_build_exchange_writes_index_boe_and_zip(tmp_path: Path):
         scan_modes=("static-only",),
     )
     assert second["reused_scans"] == 1
+    scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
+    index = json.loads((generated / "index.json").read_text())
+    assert len(scanner_runs["rows"]) == 2
+    assert len(index["skills"][0]["scanner_run_ids"]) == 1
+    assert index["skills"][0]["scanner_run_ids"][0] == scanner_runs["rows"][-1]["id"]
+
+
+def test_scanner_finding_rows_preserve_native_details_for_display():
+    rows = scanner_finding_rows_for(
+        "run-1",
+        {
+            "issues": [
+                {
+                    "id": "AST1",
+                    "category": "Dangerous Code Execution",
+                    "pattern": "exec() call detected",
+                    "severity": "HIGH",
+                    "confidence": 0.85,
+                    "location": {"file": "examples/demo.py", "start_line": 10, "end_line": 10},
+                    "explanation": "exec() call detected",
+                    "remediation": "Replace exec() with explicit parsing.",
+                    "code_snippet": "exec(user_value)",
+                }
+            ]
+        },
+    )
+
+    assert rows == [
+        {
+            "id": "run-1:AST1:0",
+            "scanner_run_id": "run-1",
+            "native_issue_id": "AST1",
+            "severity": "HIGH",
+            "category": "Dangerous Code Execution",
+            "pattern": "exec() call detected",
+            "confidence": 0.85,
+            "path": "examples/demo.py",
+            "start_line": 10,
+            "end_line": 10,
+            "explanation": "exec() call detected",
+            "remediation": "Replace exec() with explicit parsing.",
+            "code_snippet": "exec(user_value)",
+            "native_finding_json": {
+                "id": "AST1",
+                "category": "Dangerous Code Execution",
+                "pattern": "exec() call detected",
+                "severity": "HIGH",
+                "confidence": 0.85,
+                "location": {"file": "examples/demo.py", "start_line": 10, "end_line": 10},
+                "explanation": "exec() call detected",
+                "remediation": "Replace exec() with explicit parsing.",
+                "code_snippet": "exec(user_value)",
+            },
+        }
+    ]

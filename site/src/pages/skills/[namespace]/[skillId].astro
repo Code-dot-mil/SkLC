@@ -1,8 +1,11 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import RiskBadge from "../../../components/RiskBadge.astro";
+import ScannerFindings from "../../../components/ScannerFindings";
 import index from "../../../../../.exchange/generated/index.json";
 import scannerRunsTable from "../../../../../.exchange/generated/tables/scanner_runs.json";
+import scannerFindingsTable from "../../../../../.exchange/generated/tables/scanner_findings.json";
+import scannerArtifactsTable from "../../../../../.exchange/generated/tables/scanner_artifacts.json";
 
 export function getStaticPaths() {
   return index.skills.map((skill) => ({
@@ -12,7 +15,13 @@ export function getStaticPaths() {
 }
 
 const { skill } = Astro.props;
-const scannerRuns = scannerRunsTable.rows.filter((row) => skill.scanner_run_ids.includes(row.id));
+const scannerRuns = scannerRunsTable.rows
+  .filter((row) => row.namespace === skill.namespace && row.skill_id === skill.skill_id)
+  .sort((left, right) => Date.parse(right.last_scanned || "") - Date.parse(left.last_scanned || ""));
+const scannerRunIds = new Set(scannerRuns.map((run) => run.id));
+const scannerFindings = scannerFindingsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
+const scannerArtifacts = scannerArtifactsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
+
 ---
 
 <BaseLayout title={skill.display_id}>
@@ -20,15 +29,17 @@ const scannerRuns = scannerRunsTable.rows.filter((row) => skill.scanner_run_ids.
     <p><a href="/">Back to catalog</a></p>
     <h1>{skill.display_id}</h1>
     <p class="muted">{skill.description}</p>
-    <p><RiskBadge risk={skill.risk} flags={skill.confidence_flags} /></p>
+    <p><strong>Overall Risk Level:</strong> <RiskBadge risk={skill.risk} flags={skill.confidence_flags} /></p>
   </header>
 
   <section class="card">
     <h2>Metadata</h2>
+    <p><strong>Description:</strong> {skill.description}</p>
     <p><strong>Category:</strong> {skill.category || "Uncategorized"}</p>
     <p><strong>Tags:</strong> {skill.tags.join(", ") || "None"}</p>
     <p><strong>Owner:</strong> {skill.owner || "Not declared"}</p>
     {skill.upstream_url && <p><strong>Upstream:</strong> <a href={skill.upstream_url}>{skill.upstream_url}</a></p>}
+    {skill.source_url && <p><strong>Source:</strong> <a href={skill.source_url}>View source</a></p>}
   </section>
 
   <section class="card">
@@ -40,30 +51,17 @@ const scannerRuns = scannerRunsTable.rows.filter((row) => skill.scanner_run_ids.
   </section>
 
   <section class="card">
-    <h2>Scanner Runs</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Scanner</th>
-          <th>Mode</th>
-          <th>Native Severity</th>
-          <th>Score</th>
-          <th>Display Risk</th>
-          <th>Report</th>
-        </tr>
-      </thead>
-      <tbody>
-        {scannerRuns.map((run) => (
-          <tr>
-            <td>{run.scanner_name} {run.scanner_version}</td>
-            <td>{run.scan_mode}</td>
-            <td>{run.native_severity || "Unknown"}</td>
-            <td>{run.native_score ?? "n/a"}</td>
-            <td>{run.display_risk}</td>
-            <td><code>{run.native_report_path}</code></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <h2>Files</h2>
+    <ul class="file-list">
+      {skill.skill_files.map((file) => (
+        <li><code>{file.path}</code> <span class="muted">{file.size_bytes} bytes</span></li>
+      ))}
+    </ul>
+    <details>
+      <summary>View SKILL.md</summary>
+      <pre><code>{skill.skill_md_content}</code></pre>
+    </details>
   </section>
+
+  <ScannerFindings scannerRuns={scannerRuns} scannerFindings={scannerFindings} scannerArtifacts={scannerArtifacts} client:load />
 </BaseLayout>

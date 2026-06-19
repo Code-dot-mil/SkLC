@@ -40,6 +40,17 @@ body {
   font-size: 0.82rem;
 }
 
+.pill-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inline-pills {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
 .risk-high {
   background: #fee2e2;
   color: #991b1b;
@@ -119,4 +130,136 @@ td {
 
 code {
   overflow-wrap: anywhere;
+}
+
+pre {
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid #d8dee9;
+  border-radius: 6px;
+  padding: 10px;
+  background: #f7f8fb;
+  white-space: pre-wrap;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.file-list {
+  padding-left: 20px;
+}
+
+.finding-list {
+  display: grid;
+  gap: 12px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.section-title-row h2 {
+  margin: 0;
+}
+
+.title-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.finding-card {
+  border: 1px solid #d8dee9;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.finding-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 28px;
+  border: 1px solid #c6ccd7;
+  border-radius: 6px;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 28px;
+  border: 1px solid #c6ccd7;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #171923;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.icon-button.compact {
+  width: auto;
+  min-height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.hash-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+dialog {
+  max-width: 520px;
+  border: 1px solid #c6ccd7;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+dialog::backdrop {
+  background: rgb(23 25 35 / 0.35);
+}
+
+.dialog-close {
+  float: right;
+  min-height: 32px;
+  border: 1px solid #c6ccd7;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+abbr[title] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+tr.selected-row {
+  background: #eef6ff;
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+}
+
+tbody tr[tabindex="0"] {
+  cursor: pointer;
 }

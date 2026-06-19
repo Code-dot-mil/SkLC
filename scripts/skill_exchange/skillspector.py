@@ -32,9 +32,6 @@ def run_skillspector(skill_path: Path, output_path: Path, *, no_llm: bool = True
     if no_llm:
         command.append("--no-llm")
     completed = subprocess.run(command, text=True, capture_output=True, check=False, env=skillspector_env())
-    if completed.returncode != 0:
-        output = completed.stderr or completed.stdout or f"skillspector exited {completed.returncode}"
-        raise RuntimeError(output)
     if output_path.exists():
         return json.loads(output_path.read_text())
 
@@ -56,3 +53,11 @@ def skillspector_env() -> dict[str, str]:
     env.setdefault("SKILLSPECTOR_PROVIDER", "openai")
     env.setdefault("OPENAI_API_KEY", "unused")
     return env
+
+
+def skillspector_llm_config() -> dict[str, str | None]:
+    env = skillspector_env()
+    return {
+        "provider": env.get("SKILLSPECTOR_PROVIDER"),
+        "model": env.get("SKILLSPECTOR_MODEL"),
+    }

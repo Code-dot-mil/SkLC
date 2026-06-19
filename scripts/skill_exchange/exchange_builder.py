@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +12,7 @@ from .boe import write_boe
 from .policy import load_exchange_policy
 from .risk import assess_report
 from .skills import discover_skills
-from .skillspector import run_skillspector
+from .skillspector import run_skillspector, skillspector_llm_config
 from .validation import validate_skill
 from .zipper import write_skill_zip
 
@@ -22,49 +26,64 @@ def build_exchange(
 ) -> dict[str, Any]:
     generated_dir.mkdir(parents=True, exist_ok=True)
     policy = load_exchange_policy(exchange_dir)
+    site_config = load_site_config(exchange_dir)
     skills = discover_skills(skills_root)
     records: list[dict[str, Any]] = []
     skill_rows: list[dict[str, Any]] = []
-    scanner_run_rows: list[dict[str, Any]] = []
-    scanner_artifact_rows: list[dict[str, Any]] = []
-    scanner_finding_rows: list[dict[str, Any]] = []
+    scanner_run_rows: list[dict[str, Any]] = [
+        row for row in existing_table_rows(generated_dir, "scanner_runs") if row.get("scan_cache_key")
+    ]
+    historical_run_ids = {row["id"] for row in scanner_run_rows}
+    scanner_artifact_rows: list[dict[str, Any]] = [
+        row for row in existing_table_rows(generated_dir, "scanner_artifacts") if row.get("scanner_run_id") in historical_run_ids
+    ]
+    scanner_finding_rows: list[dict[str, Any]] = [
+        row for row in existing_table_rows(generated_dir, "scanner_findings") if row.get("scanner_run_id") in historical_run_ids
+    ]
     reused_scans = 0
 
     for skill in skills:
         validation = validate_skill(skill, policy)
         skill_scanner_runs: list[dict[str, Any]] = []
+        last_updated = skill_last_updated(skill)
         for mode in scan_modes:
             no_llm = mode == "static-only"
             report_source = generated_dir / "tmp" / skill.metadata.namespace / skill.metadata.skill_id / mode / "report.json"
             report = run_skillspector(skill.path, report_source, no_llm=no_llm)
+            last_scanned = datetime.now(timezone.utc).isoformat()
 
             scan_key = make_scan_key(skill.content_hash, report)
+            run_id = make_run_id(scan_key, last_scanned)
             existing_boe_path = boe_path_for(generated_dir, skill, scan_key)
+            assessment = assess_report(report)
             if existing_boe_path.exists():
-                assessment = assessment_from_boe(existing_boe_path)
-                boe_path = existing_boe_path
                 reused_scans += 1
-            else:
-                assessment = assess_report(report)
-                boe_path = write_boe(
-                    root=generated_dir,
-                    skill=skill,
-                    scan_key=scan_key,
-                    report=report,
-                    assessment=assessment,
-                    validation=validation,
-                    report_path=report_source,
-                )
-            native_report_path = boe_path.parent / "skillspector.json"
-            summary_path = boe_path.parent / "summary.json"
+            boe_path = write_boe(
+                root=generated_dir,
+                skill=skill,
+                scan_key=scan_key,
+                report=report,
+                assessment=assessment,
+                validation=validation,
+                report_path=report_source,
+            )
+            run_artifacts = write_run_artifacts(
+                generated_dir=generated_dir,
+                run_id=run_id,
+                report_path=report_source,
+                boe_path=boe_path,
+                assessment=assessment,
+            )
             scanner_run = scanner_run_row(
                 skill=skill,
                 report=report,
                 assessment=assessment,
+                run_id=run_id,
                 scan_key=scan_key,
-                boe_path=boe_path,
-                native_report_path=native_report_path,
-                summary_path=summary_path,
+                boe_path=run_artifacts["boe_path"],
+                native_report_path=run_artifacts["native_report_path"],
+                summary_path=run_artifacts["summary_path"],
+                last_scanned=last_scanned,
             )
             skill_scanner_runs.append(scanner_run)
             scanner_run_rows.append(scanner_run)
@@ -74,6 +93,7 @@ def build_exchange(
         detail_path = generated_dir / "skills" / f"{skill.metadata.namespace}--{skill.metadata.skill_id}.json"
         detail_path.parent.mkdir(parents=True, exist_ok=True)
         aggregate = aggregate_assessment(skill_scanner_runs)
+        last_scanned = max(row["last_scanned"] for row in skill_scanner_runs)
 
         record = {
             "namespace": skill.metadata.namespace,
@@ -87,6 +107,12 @@ def build_exchange(
             "owner_missing": "missing_owner" in validation.metadata_flags,
             "upstream_url": skill.metadata.upstream_url,
             "content_hash": skill.content_hash,
+            "skill_files": skill_files(skill),
+            "skill_md_content": skill.skill_file.read_text(),
+            "source_path": skill.path.as_posix(),
+            "source_url": source_url(site_config, skill.path.as_posix()),
+            "last_updated": last_updated,
+            "last_scanned": last_scanned,
             "risk": aggregate["risk"],
             "risk_reason": aggregate["reason"],
             "confidence_flags": aggregate["confidence_flags"],
@@ -122,6 +148,11 @@ def make_scan_key(content_hash: str, report: dict[str, Any]) -> str:
     return f"{content_hash}--{name}-{version}--{mode}"
 
 
+def make_run_id(scan_key: str, last_scanned: str) -> str:
+    timestamp = last_scanned.replace("-", "").replace(":", "").replace("+", "").replace(".", "")
+    return f"{scan_key}--{timestamp}"
+
+
 def scan_mode(report: dict[str, Any]) -> str:
     metadata = report.get("metadata", {})
     if isinstance(metadata, dict) and metadata.get("llm_requested") is False:
@@ -134,23 +165,31 @@ def scanner_run_row(
     skill,
     report: dict[str, Any],
     assessment: dict[str, Any],
+    run_id: str,
     scan_key: str,
     boe_path: Path,
     native_report_path: Path,
     summary_path: Path,
+    last_scanned: str,
 ) -> dict[str, Any]:
     metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
     risk_assessment = report.get("risk_assessment") if isinstance(report.get("risk_assessment"), dict) else {}
+    mode = scan_mode(report)
+    llm_config = skillspector_llm_config() if mode == "llm-assisted" else {"provider": None, "model": None}
     return {
-        "id": scan_key,
+        "id": run_id,
+        "scan_cache_key": scan_key,
         "skill_display_id": skill.metadata.display_id,
         "namespace": skill.metadata.namespace,
         "skill_id": skill.metadata.skill_id,
         "content_hash": skill.content_hash,
+        "last_scanned": last_scanned,
         "scanner_name": "skillspector",
         "scanner_type": "security",
         "scanner_version": metadata.get("skillspector_version", "unknown"),
-        "scan_mode": scan_mode(report),
+        "scan_mode": mode,
+        "llm_provider": llm_config["provider"],
+        "llm_model": llm_config["model"],
         "native_output_format": "skillspector-json-v2",
         "native_report_path": native_report_path.as_posix(),
         "summary_path": summary_path.as_posix(),
@@ -173,6 +212,7 @@ def scanner_artifact_rows_for(scanner_run: dict[str, Any]) -> list[dict[str, Any
             "scanner_run_id": run_id,
             "artifact_kind": "native_report",
             "path": scanner_run["native_report_path"],
+            "download_path": f"/downloads/scanner-runs/{run_id}/skillspector.json",
             "media_type": "application/vnd.skillspector.report+json",
         },
         {
@@ -180,6 +220,7 @@ def scanner_artifact_rows_for(scanner_run: dict[str, Any]) -> list[dict[str, Any
             "scanner_run_id": run_id,
             "artifact_kind": "summary",
             "path": scanner_run["summary_path"],
+            "download_path": f"/downloads/scanner-runs/{run_id}/summary.json",
             "media_type": "application/json",
         },
         {
@@ -187,6 +228,7 @@ def scanner_artifact_rows_for(scanner_run: dict[str, Any]) -> list[dict[str, Any
             "scanner_run_id": run_id,
             "artifact_kind": "boe",
             "path": scanner_run["boe_path"],
+            "download_path": f"/downloads/scanner-runs/{run_id}/boe.json",
             "media_type": "application/json",
         },
     ]
@@ -209,9 +251,14 @@ def scanner_finding_rows_for(scanner_run_id: str, report: dict[str, Any]) -> lis
                 "native_issue_id": issue_id,
                 "severity": issue.get("severity"),
                 "category": issue.get("category"),
+                "pattern": issue.get("pattern"),
+                "confidence": issue.get("confidence"),
                 "path": location.get("file"),
                 "start_line": location.get("start_line"),
                 "end_line": location.get("end_line"),
+                "explanation": issue.get("explanation"),
+                "remediation": issue.get("remediation"),
+                "code_snippet": issue.get("code_snippet"),
                 "native_finding_json": issue,
             }
         )
@@ -226,6 +273,38 @@ def write_table(generated_dir: Path, name: str, rows: list[dict[str, Any]]) -> N
         "rows": rows,
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def existing_table_rows(generated_dir: Path, name: str) -> list[dict[str, Any]]:
+    path = generated_dir / "tables" / f"{name}.json"
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text())
+    rows = payload.get("rows")
+    return rows if isinstance(rows, list) else []
+
+
+def write_run_artifacts(
+    *,
+    generated_dir: Path,
+    run_id: str,
+    report_path: Path,
+    boe_path: Path,
+    assessment: dict[str, Any],
+) -> dict[str, Path]:
+    run_dir = generated_dir / "scanner-runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    native_report_path = run_dir / "skillspector.json"
+    summary_path = run_dir / "summary.json"
+    run_boe_path = run_dir / "boe.json"
+    shutil.copyfile(report_path, native_report_path)
+    shutil.copyfile(boe_path, run_boe_path)
+    summary_path.write_text(json.dumps(assessment, indent=2, sort_keys=True) + "\n")
+    return {
+        "native_report_path": native_report_path,
+        "summary_path": summary_path,
+        "boe_path": run_boe_path,
+    }
 
 
 def aggregate_assessment(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
@@ -243,6 +322,53 @@ def aggregate_assessment(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def skill_files(skill) -> list[dict[str, Any]]:
+    rows = []
+    for path in sorted(item for item in skill.path.rglob("*") if item.is_file()):
+        rows.append(
+            {
+                "path": path.relative_to(skill.path).as_posix(),
+                "size_bytes": path.stat().st_size,
+            }
+        )
+    return rows
+
+
+def load_site_config(exchange_dir: Path) -> dict[str, Any]:
+    path = exchange_dir / "site-config.json"
+    config = json.loads(path.read_text()) if path.exists() else {}
+    source_repository_url = os.environ.get("SKILL_EXCHANGE_SOURCE_REPOSITORY_URL")
+    source_branch = os.environ.get("SKILL_EXCHANGE_SOURCE_BRANCH")
+    if source_repository_url:
+        config["sourceRepositoryUrl"] = source_repository_url
+    if source_branch:
+        config["sourceBranch"] = source_branch
+    return config
+
+
+def source_url(site_config: dict[str, Any], source_path: str) -> str | None:
+    repository_url = str(site_config.get("sourceRepositoryUrl") or "").rstrip("/")
+    branch = str(site_config.get("sourceBranch") or "main").strip("/")
+    if not repository_url:
+        return None
+    return f"{repository_url}/tree/{branch}/{source_path}"
+
+
+def skill_last_updated(skill) -> str:
+    completed = subprocess.run(
+        ["git", "log", "-1", "--format=%cI", "--", skill.path.as_posix()],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    timestamp = completed.stdout.strip()
+    if timestamp:
+        return timestamp
+
+    newest_mtime = max(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
+    return datetime.fromtimestamp(newest_mtime, tz=timezone.utc).isoformat()
+
+
 def boe_path_for(generated_dir: Path, skill, scan_key: str) -> Path:
     return (
         generated_dir
@@ -253,12 +379,3 @@ def boe_path_for(generated_dir: Path, skill, scan_key: str) -> Path:
         / scan_key
         / "boe.json"
     )
-
-
-def assessment_from_boe(boe_path: Path) -> dict[str, Any]:
-    boe = json.loads(boe_path.read_text())
-    return {
-        "risk": boe["risk"],
-        "reason": boe["risk_reason"],
-        "confidence_flags": boe.get("confidence_flags", []),
-    }

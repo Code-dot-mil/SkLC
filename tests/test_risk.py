@@ -16,7 +16,7 @@ def test_clean_static_report_is_low_with_low_confidence():
 
     assert assessment["risk"] == "Low"
     assert assessment["confidence_flags"] == ["Low confidence"]
-    assert assessment["reason"] == "no_medium_high_or_critical_findings"
+    assert assessment["reason"] == "No medium, high, or critical findings detected."
 
 
 def test_medium_report_is_medium():
@@ -49,4 +49,4 @@ def test_malformed_report_is_unknown():
     assessment = assess_report({"unexpected": "shape"})
 
     assert assessment["risk"] == "Unknown"
-    assert assessment["reason"] == "malformed_report"
+    assert assessment["reason"] == "Scanner report did not match the expected SkillSpector shape."

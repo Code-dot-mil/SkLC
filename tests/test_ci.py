@@ -121,6 +121,37 @@ def test_commit_generated_outputs_force_adds_ignored_generated_files(monkeypatch
     assert tracked.stdout.strip() == ".exchange/generated/index.json"
 
 
+def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypatch, tmp_path: Path):
+    calls = []
+
+    def fake_run_git(repo_root: Path, *args: str):
+        calls.append((repo_root, args))
+
+    monkeypatch.setattr(ci, "run_git", fake_run_git)
+    monkeypatch.delenv("EXCHANGE_PUBLISH_PUSH_URL", raising=False)
+    monkeypatch.delenv("EXCHANGE_PUBLISH_TOKEN", raising=False)
+    monkeypatch.delenv("GITLAB_TOKEN", raising=False)
+    monkeypatch.delenv("EXCHANGE_PUBLISH_USERNAME", raising=False)
+    monkeypatch.setenv("CI_JOB_TOKEN", "job-token-value")
+    monkeypatch.setenv("CI_SERVER_PROTOCOL", "https")
+    monkeypatch.setenv("CI_SERVER_HOST", "gitlab.example.invalid")
+    monkeypatch.setenv("CI_PROJECT_PATH", "group/project")
+
+    ci.configure_push_remote(tmp_path)
+
+    assert calls == [
+        (
+            tmp_path,
+            (
+                "remote",
+                "set-url",
+                "origin",
+                "https://gitlab-ci-token:job-token-value@gitlab.example.invalid/group/project.git",
+            ),
+        )
+    ]
+
+
 def test_local_package_scripts_cover_common_checks():
     root_scripts = json.loads(Path("package.json").read_text())["scripts"]
     site_scripts = json.loads(Path("site/package.json").read_text())["scripts"]
@@ -146,6 +177,7 @@ def test_gitlab_ci_routes_jobs_by_expected_changes():
     assert config["variables"]["NODE_IMAGE"] == "$NODE_IMAGE_REGISTRY/$NODE_IMAGE_REPOSITORY:$NODE_IMAGE_TAG"
     assert config["variables"]["SKILL_EXCHANGE_RUNNER_TAG"] == "mitre-no-cui"
     assert config["variables"]["PAGES_RUNNER_TAG"] == "pages-no-cui"
+    assert config["variables"]["EXCHANGE_PUBLISH_USERNAME"] == ""
     assert config[".python_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
     assert config[".node_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
     for job_name in [".python_job", "review:skills", "publish:exchange"]:

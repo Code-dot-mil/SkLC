@@ -341,7 +341,11 @@ def configure_push_remote(repo_root: Path) -> None:
     push_url = os.environ.get("EXCHANGE_PUBLISH_PUSH_URL")
     if not push_url:
         token = os.environ.get("EXCHANGE_PUBLISH_TOKEN") or os.environ.get("GITLAB_TOKEN")
-        username = os.environ.get("EXCHANGE_PUBLISH_USERNAME", "oauth2")
+        username = os.environ.get("EXCHANGE_PUBLISH_USERNAME")
+        if not token and os.environ.get("CI_JOB_TOKEN"):
+            token = os.environ["CI_JOB_TOKEN"]
+            username = username or "gitlab-ci-token"
+        username = username or "oauth2"
         protocol = os.environ.get("CI_SERVER_PROTOCOL", "https")
         host = os.environ.get("CI_SERVER_HOST")
         project_path = os.environ.get("CI_PROJECT_PATH")

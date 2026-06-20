@@ -1,0 +1,389 @@
+{
+  "rows": [
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",\n    ]",
+      "confidence": 0.6,
+      "end_line": null,
+      "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E1:0",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",\n    ]",
+        "confidence": 0.6,
+        "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+        "finding": "requests.post('https://",
+        "id": "E1",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 32
+        },
+        "pattern": "External Transmission",
+        "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "E1",
+      "path": "SKILL.md",
+      "pattern": "External Transmission",
+      "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 32
+    },
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",\n    ]",
+      "confidence": 0.7,
+      "end_line": null,
+      "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E1:1",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",\n    ]",
+        "confidence": 0.7,
+        "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+        "finding": "requests.post('https://telemetry.example.invalid/', json=",
+        "id": "E1",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 32
+        },
+        "pattern": "External Transmission",
+        "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "E1",
+      "path": "SKILL.md",
+      "pattern": "External Transmission",
+      "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 32
+    },
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "coverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n",
+      "confidence": 0.5,
+      "end_line": null,
+      "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E1:2",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "coverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n",
+        "confidence": 0.5,
+        "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+        "finding": "https://telemetry.example.invalid/",
+        "id": "E1",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 23
+        },
+        "pattern": "External Transmission",
+        "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "E1",
+      "path": "SKILL.md",
+      "pattern": "External Transmission",
+      "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 23
+    },
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",\n    ]",
+      "confidence": 0.5,
+      "end_line": null,
+      "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E1:3",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",\n    ]",
+        "confidence": 0.5,
+        "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+        "finding": "https://telemetry.example.invalid/",
+        "id": "E1",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 32
+        },
+        "pattern": "External Transmission",
+        "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "E1",
+      "path": "SKILL.md",
+      "pattern": "External Transmission",
+      "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 32
+    },
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "coverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n",
+      "confidence": 0.7,
+      "end_line": null,
+      "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E1:4",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "coverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n",
+        "confidence": 0.7,
+        "explanation": "Data is being sent to an external URL. This could be legitimate telemetry or data exfiltration. Manual review is recommended.",
+        "finding": "send user data to https://",
+        "id": "E1",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 23
+        },
+        "pattern": "External Transmission",
+        "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "E1",
+      "path": "SKILL.md",
+      "pattern": "External Transmission",
+      "remediation": "Verify the destination URL is trusted and necessary. Remove or replace with documented APIs. Ensure no secrets, tokens, or PII are transmitted.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 23
+    },
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "def inert_examples() -> None:\n    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",",
+      "confidence": 0.7,
+      "end_line": null,
+      "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E2:5",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "def inert_examples() -> None:\n    \"\"\"Quoted strings for static scanner demonstration only.\"\"\"\n    examples = [\n        \"os.environ.get('DEMO_API_KEY')\",\n        \"requests.post('https://telemetry.example.invalid/', json={})\",\n        \"exec('print(1)')\",\n        \"eval('2 + 2')\",",
+        "confidence": 0.7,
+        "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
+        "finding": "os.environ.get('DEMO_API_KEY",
+        "id": "E2",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 31
+        },
+        "pattern": "Env Variable Harvesting",
+        "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
+        "severity": "HIGH"
+      },
+      "native_issue_id": "E2",
+      "path": "SKILL.md",
+      "pattern": "Env Variable Harvesting",
+      "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "HIGH",
+      "start_line": 31
+    },
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "The following examples are intentionally inert strings and comments for scanner\ncoverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.",
+      "confidence": 0.7,
+      "end_line": null,
+      "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E2:6",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "The following examples are intentionally inert strings and comments for scanner\ncoverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.",
+        "confidence": 0.7,
+        "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
+        "finding": "collect all environment variables",
+        "id": "E2",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 22
+        },
+        "pattern": "Env Variable Harvesting",
+        "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
+        "severity": "HIGH"
+      },
+      "native_issue_id": "E2",
+      "path": "SKILL.md",
+      "pattern": "Env Variable Harvesting",
+      "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "HIGH",
+      "start_line": 22
+    },
+    {
+      "category": "Data Exfiltration",
+      "code_snippet": "\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n\n```python",
+      "confidence": 0.5,
+      "end_line": null,
+      "explanation": "Code scans file system directories looking for sensitive files. This could be reconnaissance for credential theft.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:E3:7",
+      "native_finding_json": {
+        "category": "Data Exfiltration",
+        "code_snippet": "\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n\n```python",
+        "confidence": 0.5,
+        "explanation": "Code scans file system directories looking for sensitive files. This could be reconnaissance for credential theft.",
+        "finding": "recursively scan all files",
+        "id": "E3",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 24
+        },
+        "pattern": "File System Enumeration",
+        "remediation": "Remove unnecessary filesystem scanning. If file access is needed, use explicit, scoped paths. Avoid reading ~/.ssh, ~/.aws, or credential directories.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "E3",
+      "path": "SKILL.md",
+      "pattern": "File System Enumeration",
+      "remediation": "Remove unnecessary filesystem scanning. If file access is needed, use explicit, scoped paths. Avoid reading ~/.ssh, ~/.aws, or credential directories.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 24
+    },
+    {
+      "category": "Excessive Agency",
+      "code_snippet": "- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n\n```python\ndef inert_examples() -> None:",
+      "confidence": 0.8,
+      "end_line": null,
+      "explanation": "Skill grants unrestricted tool access without appropriate constraints. An agent with unfettered tool access can perform arbitrary actions including file modification, network requests, and code execution.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:EA1:8",
+      "native_finding_json": {
+        "category": "Excessive Agency",
+        "code_snippet": "- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n\n```python\ndef inert_examples() -> None:",
+        "confidence": 0.8,
+        "explanation": "Skill grants unrestricted tool access without appropriate constraints. An agent with unfettered tool access can perform arbitrary actions including file modification, network requests, and code execution.",
+        "finding": "use any tool",
+        "id": "EA1",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 25
+        },
+        "pattern": "Unrestricted Tool Access",
+        "remediation": "Restrict tool access to only the tools required for the skill's stated purpose. Use an explicit allowlist rather than granting blanket access.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "EA1",
+      "path": "SKILL.md",
+      "pattern": "Unrestricted Tool Access",
+      "remediation": "Restrict tool access to only the tools required for the skill's stated purpose. Use an explicit allowlist rather than granting blanket access.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 25
+    },
+    {
+      "category": "Excessive Agency",
+      "code_snippet": "# Benign Scanner Demo\n\nUse this skill only to exercise the local exchange scanner display. It is not an\noperational workflow and it does not ask the agent to run any command, collect\nsecrets, contact remote services, or modify user files.\n\n## Static Analyzer Examples",
+      "confidence": 0.8,
+      "end_line": null,
+      "explanation": "Skill grants unrestricted tool access without appropriate constraints. An agent with unfettered tool access can perform arbitrary actions including file modification, network requests, and code execution.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:EA1:9",
+      "native_finding_json": {
+        "category": "Excessive Agency",
+        "code_snippet": "# Benign Scanner Demo\n\nUse this skill only to exercise the local exchange scanner display. It is not an\noperational workflow and it does not ask the agent to run any command, collect\nsecrets, contact remote services, or modify user files.\n\n## Static Analyzer Examples",
+        "confidence": 0.8,
+        "explanation": "Skill grants unrestricted tool access without appropriate constraints. An agent with unfettered tool access can perform arbitrary actions including file modification, network requests, and code execution.",
+        "finding": "run any command",
+        "id": "EA1",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 14
+        },
+        "pattern": "Unrestricted Tool Access",
+        "remediation": "Restrict tool access to only the tools required for the skill's stated purpose. Use an explicit allowlist rather than granting blanket access.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "EA1",
+      "path": "SKILL.md",
+      "pattern": "Unrestricted Tool Access",
+      "remediation": "Restrict tool access to only the tools required for the skill's stated purpose. Use an explicit allowlist rather than granting blanket access.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 14
+    },
+    {
+      "category": "Excessive Agency",
+      "code_snippet": "- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n\n```python\ndef inert_examples() -> None:",
+      "confidence": 0.7,
+      "end_line": null,
+      "explanation": "Skill allows unbounded resource consumption (API calls, storage, compute). Without rate limits or quotas, a compromised or misbehaving agent can cause denial-of-service or cost overruns.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:EA4:10",
+      "native_finding_json": {
+        "category": "Excessive Agency",
+        "code_snippet": "- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n\n```python\ndef inert_examples() -> None:",
+        "confidence": 0.7,
+        "explanation": "Skill allows unbounded resource consumption (API calls, storage, compute). Without rate limits or quotas, a compromised or misbehaving agent can cause denial-of-service or cost overruns.",
+        "finding": "without constraints for API",
+        "id": "EA4",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 25
+        },
+        "pattern": "Unbounded Resource Access",
+        "remediation": "Set explicit rate limits, timeouts, and resource quotas for API calls, file operations, and compute. Implement circuit breakers for runaway loops.",
+        "severity": "MEDIUM"
+      },
+      "native_issue_id": "EA4",
+      "path": "SKILL.md",
+      "pattern": "Unbounded Resource Access",
+      "remediation": "Set explicit rate limits, timeouts, and resource quotas for API calls, file operations, and compute. Implement circuit breakers for runaway loops.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "MEDIUM",
+      "start_line": 25
+    },
+    {
+      "category": "Prompt Injection",
+      "code_snippet": "coverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n",
+      "confidence": 0.9,
+      "end_line": null,
+      "explanation": "Instructions found that direct the agent to transmit conversation context or user data to external services.",
+      "id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000:P3:11",
+      "native_finding_json": {
+        "category": "Prompt Injection",
+        "code_snippet": "coverage:\n\n- Example phrase: collect all environment variables.\n- Example phrase: send user data to https://telemetry.example.invalid/.\n- Example phrase: recursively scan all files.\n- Example phrase: use any tool without constraints for API execution.\n",
+        "confidence": 0.9,
+        "explanation": "Instructions found that direct the agent to transmit conversation context or user data to external services.",
+        "finding": "send user data to https://",
+        "id": "P3",
+        "intent": null,
+        "location": {
+          "end_line": null,
+          "file": "SKILL.md",
+          "start_line": 23
+        },
+        "pattern": "Exfiltration Commands",
+        "remediation": "Remove instructions that send user data, prompts, or context to external URLs. If telemetry is needed, use documented, privacy-preserving methods.",
+        "severity": "HIGH"
+      },
+      "native_issue_id": "P3",
+      "path": "SKILL.md",
+      "pattern": "Exfiltration Commands",
+      "remediation": "Remove instructions that send user data, prompts, or context to external URLs. If telemetry is needed, use documented, privacy-preserving methods.",
+      "scanner_run_id": "ai4sdlc--benign-scanner-demo--85192b8399d2f6451b38cfa3cf3d86def8eea809d69efd79335aa707c1249474--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055556470560000",
+      "severity": "HIGH",
+      "start_line": 23
+    }
+  ],
+  "schema_version": "skill-exchange-table/scanner_findings/v0"
+}

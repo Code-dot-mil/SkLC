@@ -1,0 +1,57 @@
+{
+  "boe_path": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/boe/ai4sdlc/python-secure-code-review/9352edab7e0961b2fbfacf2d9cf66d1428a1b71461ec793bf9bd45bbf5535143/ai4sdlc--python-secure-code-review--9352edab7e0961b2fbfacf2d9cf66d1428a1b71461ec793bf9bd45bbf5535143--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0/boe.json",
+  "category": "security",
+  "confidence_flags": [
+    "Low confidence"
+  ],
+  "content_hash": "9352edab7e0961b2fbfacf2d9cf66d1428a1b71461ec793bf9bd45bbf5535143",
+  "description": "Use when reviewing Python code changes for security issues.",
+  "detail_path": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/skills/ai4sdlc--python-secure-code-review.json",
+  "display_id": "ai4sdlc/python-secure-code-review",
+  "download_path": "/downloads/ai4sdlc--python-secure-code-review.zip",
+  "first_observed": "2026-06-19T15:47:47-05:00",
+  "last_scanned": "2026-06-20T00:55:58.402307+00:00",
+  "last_updated": "2026-06-19T15:47:47-05:00",
+  "latest_source_commit_sha": "cb26a6cb0e8bae08c13d400b2135b317b5ae4d1f",
+  "metadata_flags": [],
+  "name": "python-secure-code-review",
+  "namespace": "ai4sdlc",
+  "owner": "slunsford",
+  "owner_missing": false,
+  "recommendation": "SAFE",
+  "recommendation_label": "Safe to use",
+  "risk": "Low",
+  "risk_reason": "No medium, high, or critical findings detected.",
+  "scan_mode": "static-only",
+  "scan_modes": [
+    "static-only"
+  ],
+  "scanner_provenance": {
+    "model": null,
+    "name": "skillspector",
+    "provider": null,
+    "scan_mode": "static-only",
+    "version": "2.1.5"
+  },
+  "scanner_run_ids": [
+    "ai4sdlc--python-secure-code-review--9352edab7e0961b2fbfacf2d9cf66d1428a1b71461ec793bf9bd45bbf5535143--skillspector-v2.1.5--static-only--no-llm--9a705f32dd4049d0--20260620T0055584023070000"
+  ],
+  "skill_files": [
+    {
+      "path": "SKILL.md",
+      "size_bytes": 448
+    }
+  ],
+  "skill_id": "python-secure-code-review",
+  "skill_md_content": "---\nname: python-secure-code-review\ndescription: Use when reviewing Python code changes for security issues.\nmetadata:\n  ai4sdlc.namespace: ai4sdlc\n  ai4sdlc.category: security\n  ai4sdlc.tags: code-review,python,security\n  ai4sdlc.owner: slunsford\n---\n\n# Python Secure Code Review\n\nUse this skill when reviewing Python code changes for security issues. Focus on data-flow risks, trust boundaries, dependency behavior, and evidence-backed findings.\n",
+  "source_path": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/skills/ai4sdlc/python-secure-code-review",
+  "source_url": "https://example.invalid/skill-exchange-site/tree/main//apps/gitlab/dod-ai4sdlc/skill-exchange-site/skills/ai4sdlc/python-secure-code-review",
+  "tags": [
+    "code-review",
+    "python",
+    "security"
+  ],
+  "upstream_url": null,
+  "warnings": [],
+  "zip_path": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/zips/ai4sdlc--python-secure-code-review.zip"
+}

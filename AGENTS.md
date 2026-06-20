@@ -14,6 +14,7 @@ These instructions apply to this repository.
 
 - Keep environment-specific settings configurable through environment variables or GitLab CI variables.
 - Do not add organization-specific or provider-specific environment variable names. Prefer generic names such as `SKILL_EXCHANGE_LLM_*`, image registry variables, and runner tag variables.
+- Do not add silent configuration or credential fallbacks between variables with different responsibilities. If fallback behavior is required, make the precedence explicit in code, document it, test it, and fail closed when no valid value is configured.
 - Do not commit secrets, tokens, endpoint credentials, or generated bot credentials.
 - Docker image references must remain configurable. Use the existing image registry, repository, tag, and full-image override variables instead of hardcoding a network-specific registry.
 - GitLab Pages runner routing must remain configurable through `PAGES_RUNNER_TAG`.

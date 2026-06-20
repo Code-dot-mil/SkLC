@@ -176,6 +176,7 @@ def test_gitlab_ci_routes_jobs_by_expected_changes():
     ]
     assert config["pages"]["tags"] == ["$PAGES_RUNNER_TAG"]
     assert config["pages"]["rules"] == [
+        {"if": '$CI_PIPELINE_SOURCE == "schedule"'},
         {"if": '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'}
     ]
     for job_name in ["lint:python", "lint:site", "test:python", "test:site", "audit:python", "audit:site"]:

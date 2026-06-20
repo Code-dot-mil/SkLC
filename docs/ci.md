@@ -7,14 +7,14 @@ The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not impo
 - `lint`, `test`, and `audit` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`. It validates changed skill packages, runs SkillSpector, writes reviewer artifacts, and can post a merge request comment when comment variables are configured.
 - `publish:exchange` runs only for scheduled pipelines. It generates official exchange evidence under `.exchange/generated/` and can commit those generated files back when bot push variables are configured.
-- `pages` runs on default-branch push pipelines and publishes the built static site as GitLab Pages artifacts.
+- `pages` runs on default-branch push pipelines and scheduled pipelines. On schedules, it deploys from the generated exchange artifacts produced by `publish:exchange` in the same pipeline.
 - By default, non-Pages jobs use the runner tag in `SKILL_EXCHANGE_RUNNER_TAG`. For MITRE non-CUI shared runners this defaults to `mitre-no-cui`.
 - By default, `pages` uses the runner tag in `PAGES_RUNNER_TAG`. For MITRE GitLab Pages this defaults to `pages-no-cui`.
 - By default, Python jobs use the official Docker Hub Python image and install `uv` with `PYTHON_BOOTSTRAP_COMMAND`. Override the image variables when the target environment requires an internal registry or a prebuilt image.
 
 ## Required Schedule
 
-Create a GitLab pipeline schedule for the default branch using the cadence required by the target environment, such as nightly. The schedule should run with `CI_PIPELINE_SOURCE=schedule`, which triggers `publish:exchange`.
+Create a GitLab pipeline schedule for the default branch using the cadence required by the target environment, such as nightly. The schedule should run with `CI_PIPELINE_SOURCE=schedule`, which triggers `publish:exchange` followed by `pages`.
 
 For official BOE publication, run the schedule as the exchange bot or provide bot credentials through masked CI variables.
 

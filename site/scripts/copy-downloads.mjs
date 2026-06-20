@@ -36,7 +36,9 @@ if (existsSync(artifactsTable)) {
 }
 
 function resolveArtifactSource(pathValue) {
-  const source = isAbsolute(pathValue) ? resolve(pathValue) : resolve(repositoryRoot, pathValue);
+  const source = isAbsolute(pathValue)
+    ? rebaseGeneratedScannerPath(pathValue)
+    : resolve(repositoryRoot, pathValue);
   assertInside(source, scannerRunsRoot, "artifact source is outside .exchange/generated/scanner-runs");
   if (existsSync(source) && existsSync(scannerRunsRoot)) {
     const realSource = realpathSync(source);
@@ -44,6 +46,16 @@ function resolveArtifactSource(pathValue) {
     assertInside(realSource, realScannerRunsRoot, "artifact source is outside .exchange/generated/scanner-runs");
   }
   return source;
+}
+
+function rebaseGeneratedScannerPath(pathValue) {
+  const source = resolve(pathValue);
+  const marker = `${sep}.exchange${sep}generated${sep}scanner-runs${sep}`;
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex === -1) {
+    return source;
+  }
+  return resolve(scannerRunsRoot, source.slice(markerIndex + marker.length));
 }
 
 function resolveDownloadDestination(downloadPath) {

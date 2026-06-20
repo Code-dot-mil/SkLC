@@ -183,6 +183,7 @@ pages:
   tags:
     - "$PAGES_RUNNER_TAG"
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
   script:
     - npm --prefix site run build

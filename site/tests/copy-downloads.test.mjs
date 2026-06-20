@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,6 +59,36 @@ test("copy-downloads rejects destinations outside public downloads", () => {
 
   assert.notEqual(completed.status, 0);
   assert.match(completed.stderr, /outside public\/downloads/);
+});
+
+test("copy-downloads rebases generated artifact paths from another checkout", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-copy-downloads-"));
+  const siteDir = resolve(root, "site");
+  const scannerRun = resolve(root, ".exchange", "generated", "scanner-runs", "run-1");
+  const generatedTables = resolve(root, ".exchange", "generated", "tables");
+  mkdirSync(siteDir, { recursive: true });
+  mkdirSync(scannerRun, { recursive: true });
+  mkdirSync(generatedTables, { recursive: true });
+  writeFileSync(resolve(scannerRun, "skillspector.json"), "{\"risk\":\"low\"}\n");
+  writeFileSync(
+    resolve(generatedTables, "scanner_artifacts.json"),
+    JSON.stringify({
+      rows: [
+        {
+          path: "/previous/checkout/.exchange/generated/scanner-runs/run-1/skillspector.json",
+          download_path: "/downloads/scanner-runs/run-1/skillspector.json",
+        },
+      ],
+    }),
+  );
+
+  const completed = runCopyDownloads(siteDir);
+
+  assert.equal(completed.status, 0, completed.stderr);
+  assert.equal(
+    readFileSync(resolve(siteDir, "public", "downloads", "scanner-runs", "run-1", "skillspector.json"), "utf-8"),
+    "{\"risk\":\"low\"}\n",
+  );
 });
 
 function runCopyDownloads(siteDir) {

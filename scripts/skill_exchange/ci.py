@@ -219,9 +219,11 @@ def review_changed_skills(
             / "report.json"
         )
         scanner_error = None
+        scanner_findings: list[dict[str, str]] = []
         try:
             report = run_skillspector(skill.path, report_path, no_llm=scan_mode == "static-only")
             assessment = assess_report(report)
+            scanner_findings = scanner_findings_from_report(report)
         except Exception as exc:
             scanner_errors += 1
             scanner_error = str(exc)
@@ -240,6 +242,7 @@ def review_changed_skills(
                 "scan_mode": scan_mode,
                 "report": str(report_path),
                 "scanner_error": scanner_error,
+                "scanner_findings": scanner_findings,
             }
         )
 
@@ -272,7 +275,38 @@ def render_review_comment(summary_rows: list[dict[str, Any]], validation_rows: l
         flags = ", ".join(row["confidence_flags"]) if row["confidence_flags"] else "-"
         lines.append(f"| `{row['skill']}` | {row['risk']} | {flags} | {row['scan_mode']} | {row['reason']} |")
 
-    lines.extend(["", "## Validation"])
+    lines.extend(["", "## Scanner findings"])
+    if not summary_rows:
+        lines.append("- No changed skill packages were detected.")
+    for row in summary_rows:
+        lines.append(f"### `{row['skill']}`")
+        if row.get("scanner_error"):
+            lines.append(f"- Scanner failed: {row['scanner_error']}")
+            continue
+
+        findings = row.get("scanner_findings") or []
+        if not findings:
+            lines.append("- No scanner findings were reported.")
+            continue
+
+        for index, finding in enumerate(findings, start=1):
+            title = scanner_finding_title(finding)
+            lines.append(f"{index}. **{finding['severity']}** `{finding['id']}` - {title}")
+            if finding["location"]:
+                lines.append(f"   - Location: `{finding['location']}`")
+            if finding["confidence"]:
+                lines.append(f"   - Confidence: {finding['confidence']}")
+            if finding["finding"]:
+                lines.append(f"   - Finding: {finding['finding']}")
+            if finding["explanation"]:
+                lines.append(f"   - Explanation: {finding['explanation']}")
+            if finding["remediation"]:
+                lines.append(f"   - Remediation: {finding['remediation']}")
+            if finding["code_snippet"]:
+                lines.append("   - Snippet:")
+                lines.extend(indented_code_block(finding["code_snippet"]))
+
+    lines.extend(["", "## Exchange validation"])
     if not validation_rows:
         lines.append("- No changed skill packages were detected.")
     for row in validation_rows:
@@ -281,6 +315,64 @@ def render_review_comment(summary_rows: list[dict[str, Any]], validation_rows: l
         flags = ", ".join(row["metadata_flags"]) if row["metadata_flags"] else "none"
         lines.append(f"- `{row['skill']}` errors: {errors}; warnings: {warnings}; metadata flags: {flags}")
     return "\n".join(lines) + "\n"
+
+
+def scanner_findings_from_report(report: dict[str, Any]) -> list[dict[str, str]]:
+    issues = report.get("issues")
+    if not isinstance(issues, list):
+        return []
+
+    findings: list[dict[str, str]] = []
+    for issue in issues:
+        if not isinstance(issue, dict):
+            continue
+        location = issue.get("location") if isinstance(issue.get("location"), dict) else {}
+        findings.append(
+            {
+                "id": one_line(issue.get("id")) or "unknown",
+                "severity": (one_line(issue.get("severity")) or "UNKNOWN").upper(),
+                "category": one_line(issue.get("category")),
+                "pattern": one_line(issue.get("pattern")),
+                "location": scanner_issue_location(location),
+                "confidence": one_line(issue.get("confidence")),
+                "finding": one_line(issue.get("finding")),
+                "explanation": one_line(issue.get("explanation")),
+                "remediation": one_line(issue.get("remediation")),
+                "code_snippet": str(issue.get("code_snippet") or "").strip(),
+            }
+        )
+    return findings
+
+
+def scanner_finding_title(finding: dict[str, str]) -> str:
+    parts = [finding["category"], finding["pattern"]]
+    return " / ".join(part for part in parts if part) or "Untitled finding"
+
+
+def scanner_issue_location(location: dict[str, Any]) -> str:
+    file = one_line(location.get("file"))
+    start_line = one_line(location.get("start_line"))
+    end_line = one_line(location.get("end_line"))
+    if not file:
+        return ""
+    if start_line and end_line and end_line != start_line:
+        return f"{file}:{start_line}-{end_line}"
+    if start_line:
+        return f"{file}:{start_line}"
+    return file
+
+
+def indented_code_block(value: str) -> list[str]:
+    lines = ["     ```text"]
+    lines.extend(f"     {line}" for line in value.replace("```", "'''").splitlines())
+    lines.append("     ```")
+    return lines
+
+
+def one_line(value: Any) -> str:
+    if value is None:
+        return ""
+    return " ".join(str(value).split())
 
 
 def post_review_comment(body: str) -> str:

@@ -1,0 +1,28 @@
+{
+  "skill": {
+    "name": "code-change-description",
+    "source": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/skills/ai4sdlc/code-change-description",
+    "scanned_at": "2026-06-20T03:04:02.341361+00:00"
+  },
+  "risk_assessment": {
+    "score": 0,
+    "severity": "LOW",
+    "recommendation": "SAFE"
+  },
+  "components": [
+    {
+      "path": "SKILL.md",
+      "type": "markdown",
+      "lines": 161,
+      "executable": false,
+      "size_bytes": 6094
+    }
+  ],
+  "issues": [],
+  "metadata": {
+    "has_executable_scripts": false,
+    "skillspector_version": "2.1.5",
+    "llm_requested": false,
+    "llm_available": true
+  }
+}

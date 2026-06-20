@@ -27,6 +27,7 @@ variables:
   NPM_CACHE_DIR: "$CI_PROJECT_DIR/.npm"
   PYTHON_AUDIT_COMMAND: "uv run --with pip-audit pip-audit --progress-spinner off"
   NPM_AUDIT_LEVEL: "high"
+  SKILL_EXCHANGE_RUNNER_TAG: "mitre-no-cui"
   PAGES_RUNNER_TAG: "pages-no-cui"
   SKILLSPECTOR_INSTALL_COMMAND: ""
   SKILL_EXCHANGE_REVIEW_SCAN_MODE: "static-only"
@@ -64,6 +65,8 @@ variables:
 
 .python_job:
   image: "$PYTHON_IMAGE"
+  tags:
+    - "$SKILL_EXCHANGE_RUNNER_TAG"
   before_script:
     - uv --version
     - uv sync --extra test
@@ -74,6 +77,8 @@ variables:
 
 .node_job:
   image: "$NODE_IMAGE"
+  tags:
+    - "$SKILL_EXCHANGE_RUNNER_TAG"
   before_script:
     - node --version
     - npm --version

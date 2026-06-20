@@ -8,6 +8,7 @@ The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not impo
 - `review:skills` runs only for merge requests that change `skills/**/*`. It validates changed skill packages, runs SkillSpector, writes reviewer artifacts, and can post a merge request comment when comment variables are configured.
 - `publish:exchange` runs only for scheduled pipelines. It generates official exchange evidence under `.exchange/generated/` and can commit those generated files back when bot push variables are configured.
 - `pages` runs on default-branch push pipelines and publishes the built static site as GitLab Pages artifacts.
+- By default, non-Pages jobs use the runner tag in `SKILL_EXCHANGE_RUNNER_TAG`. For MITRE non-CUI shared runners this defaults to `mitre-no-cui`.
 - By default, `pages` uses the runner tag in `PAGES_RUNNER_TAG`. For MITRE GitLab Pages this defaults to `pages-no-cui`.
 
 ## Required Schedule
@@ -22,6 +23,7 @@ All environment-specific values are CI variables:
 
 - `PYTHON_IMAGE_REGISTRY`, `PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and `PYTHON_IMAGE` select the Python runner image.
 - `NODE_IMAGE_REGISTRY`, `NODE_IMAGE_REPOSITORY`, `NODE_IMAGE_TAG`, and `NODE_IMAGE` select the Node runner image.
+- `SKILL_EXCHANGE_RUNNER_TAG` selects the runner tag for lint, test, audit, review, and publish jobs.
 - `PAGES_RUNNER_TAG` selects the GitLab Pages runner tag.
 - `SKILLSPECTOR_INSTALL_COMMAND` installs SkillSpector when the runner image does not already include it.
 - `SKILLSPECTOR_BIN` points to a SkillSpector binary when it is not on `PATH`.

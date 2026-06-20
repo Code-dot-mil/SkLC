@@ -76,7 +76,7 @@ See [docs/ci.md](docs/ci.md) for the full configuration reference.
 Configuration is part of the portability model. Do not hardcode network-specific values into the repository. Use CI variables or environment variables for:
 
 - Python and Node image registry, repository, tag, or full image override.
-- GitLab Pages runner tag.
+- GitLab runner tags for CI jobs and Pages deployment.
 - SkillSpector binary path or installation command.
 - LLM-assisted scan provider endpoint, model, and API key.
 - Merge request comment token behavior.

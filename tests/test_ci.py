@@ -107,7 +107,10 @@ def test_gitlab_ci_routes_jobs_by_expected_changes():
     assert config["variables"]["NODE_IMAGE_REGISTRY"] == "docker.io"
     assert config["variables"]["PYTHON_IMAGE"] == "$PYTHON_IMAGE_REGISTRY/$PYTHON_IMAGE_REPOSITORY:$PYTHON_IMAGE_TAG"
     assert config["variables"]["NODE_IMAGE"] == "$NODE_IMAGE_REGISTRY/$NODE_IMAGE_REPOSITORY:$NODE_IMAGE_TAG"
+    assert config["variables"]["SKILL_EXCHANGE_RUNNER_TAG"] == "mitre-no-cui"
     assert config["variables"]["PAGES_RUNNER_TAG"] == "pages-no-cui"
+    assert config[".python_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
+    assert config[".node_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
     assert config["review:skills"]["rules"] == [
         {"if": '$CI_PIPELINE_SOURCE == "merge_request_event"', "changes": ["skills/**/*"]}
     ]

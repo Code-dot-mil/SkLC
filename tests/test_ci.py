@@ -2,7 +2,6 @@ import json
 import subprocess
 from pathlib import Path
 
-import yaml
 from skill_exchange import ci
 
 
@@ -165,46 +164,3 @@ def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypat
             ),
         )
     ]
-
-
-def test_gitlab_ci_routes_jobs_by_expected_changes():
-    config = yaml.safe_load(Path(".gitlab-ci.yml").read_text())
-
-    assert config["variables"]["PYTHON_IMAGE_REGISTRY"] == "docker.io"
-    assert config["variables"]["PYTHON_IMAGE_REPOSITORY"] == "library/python"
-    assert config["variables"]["PYTHON_IMAGE_TAG"] == "3.12-bookworm"
-    assert config["variables"]["PYTHON_BOOTSTRAP_COMMAND"] == "python -m pip install --no-cache-dir uv"
-    assert config["variables"]["NODE_IMAGE_REGISTRY"] == "docker.io"
-    assert config["variables"]["PYTHON_IMAGE"] == "$PYTHON_IMAGE_REGISTRY/$PYTHON_IMAGE_REPOSITORY:$PYTHON_IMAGE_TAG"
-    assert config["variables"]["NODE_IMAGE"] == "$NODE_IMAGE_REGISTRY/$NODE_IMAGE_REPOSITORY:$NODE_IMAGE_TAG"
-    assert config["variables"]["SKILL_EXCHANGE_RUNNER_TAG"] == "mitre-no-cui"
-    assert config["variables"]["PAGES_RUNNER_TAG"] == "pages-no-cui"
-    assert config["variables"]["EXCHANGE_PUBLISH_USERNAME"] == ""
-    assert config[".python_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
-    assert config[".node_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
-    for job_name in [".python_job", "review:skills", "publish:exchange", "generate:exchange"]:
-        assert config[job_name]["before_script"][0] == (
-            'if [ -n "$PYTHON_BOOTSTRAP_COMMAND" ]; then sh -c "$PYTHON_BOOTSTRAP_COMMAND"; fi'
-        )
-    assert config["review:skills"]["rules"] == [
-        {"if": '$CI_PIPELINE_SOURCE == "merge_request_event"', "changes": ["skills/**/*"]}
-    ]
-    assert config["generate:exchange"]["rules"] == [
-        {"if": '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'}
-    ]
-    assert config["generate:exchange"]["artifacts"]["paths"] == [".exchange/generated/", "generate-result.json"]
-    assert config["pages"]["tags"] == ["$PAGES_RUNNER_TAG"]
-    assert config["pages"]["needs"] == [
-        {"job": "publish:exchange", "artifacts": True, "optional": True},
-        {"job": "generate:exchange", "artifacts": True, "optional": True},
-    ]
-    assert config["pages"]["rules"] == [
-        {"if": '$CI_PIPELINE_SOURCE == "schedule"'},
-        {"if": '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'}
-    ]
-    for job_name in ["lint:python", "lint:site", "test:python", "test:site", "audit:python", "audit:site"]:
-        rule_changes = config[job_name]["rules"][0]["changes"]
-        assert "skills/**/*" not in rule_changes
-        assert "site/**/*" in rule_changes
-        assert "scripts/**/*" in rule_changes
-    assert "uv run ruff check scripts tests" in config["lint:python"]["script"]

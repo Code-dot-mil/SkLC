@@ -1,4 +1,5 @@
 import json
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -94,6 +95,67 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert len(scanner_runs["rows"]) == 1
     assert len(index["skills"][0]["scanner_run_ids"]) == 1
     assert index["skills"][0]["scanner_run_ids"][0] == scanner_runs["rows"][0]["id"]
+
+
+def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monkeypatch, tmp_path: Path):
+    generated = tmp_path / "generated"
+    calls = 0
+
+    def fake_run_skillspector(skill_path, output_path, *, no_llm):
+        nonlocal calls
+        calls += 1
+        report = _fake_clean_report(llm_requested=not no_llm)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report))
+        return report
+
+    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "v2.1.5")
+    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
+
+    first = build_exchange(
+        skills_root=Path("tests/fixtures/skills"),
+        exchange_dir=Path(".exchange"),
+        generated_dir=generated,
+        scan_modes=("static-only",),
+    )
+    assert first["reused_scans"] == 0
+    assert calls == 1
+
+    boe_only = tmp_path / "boe-only-generated"
+    shutil.copytree(generated / "boe", boe_only / "boe")
+    shutil.rmtree(generated)
+
+    second_calls = 0
+
+    def fail_if_scanner_runs(skill_path, output_path, *, no_llm):
+        nonlocal second_calls
+        second_calls += 1
+        raise AssertionError("matching BOE should prevent another SkillSpector scan")
+
+    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
+    monkeypatch.setattr(exchange_builder, "run_skillspector", fail_if_scanner_runs)
+
+    second = build_exchange(
+        skills_root=Path("tests/fixtures/skills"),
+        exchange_dir=Path(".exchange"),
+        generated_dir=boe_only,
+        scan_modes=("static-only",),
+    )
+
+    assert second["reused_scans"] == 1
+    assert second_calls == 0
+    index = json.loads((boe_only / "index.json").read_text())
+    scanner_runs = json.loads((boe_only / "tables" / "scanner_runs.json").read_text())
+    scanner_artifacts = json.loads((boe_only / "tables" / "scanner_artifacts.json").read_text())
+    assert index["skills"][0]["display_id"] == "ai4sdlc/sample-skill"
+    assert index["skills"][0]["scanner_run_ids"] == [scanner_runs["rows"][0]["id"]]
+    assert Path(index["skills"][0]["boe_path"]).is_relative_to(boe_only / "boe")
+    assert Path(scanner_runs["rows"][0]["native_report_path"]).exists()
+    assert {row["artifact_kind"] for row in scanner_artifacts["rows"]} == {
+        "boe",
+        "native_report",
+        "summary",
+    }
 
 
 def test_build_exchange_blocks_invalid_required_metadata(monkeypatch, tmp_path: Path):

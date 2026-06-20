@@ -25,6 +25,7 @@ These instructions apply to this repository.
 - Skill review should run only for merge requests that change `skills/**/*`.
 - Scheduled publication produces official exchange evidence and may commit BOE bundles only when bot variables are configured.
 - Deploy jobs consume generated artifacts produced by Python jobs; Node jobs must not generate exchange data.
+- Exact scan cache key matches must be reused from tracked BOE bundles. Do not depend on GitLab runner caches as the authoritative scanner-output cache.
 - The GitLab Pages job must be named `pages` and must publish a top-level `public/` artifact.
 
 ## Local Development

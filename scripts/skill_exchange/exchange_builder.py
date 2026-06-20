@@ -78,6 +78,42 @@ def build_exchange(
                 skill_scanner_runs.append(cached_scanner_run)
                 continue
 
+            cached_boe = read_cached_boe(generated_dir=generated_dir, skill=skill, scan_key=scan_key)
+            if cached_boe:
+                report = cached_boe["report"]
+                assessment = assess_report(report)
+                last_scanned = cached_boe["scan_timestamp"]
+                run_id = make_run_id(scan_key, last_scanned)
+                run_artifacts = write_run_artifacts(
+                    generated_dir=generated_dir,
+                    run_id=run_id,
+                    report_path=cached_boe["report_path"],
+                    boe_path=cached_boe["boe_path"],
+                    assessment=assessment,
+                )
+                scanner_run = scanner_run_row(
+                    skill=skill,
+                    report=report,
+                    assessment=assessment,
+                    run_id=run_id,
+                    scan_key=scan_key,
+                    boe_path=run_artifacts["boe_path"],
+                    native_report_path=run_artifacts["native_report_path"],
+                    summary_path=run_artifacts["summary_path"],
+                    last_scanned=last_scanned,
+                    scanner_version=scanner_version,
+                    scanner_config=scanner_config,
+                    status="completed",
+                    canonical_boe_path=cached_boe["boe_path"],
+                )
+                reused_scans += 1
+                skill_scanner_runs.append(scanner_run)
+                scanner_run_rows.append(scanner_run)
+                cached_scanner_runs[scan_key] = scanner_run
+                scanner_artifact_rows.extend(scanner_artifact_rows_for(scanner_run))
+                scanner_finding_rows.extend(scanner_finding_rows_for(scanner_run["id"], report))
+                continue
+
             report_source = (
                 generated_dir
                 / "tmp"
@@ -417,6 +453,58 @@ def read_cached_report(scanner_run: dict[str, Any] | None) -> dict[str, Any] | N
         return None
     report = json.loads(path.read_text())
     return report if isinstance(report, dict) else None
+
+
+def read_cached_boe(*, generated_dir: Path, skill, scan_key: str) -> dict[str, Any] | None:
+    for candidate_key in equivalent_scan_keys(scan_key):
+        boe_path = boe_path_for(generated_dir, skill, candidate_key)
+        if boe_path.exists():
+            return read_boe_bundle(boe_path=boe_path, scan_key=candidate_key)
+    return None
+
+
+def equivalent_scan_keys(scan_key: str) -> list[str]:
+    keys = [scan_key]
+    prefix, marker, suffix = scan_key.partition("--skillspector-")
+    if not marker:
+        return keys
+    scanner_version, separator, tail = suffix.partition("--")
+    if not separator:
+        return keys
+    if len(scanner_version) > 1 and scanner_version.startswith("v") and scanner_version[1].isdigit():
+        alternate_version = scanner_version[1:]
+    else:
+        alternate_version = f"v{scanner_version}"
+    alternate_key = f"{prefix}{marker}{alternate_version}{separator}{tail}"
+    if alternate_key not in keys:
+        keys.append(alternate_key)
+    return keys
+
+
+def read_boe_bundle(*, boe_path: Path, scan_key: str) -> dict[str, Any] | None:
+    boe = json.loads(boe_path.read_text())
+    if not isinstance(boe, dict):
+        return None
+    if boe.get("schema_version") != "skill-exchange-boe/v0":
+        return None
+    if boe.get("scan_cache_key") != scan_key:
+        return None
+    scan_timestamp = boe.get("scan_timestamp") or boe.get("generated_at")
+    if not scan_timestamp:
+        return None
+    report_path = boe_path.parent / "skillspector.json"
+    if not report_path.exists():
+        return None
+    report = json.loads(report_path.read_text())
+    if not isinstance(report, dict):
+        return None
+    return {
+        "boe": boe,
+        "boe_path": boe_path,
+        "report": report,
+        "report_path": report_path,
+        "scan_timestamp": str(scan_timestamp),
+    }
 
 
 def write_run_artifacts(

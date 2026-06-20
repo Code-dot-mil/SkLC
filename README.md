@@ -26,18 +26,37 @@ The exchange has three main layers:
 
 Tracked generated evidence lives under `.exchange/generated/boe/`. Other generated outputs under `.exchange/generated/` are deploy-time site inputs and should not be committed.
 
+BOE bundles are also the durable scanner cache. If a later publication computes the same skill identity, content hash, SkillSpector version, scan mode, and scanner configuration, the builder reuses the matching BOE bundle and regenerates derived site data without running the scanner again.
+
 ## Repository Map
 
 - `.exchange/` stores exchange policy, display configuration, tags, categories, and generated catalog output.
 - `.gitlab-ci.yml` defines the standalone GitLab CI pipeline.
+- `CI.md` documents CI variables, schedules, review behavior, and deploy behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
 - `GOVERNANCE.md` describes exchange roles, review flow, generated-output boundaries, and bot publication rules.
-- `docs/ci.md` documents CI variables, schedules, review behavior, and deploy behavior.
-- `docs/local-mvp.md` documents local publication commands.
 - `scripts/skill_exchange/` contains Python exchange tooling and CI entry points.
 - `site/` contains the Astro static site.
 - `skills/` contains skill packages included in the exchange.
 - `tests/` contains Python tests for exchange tooling and CI behavior.
+
+## Developer Setup
+
+Install the local toolchain:
+
+- Python 3.12 with `uv`.
+- Node.js 22 with `npm`.
+- `just` for cross-stack commands.
+- SkillSpector on `PATH`, or `SKILLSPECTOR_BIN` pointing to a SkillSpector binary, when running local generation or deploy-equivalent builds.
+
+Install dependencies:
+
+```sh
+uv sync --extra test
+npm ci --prefix site
+```
+
+SkillSpector is not required for Python lint, Python tests, site lint, or site tests. It is required for `just generate`, `just build`, and CI publication jobs. Matching BOE evidence avoids scan execution, but the publication environment still needs a configured SkillSpector binary so the cache key can be computed consistently.
 
 ## Local Workflow
 
@@ -59,9 +78,18 @@ Build the static site from freshly generated local data:
 just build
 ```
 
+Pass a scan mode when needed:
+
+```sh
+just generate llm-assisted
+just build llm-assisted
+```
+
+LLM-assisted scans require the generic `SKILL_EXCHANGE_LLM_*` environment variables described in [CI.md](CI.md).
+
 Local `just` generation writes to `.exchange/local-generated/` so developers do not accidentally rewrite tracked CI-produced BOE. Use `uv` directly for Python-only checks and `npm --prefix site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
 
-Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details. See [docs/local-mvp.md](docs/local-mvp.md) for local scan-mode details and generated output descriptions.
+Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details.
 
 ## CI Workflow
 
@@ -73,7 +101,7 @@ The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`
 - `generate:exchange` runs on default-branch push pipelines and produces deploy-time generated site artifacts.
 - `pages` runs on default-branch push pipelines and scheduled publication pipelines, consuming generated artifacts and publishing a top-level `public/` artifact for GitLab Pages.
 
-See [docs/ci.md](docs/ci.md) for the full configuration reference.
+See [CI.md](CI.md) for the full configuration reference.
 
 ## Configuration
 

@@ -37,6 +37,8 @@ The exchange bot is the only actor that may produce or commit official generated
 
 Generated output belongs under `.exchange/generated/`. BOE bundles under `.exchange/generated/boe/` are the durable generated evidence committed to the repository. They may include BOE records, exact native scanner output, scanner summaries, redacted scanner configuration, and supporting hashes.
 
+BOE bundles are also the authoritative scan reuse source. When a later publication computes the same skill content hash, scanner version, scan mode, and scanner configuration, it should reuse the matching BOE bundle instead of re-running the scanner.
+
 Generated index files, scanner tables, public scanner-run mirrors, generated skill records, and runtime skill zip artifacts are derived deploy artifacts. They should be generated in CI or locally and should not be committed.
 
 Generated-output merge requests from the exchange bot may be exempt from human review only when the diff is limited to BOE bundles under `.exchange/generated/boe/`.

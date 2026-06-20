@@ -9,15 +9,20 @@ The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not impo
 - `publish:exchange` runs only for scheduled pipelines. It generates the full `.exchange/generated/` tree for deploy artifacts and can commit BOE bundles back when bot push variables are configured.
 - `generate:exchange` runs on default-branch push pipelines. It generates deploy-time `.exchange/generated/` artifacts without committing them.
 - `pages` runs on default-branch push pipelines and scheduled pipelines. It deploys from generated exchange artifacts produced by `generate:exchange` or `publish:exchange` in the same pipeline.
-- By default, non-Pages jobs use the runner tag in `SKILL_EXCHANGE_RUNNER_TAG`. For MITRE non-CUI shared runners this defaults to `mitre-no-cui`.
-- By default, `pages` uses the runner tag in `PAGES_RUNNER_TAG`. For MITRE GitLab Pages this defaults to `pages-no-cui`.
+- Python publication jobs reuse tracked BOE bundles when the computed scan cache key already exists. Runner caches are used for dependencies only, not as the source of scanner history.
+- Non-Pages jobs use the runner tag in `SKILL_EXCHANGE_RUNNER_TAG`.
+- `pages` uses the runner tag in `PAGES_RUNNER_TAG`.
 - By default, Python jobs use the official Docker Hub Python image and install `uv` with `PYTHON_BOOTSTRAP_COMMAND`. Override the image variables when the target environment requires an internal registry or a prebuilt image.
+
+The checked-in runner tag defaults are environment examples. Override them in the destination GitLab project instead of editing job definitions.
 
 ## Required Schedule
 
 Create a GitLab pipeline schedule for the default branch using the cadence required by the target environment, such as nightly. The schedule should run with `CI_PIPELINE_SOURCE=schedule`, which triggers `publish:exchange` followed by `pages`.
 
 For official BOE publication, run the schedule as the exchange bot or provide bot credentials through masked CI variables.
+
+The target GitLab project also needs shared or project runners enabled for the configured tags, GitLab Pages available for the `pages` job, and permission for the scheduled publication identity to push BOE commits when `EXCHANGE_PUBLISH_COMMIT=true`.
 
 ## Configurable Variables
 

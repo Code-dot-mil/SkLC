@@ -41,7 +41,7 @@ def run_skillspector(skill_path: Path, output_path: Path, *, no_llm: bool = True
 
 def skillspector_version() -> str:
     try:
-        return version("skillspector")
+        return normalize_version(version("skillspector"))
     except PackageNotFoundError:
         pass
 
@@ -51,7 +51,14 @@ def skillspector_version() -> str:
 
     completed = subprocess.run([binary, "--version"], text=True, capture_output=True, check=False)
     output = (completed.stdout or completed.stderr).strip()
-    return output.split()[-1] if output else "unknown"
+    return normalize_version(output.split()[-1]) if output else "unknown"
+
+
+def normalize_version(version_value: str) -> str:
+    version_value = version_value.strip()
+    if len(version_value) > 1 and version_value.startswith("v") and version_value[1].isdigit():
+        return version_value[1:]
+    return version_value
 
 
 def skillspector_env() -> dict[str, str]:

@@ -35,6 +35,20 @@ def test_run_skillspector_fails_without_report(monkeypatch, tmp_path: Path):
         skillspector.run_skillspector(tmp_path, tmp_path / "report.json")
 
 
+def test_skillspector_version_normalizes_leading_v_from_binary(monkeypatch):
+    def missing_package_version(package_name):
+        raise skillspector.PackageNotFoundError
+
+    def fake_run(command, text, capture_output, check):
+        return subprocess.CompletedProcess(command, 0, stdout="skillspector v2.1.5\n", stderr="")
+
+    monkeypatch.setattr(skillspector, "version", missing_package_version)
+    monkeypatch.setattr(skillspector.shutil, "which", lambda name: "/usr/local/bin/skillspector")
+    monkeypatch.setattr(skillspector.subprocess, "run", fake_run)
+
+    assert skillspector.skillspector_version() == "2.1.5"
+
+
 def test_skillspector_env_maps_generic_llm_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "secret-value")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://llm.example/v1")
@@ -53,13 +67,14 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
     assert config == {"provider": "openai", "model": "gpt-5"}
 
 
-def test_mitre_specific_llm_env_names_are_not_committed():
+def test_legacy_provider_specific_llm_env_names_are_not_committed():
     root = Path(__file__).resolve().parents[1]
     old_prefix = "MDEV" + "CHAT"
     checked_paths = [
         root / "scripts" / "skill_exchange" / "skillspector.py",
-        root / "docs" / "ci.md",
-        root / "docs" / "local-mvp.md",
+        root / "CI.md",
+        root / "README.md",
+        root / "CONTRIBUTING.md",
     ]
 
     assert all(old_prefix not in path.read_text() for path in checked_paths)

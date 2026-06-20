@@ -17,6 +17,19 @@ Exchange-site developers maintain:
 
 Skill packages under `skills/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
 
+## First-Time Setup
+
+Install Python 3.12, `uv`, Node.js 22, `npm`, `just`, and SkillSpector. SkillSpector can be on `PATH` or configured with `SKILLSPECTOR_BIN`.
+
+Install project dependencies:
+
+```sh
+uv sync --extra test
+npm ci --prefix site
+```
+
+Python-only and Node-only checks do not require SkillSpector. Generation and deploy-equivalent local builds do, because they compute scanner cache keys and produce scanner-backed exchange data before the site build.
+
 ## Local Checks
 
 Use `just` for routine cross-stack development:
@@ -36,6 +49,8 @@ just ci-local
 Use `uv` directly for Python-only commands and `npm --prefix site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
 
 `just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds do not rewrite tracked CI-produced BOE bundles.
+
+The default scan mode is `static-only`. Use `just generate llm-assisted` or `just build llm-assisted` only after setting the generic `SKILL_EXCHANGE_LLM_*` environment variables.
 
 ## Python Tooling
 

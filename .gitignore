@@ -1,6 +1,5 @@
 .exchange/generated/**
 !.exchange/generated/.gitkeep
-.gitlab-mock/
 site/dist/
 site/.astro/
 site/public/downloads/

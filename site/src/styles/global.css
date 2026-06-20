@@ -62,8 +62,16 @@ body::before {
   margin-bottom: 28px;
 }
 
+.home-header {
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 0.7fr);
+  align-items: end;
+  column-gap: 40px;
+  row-gap: 18px;
+  margin-bottom: 24px;
+}
+
 .header h1 {
-  margin: 0;
+  margin: 6px 0 0;
   color: #ffffff;
   font-size: 2.65rem;
   line-height: 1;
@@ -72,6 +80,27 @@ body::before {
 .header > .muted {
   max-width: 760px;
   font-size: 1.06rem;
+}
+
+.home-lede {
+  max-width: 620px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 1.06rem;
+}
+
+.skill-standard-note {
+  margin: 0;
+  padding: 14px 0 14px 18px;
+  border-left: 3px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.skill-standard-note code {
+  color: #ffffff;
+  font-weight: 800;
 }
 
 .eyebrow {
@@ -700,6 +729,14 @@ tr.selected-row {
 
   .header h1 {
     font-size: 2rem;
+  }
+
+  .home-header {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-standard-note {
+    padding: 12px 0 12px 14px;
   }
 
   .catalog-summary,

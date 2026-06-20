@@ -10,7 +10,7 @@ The exchange should give users a simple way to discover approved skills while gi
 
 - Contributors add skills under `skills/<namespace>/<skill-id>/`.
 - CI reviews skill changes only when skill packages change.
-- Scheduled publication builds official exchange evidence and generated catalog data.
+- Scheduled publication and default-branch skill changes build official exchange evidence and generated catalog data.
 - GitLab Pages deploys the static site from generated data on default-branch pushes and scheduled publication pipelines.
 - All environment-specific details, including images, scanner installation, credentials, runner tags, and deployment routing, stay configurable through environment variables or CI variables.
 
@@ -97,8 +97,8 @@ The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`
 
 - `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, lockfiles, policy, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`.
-- `publish:exchange` runs only from scheduled pipelines and can commit BOE bundles when bot variables are configured.
-- `generate:exchange` runs on default-branch push pipelines and produces deploy-time generated site artifacts.
+- `publish:exchange` runs from scheduled pipelines and default-branch skill-change pipelines, and can commit BOE bundles when bot variables are configured.
+- `generate:exchange` runs on default-branch push pipelines that do not change skills, and produces deploy-time generated site artifacts.
 - `pages` runs on default-branch push pipelines and scheduled publication pipelines, consuming generated artifacts and publishing a top-level `public/` artifact for GitLab Pages.
 
 See [CI.md](CI.md) for the full configuration reference.

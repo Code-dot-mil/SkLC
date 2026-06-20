@@ -14,7 +14,7 @@ Official bill-of-evidence bundles are produced by protected scheduled CI. Candid
 |---|---|
 | Contributor | Proposes new or changed skills by merge request and responds to review feedback. |
 | Skill owner | Optional in the MVP. Accountable for declared skill purpose, usefulness, and maintenance. |
-| Reviewer | Reviews skill content, metadata, validation warnings, and SkillSpector assessment context. |
+| Reviewer | Reviews skill content, metadata, validation warnings, and [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) assessment context. |
 | Maintainer | Owns merge authority and protects governance files, CI configuration, exchange policy, and publication rules. |
 | Exchange bot | Runs protected scheduled publication, produces official BOE bundles, commits BOE evidence, and publishes Pages output. |
 

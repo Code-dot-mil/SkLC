@@ -160,13 +160,16 @@ a {
 
 .controls input,
 .controls select {
+  box-sizing: border-box;
   width: 100%;
-  min-height: 42px;
+  height: 42px;
   border: 1px solid rgb(126 174 213 / 0.38);
   border-radius: var(--radius);
   padding: 0 12px;
   background: rgb(7 10 24 / 0.82);
   color: var(--text);
+  font: inherit;
+  line-height: 1.2;
 }
 
 .controls input {
@@ -629,6 +632,19 @@ pre {
   cursor: pointer;
 }
 
+.external-link {
+  color: #77e7ff;
+  font-weight: 800;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.external-link span {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 0.88em;
+}
+
 .hash-cell {
   display: inline-flex;
   align-items: center;
@@ -696,7 +712,8 @@ tr.selected-row {
   }
 
   .controls label,
-  .controls input {
+  .controls input,
+  .controls select {
     width: 100%;
     min-width: 0;
   }

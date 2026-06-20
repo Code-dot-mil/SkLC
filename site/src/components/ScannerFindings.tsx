@@ -1,4 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 
 type ScannerRun = {
   id: string;
@@ -35,6 +37,8 @@ type Artifact = {
   download_path: string;
 };
 
+const RUNS_VALUES = ["latest", "all"];
+
 export default function ScannerFindings({
   scannerRuns,
   scannerFindings,
@@ -50,9 +54,12 @@ export default function ScannerFindings({
     [scannerRuns]
   );
   const defaultRun = sortedRuns[0];
+  const runIds = useMemo(() => sortedRuns.map((run) => run.id), [sortedRuns]);
+  const runIdsKey = runIds.join("|");
   const [selectedRunId, setSelectedRunId] = useState(defaultRun?.id || "");
   const [severity, setSeverity] = useState("all");
   const [showOlderRuns, setShowOlderRuns] = useState(false);
+  const [queryStateReady, setQueryStateReady] = useState(false);
   const selectedRun = sortedRuns.find((run) => run.id === selectedRunId) || sortedRuns[0];
   const displayedRuns = showOlderRuns ? sortedRuns : sortedRuns.slice(0, 1);
   const olderRunCount = Math.max(sortedRuns.length - 1, 0);
@@ -68,6 +75,37 @@ export default function ScannerFindings({
       ).sort(),
     [scannerFindings, selectedRun?.id]
   );
+  useEffect(() => {
+    const defaultRunId = defaultRun?.id || "";
+    const nextRunId = readQueryValue(window.location.search, "run", defaultRunId, runIds);
+    const nextRuns = readQueryValue(window.location.search, "runs", "latest", RUNS_VALUES);
+    setSelectedRunId(nextRunId);
+    setSeverity(
+      readQueryValue(window.location.search, "severity", "all", [
+        "all",
+        ...findingSeveritiesForRun(scannerFindings, nextRunId),
+      ])
+    );
+    setShowOlderRuns(nextRuns === "all" || Boolean(nextRunId && nextRunId !== defaultRunId));
+    setQueryStateReady(true);
+  }, [defaultRun?.id, runIds, runIdsKey, scannerFindings]);
+
+  useEffect(() => {
+    if (severity !== "all" && !severities.includes(severity)) {
+      setSeverity("all");
+    }
+  }, [severity, severities]);
+
+  useEffect(() => {
+    if (!queryStateReady || !selectedRun) {
+      return;
+    }
+    replaceQueryState(
+      { run: selectedRun.id, runs: showOlderRuns ? "all" : "latest", severity },
+      { run: defaultRun?.id || "", runs: "latest", severity: "all" }
+    );
+  }, [defaultRun?.id, queryStateReady, selectedRun, severity, showOlderRuns]);
+
   const visibleFindings = scannerFindings.filter((finding) => {
     if (finding.scanner_run_id !== selectedRun?.id) {
       return false;
@@ -106,7 +144,9 @@ export default function ScannerFindings({
           </p>
           <p>
             More details about findings and methodology are available on the{" "}
-            <a href="https://github.com/NVIDIA/SkillSpector">NVIDIA SkillSpector GitHub page</a>.
+            <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">
+              NVIDIA SkillSpector GitHub page <span aria-hidden="true">↗</span>
+            </a>.
           </p>
         </dialog>
         <table>
@@ -253,6 +293,17 @@ export default function ScannerFindings({
       </section>
     </>
   );
+}
+
+function findingSeveritiesForRun(scannerFindings: Finding[], scannerRunId: string) {
+  return Array.from(
+    new Set(
+      scannerFindings
+        .filter((finding) => finding.scanner_run_id === scannerRunId)
+        .map((finding) => finding.severity)
+        .filter(Boolean)
+    )
+  ).sort() as string[];
 }
 
 function ModePill({ run }: { run: ScannerRun }) {

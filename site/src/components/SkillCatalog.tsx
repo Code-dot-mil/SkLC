@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 
 type Skill = {
   display_id: string;
@@ -22,6 +24,9 @@ type Skill = {
     model?: string;
   };
 };
+
+const RECOMMENDATION_VALUES = ["all", "DO_NOT_INSTALL", "CAUTION", "REVIEW", "SAFE", "Unknown"];
+const SORT_VALUES = ["name", "recommendation", "last_updated", "last_scanned"];
 
 function RecommendationPills({
   recommendation,
@@ -51,11 +56,31 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
   const [recommendation, setRecommendation] = useState("all");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("name");
+  const [queryStateReady, setQueryStateReady] = useState(false);
 
   const categories = useMemo(
     () => Array.from(new Set(skills.map((skill) => skill.category || "uncategorized"))).sort(),
     [skills]
   );
+  const categoryValues = useMemo(() => ["all", ...categories], [categories]);
+
+  useEffect(() => {
+    setQuery(readQueryValue(window.location.search, "q", ""));
+    setRecommendation(readQueryValue(window.location.search, "recommendation", "all", RECOMMENDATION_VALUES));
+    setCategory(readQueryValue(window.location.search, "category", "all", categoryValues));
+    setSort(readQueryValue(window.location.search, "sort", "name", SORT_VALUES));
+    setQueryStateReady(true);
+  }, [categoryValues]);
+
+  useEffect(() => {
+    if (!queryStateReady) {
+      return;
+    }
+    replaceQueryState(
+      { q: query, recommendation, category, sort },
+      { q: "", recommendation: "all", category: "all", sort: "name" }
+    );
+  }, [category, query, queryStateReady, recommendation, sort]);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();

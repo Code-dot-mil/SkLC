@@ -15,10 +15,11 @@ workflow:
 
 variables:
   GIT_DEPTH: "0"
-  PYTHON_IMAGE_REGISTRY: "ghcr.io"
-  PYTHON_IMAGE_REPOSITORY: "astral-sh/uv"
-  PYTHON_IMAGE_TAG: "python3.12-bookworm-slim"
+  PYTHON_IMAGE_REGISTRY: "docker.io"
+  PYTHON_IMAGE_REPOSITORY: "library/python"
+  PYTHON_IMAGE_TAG: "3.12-bookworm"
   PYTHON_IMAGE: "$PYTHON_IMAGE_REGISTRY/$PYTHON_IMAGE_REPOSITORY:$PYTHON_IMAGE_TAG"
+  PYTHON_BOOTSTRAP_COMMAND: "python -m pip install --no-cache-dir uv"
   NODE_IMAGE_REGISTRY: "docker.io"
   NODE_IMAGE_REPOSITORY: "library/node"
   NODE_IMAGE_TAG: "22-bookworm-slim"
@@ -68,6 +69,7 @@ variables:
   tags:
     - "$SKILL_EXCHANGE_RUNNER_TAG"
   before_script:
+    - if [ -n "$PYTHON_BOOTSTRAP_COMMAND" ]; then sh -c "$PYTHON_BOOTSTRAP_COMMAND"; fi
     - uv --version
     - uv sync --extra test
   cache:
@@ -139,6 +141,7 @@ review:skills:
       changes:
         - "skills/**/*"
   before_script:
+    - if [ -n "$PYTHON_BOOTSTRAP_COMMAND" ]; then sh -c "$PYTHON_BOOTSTRAP_COMMAND"; fi
     - uv --version
     - uv sync --extra test
     - if [ -n "$SKILLSPECTOR_INSTALL_COMMAND" ]; then sh -c "$SKILLSPECTOR_INSTALL_COMMAND"; fi
@@ -157,6 +160,7 @@ publish:exchange:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
   before_script:
+    - if [ -n "$PYTHON_BOOTSTRAP_COMMAND" ]; then sh -c "$PYTHON_BOOTSTRAP_COMMAND"; fi
     - uv --version
     - uv sync --extra test
     - if [ -n "$SKILLSPECTOR_INSTALL_COMMAND" ]; then sh -c "$SKILLSPECTOR_INSTALL_COMMAND"; fi

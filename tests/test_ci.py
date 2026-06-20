@@ -103,7 +103,10 @@ def test_parse_scan_modes_accepts_comma_and_space_separated_values():
 def test_gitlab_ci_routes_jobs_by_expected_changes():
     config = yaml.safe_load(Path(".gitlab-ci.yml").read_text())
 
-    assert config["variables"]["PYTHON_IMAGE_REGISTRY"] == "ghcr.io"
+    assert config["variables"]["PYTHON_IMAGE_REGISTRY"] == "docker.io"
+    assert config["variables"]["PYTHON_IMAGE_REPOSITORY"] == "library/python"
+    assert config["variables"]["PYTHON_IMAGE_TAG"] == "3.12-bookworm"
+    assert config["variables"]["PYTHON_BOOTSTRAP_COMMAND"] == "python -m pip install --no-cache-dir uv"
     assert config["variables"]["NODE_IMAGE_REGISTRY"] == "docker.io"
     assert config["variables"]["PYTHON_IMAGE"] == "$PYTHON_IMAGE_REGISTRY/$PYTHON_IMAGE_REPOSITORY:$PYTHON_IMAGE_TAG"
     assert config["variables"]["NODE_IMAGE"] == "$NODE_IMAGE_REGISTRY/$NODE_IMAGE_REPOSITORY:$NODE_IMAGE_TAG"
@@ -111,6 +114,10 @@ def test_gitlab_ci_routes_jobs_by_expected_changes():
     assert config["variables"]["PAGES_RUNNER_TAG"] == "pages-no-cui"
     assert config[".python_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
     assert config[".node_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
+    for job_name in [".python_job", "review:skills", "publish:exchange"]:
+        assert config[job_name]["before_script"][0] == (
+            'if [ -n "$PYTHON_BOOTSTRAP_COMMAND" ]; then sh -c "$PYTHON_BOOTSTRAP_COMMAND"; fi'
+        )
     assert config["review:skills"]["rules"] == [
         {"if": '$CI_PIPELINE_SOURCE == "merge_request_event"', "changes": ["skills/**/*"]}
     ]

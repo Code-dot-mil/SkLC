@@ -316,7 +316,7 @@ def commit_generated_outputs(*, repo_root: Path, generated_dir: Path) -> dict[st
         "user.email",
         os.environ.get("EXCHANGE_BOT_GIT_EMAIL", "skill-exchange-bot@example.invalid"),
     )
-    run_git(repo_root, "add", "--", relative_generated_dir)
+    run_git(repo_root, "add", "-f", "--", relative_generated_dir)
 
     diff = subprocess.run(
         ["git", "diff", "--cached", "--quiet", "--", relative_generated_dir],

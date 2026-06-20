@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -97,6 +98,27 @@ def test_review_changed_skills_writes_reviewer_artifacts(monkeypatch, tmp_path: 
 def test_parse_scan_modes_accepts_comma_and_space_separated_values():
     assert ci.parse_scan_modes("static-only,llm-assisted") == ("static-only", "llm-assisted")
     assert ci.parse_scan_modes("static-only llm-assisted") == ("static-only", "llm-assisted")
+
+
+def test_commit_generated_outputs_force_adds_ignored_generated_files(monkeypatch, tmp_path: Path):
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / ".gitignore").write_text(".exchange/generated/**\n!.exchange/generated/.gitkeep\n")
+    generated = tmp_path / ".exchange" / "generated"
+    generated.mkdir(parents=True)
+    (generated / "index.json").write_text('{"skills": []}\n')
+    monkeypatch.setenv("EXCHANGE_PUBLISH_PUSH", "false")
+
+    result = ci.commit_generated_outputs(repo_root=tmp_path, generated_dir=generated)
+
+    assert result["committed"] is True
+    tracked = subprocess.run(
+        ["git", "ls-files", ".exchange/generated/index.json"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert tracked.stdout.strip() == ".exchange/generated/index.json"
 
 
 def test_local_package_scripts_cover_common_checks():

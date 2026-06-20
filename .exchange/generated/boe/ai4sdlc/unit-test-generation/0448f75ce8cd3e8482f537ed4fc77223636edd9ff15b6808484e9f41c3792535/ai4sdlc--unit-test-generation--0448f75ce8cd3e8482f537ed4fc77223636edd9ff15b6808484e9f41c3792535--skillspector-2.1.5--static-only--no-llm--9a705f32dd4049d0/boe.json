@@ -1,0 +1,37 @@
+{
+  "confidence_flags": [
+    "Low confidence"
+  ],
+  "display_id": "ai4sdlc/unit-test-generation",
+  "generated_at": "2026-06-20T04:03:34.183738+00:00",
+  "metadata_flags": [],
+  "model": null,
+  "namespace": "ai4sdlc",
+  "paths": {
+    "hashes": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/boe/ai4sdlc/unit-test-generation/0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535/ai4sdlc--unit-test-generation--0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535--skillspector-2.1.5--static-only--no-llm--9a705f32dd4049d0/hashes.json",
+    "report_source": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/tmp/ai4sdlc/unit-test-generation/static-only/report.json",
+    "scanner_config": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/boe/ai4sdlc/unit-test-generation/0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535/ai4sdlc--unit-test-generation--0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535--skillspector-2.1.5--static-only--no-llm--9a705f32dd4049d0/scanner-config.json",
+    "skillspector": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/boe/ai4sdlc/unit-test-generation/0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535/ai4sdlc--unit-test-generation--0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535--skillspector-2.1.5--static-only--no-llm--9a705f32dd4049d0/skillspector.json",
+    "summary": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/.exchange/generated/boe/ai4sdlc/unit-test-generation/0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535/ai4sdlc--unit-test-generation--0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535--skillspector-2.1.5--static-only--no-llm--9a705f32dd4049d0/summary.json"
+  },
+  "pipeline": {
+    "id": "2164800",
+    "job_id": "8655441"
+  },
+  "provider": null,
+  "risk": "Low",
+  "risk_reason": "No medium, high, or critical findings detected.",
+  "scan_cache_key": "ai4sdlc--unit-test-generation--0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535--skillspector-2.1.5--static-only--no-llm--9a705f32dd4049d0",
+  "scan_mode": "static-only",
+  "scan_timestamp": "2026-06-20T04:03:34.182999+00:00",
+  "scanner": {
+    "name": "skillspector",
+    "version": "2.1.5"
+  },
+  "schema_version": "skill-exchange-boe/v0",
+  "skill_content_hash": "0448f75ce8cd3e8482f537ed4fc77223636edd9ff15b6808484e9f41c3792535",
+  "skill_id": "unit-test-generation",
+  "skill_path": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/skills/ai4sdlc/unit-test-generation",
+  "source_commit_sha": "90e5717944cdc026d2d163863b3469f979d2b06e",
+  "validation_warnings": []
+}

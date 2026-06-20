@@ -30,6 +30,8 @@ Generated exchange data is written under `.exchange/generated/`. That directory 
 
 - `.exchange/` stores exchange policy, display configuration, tags, categories, and generated catalog output.
 - `.gitlab-ci.yml` defines the standalone GitLab CI pipeline.
+- `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
+- `GOVERNANCE.md` describes exchange roles, review flow, generated-output boundaries, and bot publication rules.
 - `docs/ci.md` documents CI variables, schedules, review behavior, and deploy behavior.
 - `docs/local-mvp.md` documents local publication commands.
 - `scripts/skill_exchange/` contains Python exchange tooling and CI entry points.
@@ -39,10 +41,10 @@ Generated exchange data is written under `.exchange/generated/`. That directory 
 
 ## Local Workflow
 
-Install Python dependencies and run tests:
+Run the common local checks:
 
 ```sh
-uv run --extra test pytest
+npm run ci:local
 ```
 
 Generate local exchange evidence and catalog data:
@@ -54,11 +56,10 @@ uv run python -m skill_exchange.cli publish-local
 Build the static site:
 
 ```sh
-npm --prefix site install
-npm --prefix site run build
+npm run build
 ```
 
-See [docs/local-mvp.md](docs/local-mvp.md) for local scan-mode details and generated output descriptions.
+Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details. See [docs/local-mvp.md](docs/local-mvp.md) for local scan-mode details and generated output descriptions.
 
 ## CI Workflow
 

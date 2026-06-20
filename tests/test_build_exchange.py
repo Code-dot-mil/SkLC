@@ -2,10 +2,13 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-import pytest
-
 from skill_exchange import exchange_builder
-from skill_exchange.exchange_builder import aggregate_assessment, build_exchange, make_scan_key, scanner_finding_rows_for
+from skill_exchange.exchange_builder import (
+    aggregate_assessment,
+    build_exchange,
+    make_scan_key,
+    scanner_finding_rows_for,
+)
 
 
 def _fake_clean_report(*, llm_requested: bool = False, recommendation: str = "SAFE") -> dict:

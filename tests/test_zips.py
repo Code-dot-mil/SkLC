@@ -2,7 +2,6 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
-
 from skill_exchange.models import SkillMetadata, SkillPackage
 from skill_exchange.skills import hash_skill_package
 from skill_exchange.zipper import write_skill_zip

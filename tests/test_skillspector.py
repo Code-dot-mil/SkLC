@@ -3,7 +3,6 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from skill_exchange import skillspector
 
 

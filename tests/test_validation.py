@@ -21,7 +21,12 @@ def test_validation_warns_for_unknown_category_and_tag():
     policy = load_exchange_policy(Path(".exchange"))
     skill = discover_skills(Path("tests/fixtures/skills"))[0]
     metadata = replace(skill.metadata, category="not-a-category", tags=("unknown-tag",))
-    changed = SkillPackage(metadata=metadata, path=skill.path, skill_file=skill.skill_file, content_hash=skill.content_hash)
+    changed = SkillPackage(
+        metadata=metadata,
+        path=skill.path,
+        skill_file=skill.skill_file,
+        content_hash=skill.content_hash,
+    )
 
     result = validate_skill(changed, policy)
 
@@ -33,7 +38,12 @@ def test_validation_flags_missing_owner():
     policy = load_exchange_policy(Path(".exchange"))
     skill = discover_skills(Path("tests/fixtures/skills"))[0]
     metadata = replace(skill.metadata, owner=None)
-    changed = SkillPackage(metadata=metadata, path=skill.path, skill_file=skill.skill_file, content_hash=skill.content_hash)
+    changed = SkillPackage(
+        metadata=metadata,
+        path=skill.path,
+        skill_file=skill.skill_file,
+        content_hash=skill.content_hash,
+    )
 
     result = validate_skill(changed, policy)
 

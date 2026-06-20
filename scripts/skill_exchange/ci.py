@@ -31,7 +31,11 @@ def main() -> None:
     review.add_argument("--skills-root", type=Path, default=Path("skills"))
     review.add_argument("--exchange-dir", type=Path, default=Path(".exchange"))
     review.add_argument("--artifacts-dir", type=Path, default=Path("review-artifacts"))
-    review.add_argument("--scan-mode", choices=SCAN_MODES, default=os.environ.get("SKILL_EXCHANGE_REVIEW_SCAN_MODE", "static-only"))
+    review.add_argument(
+        "--scan-mode",
+        choices=SCAN_MODES,
+        default=os.environ.get("SKILL_EXCHANGE_REVIEW_SCAN_MODE", "static-only"),
+    )
     review.add_argument("--post-comment", action="store_true", default=env_flag("SKILL_EXCHANGE_POST_REVIEW_COMMENT"))
 
     publish = subcommands.add_parser("publish")
@@ -93,7 +97,10 @@ def run_publish_command(args: argparse.Namespace) -> None:
     print(json.dumps(result, indent=2, sort_keys=True))
 
     if args.commit_generated:
-        commit_result = commit_generated_outputs(repo_root=repo_root, generated_dir=resolve_repo_path(repo_root, args.generated_dir))
+        commit_result = commit_generated_outputs(
+            repo_root=repo_root,
+            generated_dir=resolve_repo_path(repo_root, args.generated_dir),
+        )
         print(json.dumps(commit_result, indent=2, sort_keys=True))
 
 
@@ -166,7 +173,10 @@ def review_changed_skills(
 ) -> dict[str, Any]:
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     policy = load_exchange_policy(exchange_dir)
-    skills_by_path = {skill.path.resolve(): skill for skill in discover_skills(resolve_repo_path(repo_root, skills_root))}
+    skills_by_path = {
+        skill.path.resolve(): skill
+        for skill in discover_skills(resolve_repo_path(repo_root, skills_root))
+    }
 
     validation_rows: list[dict[str, Any]] = []
     summary_rows: list[dict[str, Any]] = []
@@ -201,7 +211,13 @@ def review_changed_skills(
             }
         )
 
-        report_path = artifacts_dir / "skillspector" / skill.metadata.namespace / skill.metadata.skill_id / "report.json"
+        report_path = (
+            artifacts_dir
+            / "skillspector"
+            / skill.metadata.namespace
+            / skill.metadata.skill_id
+            / "report.json"
+        )
         scanner_error = None
         try:
             report = run_skillspector(skill.path, report_path, no_llm=scan_mode == "static-only")
@@ -294,7 +310,12 @@ def post_review_comment(body: str) -> str:
 def commit_generated_outputs(*, repo_root: Path, generated_dir: Path) -> dict[str, Any]:
     relative_generated_dir = relative_to_repo(repo_root, generated_dir)
     run_git(repo_root, "config", "user.name", os.environ.get("EXCHANGE_BOT_GIT_NAME", "skill-exchange-bot"))
-    run_git(repo_root, "config", "user.email", os.environ.get("EXCHANGE_BOT_GIT_EMAIL", "skill-exchange-bot@example.invalid"))
+    run_git(
+        repo_root,
+        "config",
+        "user.email",
+        os.environ.get("EXCHANGE_BOT_GIT_EMAIL", "skill-exchange-bot@example.invalid"),
+    )
     run_git(repo_root, "add", "--", relative_generated_dir)
 
     diff = subprocess.run(
@@ -336,7 +357,11 @@ def configure_push_remote(repo_root: Path) -> None:
 
 
 def resolve_default_base_ref(head_ref: str, repo_root: Path) -> str:
-    target_branch = os.environ.get("CI_MERGE_REQUEST_TARGET_BRANCH_NAME") or os.environ.get("CI_DEFAULT_BRANCH") or "main"
+    target_branch = (
+        os.environ.get("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+        or os.environ.get("CI_DEFAULT_BRANCH")
+        or "main"
+    )
     remote_ref = f"origin/{target_branch}"
     fetch = subprocess.run(
         ["git", "fetch", "--quiet", "origin", f"{target_branch}:refs/remotes/{remote_ref}"],

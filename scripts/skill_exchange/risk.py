@@ -26,7 +26,11 @@ def assess_report(report: dict[str, Any]) -> dict[str, Any]:
     confidence_flags = ["Low confidence"] if not llm_requested else []
 
     if severities & {"critical", "high"} or report_severity in {"critical", "high"}:
-        return {"risk": "High", "reason": "Critical or high severity finding detected.", "confidence_flags": confidence_flags}
+        return {
+            "risk": "High",
+            "reason": "Critical or high severity finding detected.",
+            "confidence_flags": confidence_flags,
+        }
     if "medium" in severities or report_severity == "medium":
         return {"risk": "Medium", "reason": "Medium severity finding detected.", "confidence_flags": confidence_flags}
     return {

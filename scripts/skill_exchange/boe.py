@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -60,7 +60,7 @@ def write_boe(
         "provider": scanner_config.get("llm_provider"),
         "model": scanner_config.get("llm_model"),
         "scan_timestamp": scan_timestamp,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "pipeline": {
             "id": os.environ.get("CI_PIPELINE_ID"),
             "job_id": os.environ.get("CI_JOB_ID"),

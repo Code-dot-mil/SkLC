@@ -52,6 +52,7 @@ variables:
   - ".gitlab-ci.yml"
   - ".exchange/*.json"
   - ".exchange/*.yaml"
+  - "package.json"
   - "pyproject.toml"
   - "scripts/**/*"
   - "site/**/*"
@@ -95,6 +96,7 @@ lint:python:
   stage: lint
   rules: *site_code_rules
   script:
+    - uv run ruff check scripts tests
     - uv run python -m compileall scripts tests
     - uv run python -c "import yaml; yaml.safe_load(open('.gitlab-ci.yml'))"
 
@@ -103,7 +105,7 @@ lint:site:
   stage: lint
   rules: *site_code_rules
   script:
-    - npm --prefix site run typecheck
+    - npm --prefix site run lint
 
 test:python:
   extends: .python_job
@@ -117,6 +119,7 @@ test:site:
   stage: test
   rules: *site_code_rules
   script:
+    - npm --prefix site run test
     - npm --prefix site run build
 
 audit:python:

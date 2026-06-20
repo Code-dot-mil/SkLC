@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 import yaml
-
 from skill_exchange import ci
 
 
@@ -100,6 +99,19 @@ def test_parse_scan_modes_accepts_comma_and_space_separated_values():
     assert ci.parse_scan_modes("static-only llm-assisted") == ("static-only", "llm-assisted")
 
 
+def test_local_package_scripts_cover_common_checks():
+    root_scripts = json.loads(Path("package.json").read_text())["scripts"]
+    site_scripts = json.loads(Path("site/package.json").read_text())["scripts"]
+
+    assert root_scripts["lint"] == "npm run lint:python && npm run lint:site"
+    assert root_scripts["lint:python"] == "uv run --extra test ruff check scripts tests"
+    assert root_scripts["lint:site"] == "npm --prefix site run lint"
+    assert root_scripts["test"] == "uv run --extra test pytest"
+    assert root_scripts["build"] == "npm --prefix site run build"
+    assert site_scripts["lint"] == "npm run typecheck"
+    assert site_scripts["test"] == "node --test tests/*.test.mjs"
+
+
 def test_gitlab_ci_routes_jobs_by_expected_changes():
     config = yaml.safe_load(Path(".gitlab-ci.yml").read_text())
 
@@ -130,3 +142,4 @@ def test_gitlab_ci_routes_jobs_by_expected_changes():
         assert "skills/**/*" not in rule_changes
         assert "site/**/*" in rule_changes
         assert "scripts/**/*" in rule_changes
+    assert "uv run ruff check scripts tests" in config["lint:python"]["script"]

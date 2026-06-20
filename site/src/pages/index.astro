@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SkillCatalog from "../components/SkillCatalog";
-import index from "../../../.exchange/generated/index.json";
+import { exchangeIndex as index } from "../lib/exchange-data.mjs";
 ---
 
 <BaseLayout title="Skill Exchange">

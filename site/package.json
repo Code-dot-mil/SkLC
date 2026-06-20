@@ -3,6 +3,8 @@
     "prebuild": "node scripts/copy-downloads.mjs",
     "build": "astro build",
     "dev": "astro dev --host 127.0.0.1",
+    "lint": "npm run typecheck",
+    "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -5,10 +5,12 @@ import ScannerFindings from "../../../components/ScannerFindings";
 import { sanitizeSkillHtml } from "../../../lib/sanitize-skill-html.mjs";
 import { createMarkdownProcessor, parseFrontmatter } from "@astrojs/markdown-remark";
 import { visit } from "unist-util-visit";
-import index from "../../../../../.exchange/generated/index.json";
-import scannerRunsTable from "../../../../../.exchange/generated/tables/scanner_runs.json";
-import scannerFindingsTable from "../../../../../.exchange/generated/tables/scanner_findings.json";
-import scannerArtifactsTable from "../../../../../.exchange/generated/tables/scanner_artifacts.json";
+import {
+  exchangeIndex as index,
+  scannerArtifactsTable,
+  scannerFindingsTable,
+  scannerRunsTable,
+} from "../../../lib/exchange-data.mjs";
 
 export function getStaticPaths() {
   return index.skills.map((skill) => ({

@@ -27,9 +27,10 @@ These instructions apply to this repository.
 
 ## Local Development
 
-- Use `uv run --extra test pytest` for Python tests.
-- Use `npm --prefix site run typecheck` for site type checking.
-- Use `npm --prefix site run build` for the Astro build.
+- Use `npm run lint` for Python and site lint checks.
+- Use `npm test` for Python tests.
+- Use `npm run test:site` for Node-based site tests.
+- Use `npm run build` for the Astro build.
 - Use `uv run python -m skill_exchange.cli publish-local` to generate local exchange output.
 
 ## Boundaries

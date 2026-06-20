@@ -5,7 +5,7 @@ import os
 import re
 import shutil
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -37,10 +37,14 @@ def build_exchange(
     ]
     historical_run_ids = {row["id"] for row in scanner_run_rows}
     scanner_artifact_rows: list[dict[str, Any]] = [
-        row for row in existing_table_rows(generated_dir, "scanner_artifacts") if row.get("scanner_run_id") in historical_run_ids
+        row
+        for row in existing_table_rows(generated_dir, "scanner_artifacts")
+        if row.get("scanner_run_id") in historical_run_ids
     ]
     scanner_finding_rows: list[dict[str, Any]] = [
-        row for row in existing_table_rows(generated_dir, "scanner_findings") if row.get("scanner_run_id") in historical_run_ids
+        row
+        for row in existing_table_rows(generated_dir, "scanner_findings")
+        if row.get("scanner_run_id") in historical_run_ids
     ]
     cached_scanner_runs = latest_scanner_runs_by_cache_key(scanner_run_rows)
     reused_scans = 0
@@ -74,7 +78,14 @@ def build_exchange(
                 skill_scanner_runs.append(cached_scanner_run)
                 continue
 
-            report_source = generated_dir / "tmp" / skill.metadata.namespace / skill.metadata.skill_id / mode / "report.json"
+            report_source = (
+                generated_dir
+                / "tmp"
+                / skill.metadata.namespace
+                / skill.metadata.skill_id
+                / mode
+                / "report.json"
+            )
             scan_status = "completed"
             try:
                 report = run_skillspector(skill.path, report_source, no_llm=no_llm)
@@ -83,7 +94,7 @@ def build_exchange(
                 report = scanner_failure_report(mode=mode, scanner_version=scanner_version, error=exc)
                 report_source.parent.mkdir(parents=True, exist_ok=True)
                 report_source.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-            last_scanned = datetime.now(timezone.utc).isoformat()
+            last_scanned = datetime.now(UTC).isoformat()
 
             run_id = make_run_id(scan_key, last_scanned)
             assessment = assess_report(report)
@@ -206,7 +217,10 @@ def make_scan_key(
 ) -> str:
     config_label = scanner_config_label(scanner_config)
     config_hash = scanner_config_hash(scanner_config)
-    return f"{namespace}--{skill_id}--{content_hash}--skillspector-{scanner_version}--{mode}--{config_label}--{config_hash}"
+    return (
+        f"{namespace}--{skill_id}--{content_hash}--skillspector-{scanner_version}"
+        f"--{mode}--{config_label}--{config_hash}"
+    )
 
 
 def scanner_config_label(scanner_config: dict[str, Any]) -> str:
@@ -517,7 +531,7 @@ def skill_last_updated(skill) -> str:
         return timestamp
 
     newest_mtime = max(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
-    return datetime.fromtimestamp(newest_mtime, tz=timezone.utc).isoformat()
+    return datetime.fromtimestamp(newest_mtime, tz=UTC).isoformat()
 
 
 def skill_latest_source_commit_sha(skill) -> str:
@@ -542,7 +556,7 @@ def skill_first_observed(skill) -> str:
         return timestamp
 
     oldest_mtime = min(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
-    return datetime.fromtimestamp(oldest_mtime, tz=timezone.utc).isoformat()
+    return datetime.fromtimestamp(oldest_mtime, tz=UTC).isoformat()
 
 
 def boe_path_for(generated_dir: Path, skill, scan_key: str) -> Path:

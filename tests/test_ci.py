@@ -235,3 +235,34 @@ def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypat
             ),
         )
     ]
+
+
+def test_configure_push_remote_does_not_reuse_review_token_for_publish(monkeypatch, tmp_path: Path):
+    calls = []
+
+    def fake_run_git(repo_root: Path, *args: str):
+        calls.append((repo_root, args))
+
+    monkeypatch.setattr(ci, "run_git", fake_run_git)
+    monkeypatch.delenv("EXCHANGE_PUBLISH_PUSH_URL", raising=False)
+    monkeypatch.delenv("EXCHANGE_PUBLISH_TOKEN", raising=False)
+    monkeypatch.delenv("EXCHANGE_PUBLISH_USERNAME", raising=False)
+    monkeypatch.setenv("GITLAB_TOKEN", "review-comment-token")
+    monkeypatch.setenv("CI_JOB_TOKEN", "job-token-value")
+    monkeypatch.setenv("CI_SERVER_PROTOCOL", "https")
+    monkeypatch.setenv("CI_SERVER_HOST", "gitlab.example.invalid")
+    monkeypatch.setenv("CI_PROJECT_PATH", "group/project")
+
+    ci.configure_push_remote(tmp_path)
+
+    assert calls == [
+        (
+            tmp_path,
+            (
+                "remote",
+                "set-url",
+                "origin",
+                "https://gitlab-ci-token:job-token-value@gitlab.example.invalid/group/project.git",
+            ),
+        )
+    ]

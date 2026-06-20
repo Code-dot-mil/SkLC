@@ -28,6 +28,20 @@ For official BOE publication, run the schedule as the exchange bot or provide bo
 
 The target GitLab project also needs shared or project runners enabled for the configured tags, GitLab Pages available for the `pages` job, and permission for the publication identity to push BOE commits. `publish:exchange` defaults `EXCHANGE_PUBLISH_COMMIT=true` so official publication fails before deploy rather than publishing a skill whose BOE cannot be persisted. Override it only when another controlled process persists BOE.
 
+## Publish Authentication
+
+Keep merge request review credentials separate from publication credentials. The token named by `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE` is used only for optional merge request comments. It is not used to push BOE commits.
+
+`publish:exchange` chooses push credentials in this order:
+
+1. `EXCHANGE_PUBLISH_PUSH_URL`, when a complete authenticated remote URL is provided.
+2. `EXCHANGE_PUBLISH_TOKEN` with `EXCHANGE_PUBLISH_USERNAME`, when an explicit publisher token is configured.
+3. `CI_JOB_TOKEN` with username `gitlab-ci-token`, when GitLab job-token repository push is enabled.
+
+For the default `CI_JOB_TOKEN` path, enable the GitLab project setting that allows CI job tokens to push to the repository, then ensure the pipeline identity is permitted to push to the protected default branch. For a protected `main`, that usually means the branch allows Maintainer pushes and the scheduled or default-branch pipeline runs under a Maintainer-capable identity.
+
+If the destination project cannot allow job-token pushes to the protected branch, configure a masked `EXCHANGE_PUBLISH_TOKEN` for a dedicated publisher identity with the minimum repository write scope supported by that GitLab instance. The publisher identity must be allowed to push to the protected default branch. Do not reuse the merge request comment token for publication.
+
 ## Configurable Variables
 
 All environment-specific values are CI variables:

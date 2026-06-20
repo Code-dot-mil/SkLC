@@ -88,10 +88,81 @@ def test_review_changed_skills_writes_reviewer_artifacts(monkeypatch, tmp_path: 
             "scan_mode": "static-only",
             "report": str(artifacts / "skillspector" / "team" / "reviewed-skill" / "report.json"),
             "scanner_error": None,
+            "scanner_findings": [],
         }
     ]
     assert validation[0]["skill"] == "team/reviewed-skill"
     assert "| `team/reviewed-skill` | Low | Low confidence | static-only |" in comment
+    assert "## Exchange validation" in comment
+
+
+def test_review_comment_includes_all_scanner_findings(monkeypatch, tmp_path: Path):
+    reviewed = _write_skill(tmp_path, "team", "reviewed-skill")
+    artifacts = tmp_path / "review-artifacts"
+
+    def fake_run_skillspector(skill_path, output_path, *, no_llm):
+        assert skill_path == reviewed
+        assert no_llm is False
+        report = {
+            "metadata": {"llm_requested": True, "skillspector_version": "2.1.5"},
+            "risk_assessment": {"score": 35, "severity": "MEDIUM", "recommendation": "CAUTION"},
+            "issues": [
+                {
+                    "id": "EA2",
+                    "category": "Excessive Agency",
+                    "pattern": "Autonomous Decision Making",
+                    "severity": "MEDIUM",
+                    "confidence": 0.75,
+                    "location": {"file": "SKILL.md", "start_line": 12, "end_line": 14},
+                    "finding": "without checking",
+                    "explanation": "Skill enables autonomous high-impact decisions.",
+                    "remediation": "Add human-in-the-loop confirmation.",
+                    "code_snippet": "line one\nline two",
+                },
+                {
+                    "id": "MP3",
+                    "category": "Memory Poisoning",
+                    "pattern": "Memory Manipulation",
+                    "severity": "HIGH",
+                    "confidence": 0.8,
+                    "location": {"file": "SKILL.md", "start_line": 25},
+                    "finding": "clear context",
+                    "explanation": "Skill manipulates agent memory, state, or stored context.",
+                    "remediation": "Protect agent memory and state from untrusted content.",
+                    "code_snippet": "`[question]` - unclear context that could hide a real issue",
+                },
+            ],
+        }
+        output_path.parent.mkdir(parents=True)
+        output_path.write_text(json.dumps(report))
+        return report
+
+    monkeypatch.setattr(ci, "run_skillspector", fake_run_skillspector)
+
+    ci.review_changed_skills(
+        changed_skill_paths=[reviewed],
+        repo_root=tmp_path,
+        exchange_dir=Path.cwd() / ".exchange",
+        artifacts_dir=artifacts,
+        scan_mode="llm-assisted",
+        post_comment=False,
+    )
+
+    comment = (artifacts / "comment.md").read_text()
+
+    assert "## Scanner findings" in comment
+    assert "1. **MEDIUM** `EA2` - Excessive Agency / Autonomous Decision Making" in comment
+    assert "2. **HIGH** `MP3` - Memory Poisoning / Memory Manipulation" in comment
+    assert "Location: `SKILL.md:12-14`" in comment
+    assert "Location: `SKILL.md:25`" in comment
+    assert "Finding: without checking" in comment
+    assert "Finding: clear context" in comment
+    assert "Explanation: Skill enables autonomous high-impact decisions." in comment
+    assert "Explanation: Skill manipulates agent memory, state, or stored context." in comment
+    assert "Remediation: Add human-in-the-loop confirmation." in comment
+    assert "Remediation: Protect agent memory and state from untrusted content." in comment
+    assert "line one" in comment
+    assert "`[question]` - unclear context that could hide a real issue" in comment
 
 
 def test_parse_scan_modes_accepts_comma_and_space_separated_values():

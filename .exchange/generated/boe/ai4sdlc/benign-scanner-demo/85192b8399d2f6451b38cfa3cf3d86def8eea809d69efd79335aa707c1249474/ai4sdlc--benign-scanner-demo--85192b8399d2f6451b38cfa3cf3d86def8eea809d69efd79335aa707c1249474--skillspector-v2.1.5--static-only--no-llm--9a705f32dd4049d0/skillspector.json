@@ -2,7 +2,7 @@
   "skill": {
     "name": "benign-scanner-demo",
     "source": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/skills/ai4sdlc/benign-scanner-demo",
-    "scanned_at": "2026-06-20T00:55:55.481838+00:00"
+    "scanned_at": "2026-06-20T01:38:15.765274+00:00"
   },
   "risk_assessment": {
     "score": 100,

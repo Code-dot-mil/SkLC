@@ -6,8 +6,9 @@ The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not impo
 
 - `lint`, `test`, and `audit` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`. It validates changed skill packages, runs SkillSpector, writes reviewer artifacts, and can post a merge request comment when comment variables are configured.
-- `publish:exchange` runs only for scheduled pipelines. It generates official exchange evidence under `.exchange/generated/` and can commit those generated files back when bot push variables are configured.
-- `pages` runs on default-branch push pipelines and scheduled pipelines. On schedules, it deploys from the generated exchange artifacts produced by `publish:exchange` in the same pipeline.
+- `publish:exchange` runs only for scheduled pipelines. It generates the full `.exchange/generated/` tree for deploy artifacts and can commit BOE bundles back when bot push variables are configured.
+- `generate:exchange` runs on default-branch push pipelines. It generates deploy-time `.exchange/generated/` artifacts without committing them.
+- `pages` runs on default-branch push pipelines and scheduled pipelines. It deploys from generated exchange artifacts produced by `generate:exchange` or `publish:exchange` in the same pipeline.
 - By default, non-Pages jobs use the runner tag in `SKILL_EXCHANGE_RUNNER_TAG`. For MITRE non-CUI shared runners this defaults to `mitre-no-cui`.
 - By default, `pages` uses the runner tag in `PAGES_RUNNER_TAG`. For MITRE GitLab Pages this defaults to `pages-no-cui`.
 - By default, Python jobs use the official Docker Hub Python image and install `uv` with `PYTHON_BOOTSTRAP_COMMAND`. Override the image variables when the target environment requires an internal registry or a prebuilt image.
@@ -33,6 +34,6 @@ All environment-specific values are CI variables:
 - `SKILL_EXCHANGE_PUBLISH_SCAN_MODES` controls scheduled publication scanning, using comma or space separated modes.
 - `SKILL_EXCHANGE_LLM_API_KEY`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, and `SKILL_EXCHANGE_LLM_PROVIDER` configure LLM-assisted scans without tying the repository to a specific provider.
 - `SKILL_EXCHANGE_POST_REVIEW_COMMENT`, `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE`, and `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER` control optional merge request comments.
-- `EXCHANGE_PUBLISH_COMMIT`, `EXCHANGE_PUBLISH_PUSH`, `EXCHANGE_PUBLISH_BRANCH`, `EXCHANGE_PUBLISH_PUSH_URL`, `EXCHANGE_PUBLISH_TOKEN`, and `EXCHANGE_PUBLISH_USERNAME` control generated-output commits. When GitLab job-token repository push is enabled and no publish token is configured, scheduled publication uses `CI_JOB_TOKEN` with the `gitlab-ci-token` username.
+- `EXCHANGE_PUBLISH_COMMIT`, `EXCHANGE_PUBLISH_PUSH`, `EXCHANGE_PUBLISH_BRANCH`, `EXCHANGE_PUBLISH_PUSH_URL`, `EXCHANGE_PUBLISH_TOKEN`, and `EXCHANGE_PUBLISH_USERNAME` control BOE-bundle commits. When GitLab job-token repository push is enabled and no publish token is configured, scheduled publication uses `CI_JOB_TOKEN` with the `gitlab-ci-token` username.
 - `EXCHANGE_BOT_GIT_NAME`, `EXCHANGE_BOT_GIT_EMAIL`, and `EXCHANGE_PUBLISH_COMMIT_MESSAGE` control generated commit metadata.
 - Provider credentials and endpoints for LLM-assisted SkillSpector scans should be configured as masked CI variables, not committed to the repository.

@@ -21,10 +21,10 @@ The long-term direction is to keep this exchange portable: a target environment 
 The exchange has three main layers:
 
 1. Skill packages live under `skills/`. Each package contains a `SKILL.md` file with frontmatter and skill content.
-2. Python tooling under `scripts/skill_exchange/` validates skills, runs SkillSpector, applies exchange policy, writes bill-of-evidence records, creates runtime zip files, and produces `.exchange/generated/index.json`.
-3. The Astro site under `site/` reads `.exchange/generated/index.json` and builds a static catalog that can be published by GitLab Pages.
+2. Python tooling under `scripts/skill_exchange/` validates skills, runs SkillSpector, applies exchange policy, writes bill-of-evidence bundles, creates runtime zip files, and produces derived site data under `.exchange/generated/`.
+3. The Astro site under `site/` reads derived `.exchange/generated/` data and builds a static catalog that can be published by GitLab Pages.
 
-Generated exchange data is written under `.exchange/generated/`. That directory is the contract between the publication tooling and the static site.
+Tracked generated evidence lives under `.exchange/generated/boe/`. Other generated outputs under `.exchange/generated/` are deploy-time site inputs and should not be committed.
 
 ## Repository Map
 
@@ -44,20 +44,22 @@ Generated exchange data is written under `.exchange/generated/`. That directory 
 Run the common local checks:
 
 ```sh
-npm run ci:local
+just ci-local
 ```
 
 Generate local exchange evidence and catalog data:
 
 ```sh
-uv run python -m skill_exchange.cli publish-local
+just generate
 ```
 
-Build the static site:
+Build the static site from freshly generated local data:
 
 ```sh
-npm run build
+just build
 ```
+
+Local `just` generation writes to `.exchange/local-generated/` so developers do not accidentally rewrite tracked CI-produced BOE. Use `uv` directly for Python-only checks and `npm --prefix site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
 
 Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details. See [docs/local-mvp.md](docs/local-mvp.md) for local scan-mode details and generated output descriptions.
 
@@ -67,8 +69,9 @@ The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`
 
 - `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, lockfiles, policy, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`.
-- `publish:exchange` runs only from scheduled pipelines and can commit generated exchange evidence when bot variables are configured.
-- `pages` runs on default-branch push pipelines and scheduled publication pipelines, publishing a top-level `public/` artifact for GitLab Pages.
+- `publish:exchange` runs only from scheduled pipelines and can commit BOE bundles when bot variables are configured.
+- `generate:exchange` runs on default-branch push pipelines and produces deploy-time generated site artifacts.
+- `pages` runs on default-branch push pipelines and scheduled publication pipelines, consuming generated artifacts and publishing a top-level `public/` artifact for GitLab Pages.
 
 See [docs/ci.md](docs/ci.md) for the full configuration reference.
 

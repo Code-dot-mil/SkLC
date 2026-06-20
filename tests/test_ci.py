@@ -100,25 +100,40 @@ def test_parse_scan_modes_accepts_comma_and_space_separated_values():
     assert ci.parse_scan_modes("static-only llm-assisted") == ("static-only", "llm-assisted")
 
 
-def test_commit_generated_outputs_force_adds_ignored_generated_files(monkeypatch, tmp_path: Path):
+def test_commit_generated_outputs_force_adds_only_boe_bundle(monkeypatch, tmp_path: Path):
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-    (tmp_path / ".gitignore").write_text(".exchange/generated/**\n!.exchange/generated/.gitkeep\n")
+    (tmp_path / ".gitignore").write_text(
+        ".exchange/generated/*\n!.exchange/generated/boe/\n!.exchange/generated/boe/**\n"
+    )
     generated = tmp_path / ".exchange" / "generated"
-    generated.mkdir(parents=True)
+    boe = generated / "boe" / "team" / "skill" / "hash" / "scan-key"
+    tables = generated / "tables"
+    zips = generated / "zips"
+    boe.mkdir(parents=True)
+    tables.mkdir(parents=True)
+    zips.mkdir(parents=True)
+    (boe / "boe.json").write_text('{"schema_version": "skill-exchange-boe/v0"}\n')
+    (boe / "skillspector.json").write_text('{"issues": []}\n')
     (generated / "index.json").write_text('{"skills": []}\n')
+    (tables / "scanner_runs.json").write_text('{"rows": []}\n')
+    (zips / "team--skill.zip").write_bytes(b"zip")
     monkeypatch.setenv("EXCHANGE_PUBLISH_PUSH", "false")
 
     result = ci.commit_generated_outputs(repo_root=tmp_path, generated_dir=generated)
 
     assert result["committed"] is True
+    assert result["path"] == ".exchange/generated/boe"
     tracked = subprocess.run(
-        ["git", "ls-files", ".exchange/generated/index.json"],
+        ["git", "ls-files", ".exchange/generated"],
         cwd=tmp_path,
         check=True,
         capture_output=True,
         text=True,
     )
-    assert tracked.stdout.strip() == ".exchange/generated/index.json"
+    assert tracked.stdout.splitlines() == [
+        ".exchange/generated/boe/team/skill/hash/scan-key/boe.json",
+        ".exchange/generated/boe/team/skill/hash/scan-key/skillspector.json",
+    ]
 
 
 def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypatch, tmp_path: Path):
@@ -167,14 +182,22 @@ def test_gitlab_ci_routes_jobs_by_expected_changes():
     assert config["variables"]["EXCHANGE_PUBLISH_USERNAME"] == ""
     assert config[".python_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
     assert config[".node_job"]["tags"] == ["$SKILL_EXCHANGE_RUNNER_TAG"]
-    for job_name in [".python_job", "review:skills", "publish:exchange"]:
+    for job_name in [".python_job", "review:skills", "publish:exchange", "generate:exchange"]:
         assert config[job_name]["before_script"][0] == (
             'if [ -n "$PYTHON_BOOTSTRAP_COMMAND" ]; then sh -c "$PYTHON_BOOTSTRAP_COMMAND"; fi'
         )
     assert config["review:skills"]["rules"] == [
         {"if": '$CI_PIPELINE_SOURCE == "merge_request_event"', "changes": ["skills/**/*"]}
     ]
+    assert config["generate:exchange"]["rules"] == [
+        {"if": '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'}
+    ]
+    assert config["generate:exchange"]["artifacts"]["paths"] == [".exchange/generated/", "generate-result.json"]
     assert config["pages"]["tags"] == ["$PAGES_RUNNER_TAG"]
+    assert config["pages"]["needs"] == [
+        {"job": "publish:exchange", "artifacts": True, "optional": True},
+        {"job": "generate:exchange", "artifacts": True, "optional": True},
+    ]
     assert config["pages"]["rules"] == [
         {"if": '$CI_PIPELINE_SOURCE == "schedule"'},
         {"if": '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'}

@@ -6,7 +6,7 @@ This repository uses a lightweight governance model for the static skill exchang
 
 Human contributors may author skill content, skill metadata, and proposed exchange policy changes. They must not author official generated evidence.
 
-Official bill-of-evidence records, generated exchange index files, scanner tables, and runtime zip artifacts are produced by protected scheduled CI. Candidate MR scanner output is reviewer context only; it is not official evidence.
+Official bill-of-evidence bundles are produced by protected scheduled CI. Candidate MR scanner output is reviewer context only; it is not official evidence. Generated exchange index files, scanner tables, runtime zip artifacts, and public scanner-run mirrors are deploy-time projections of BOE and source skills.
 
 ## Roles
 
@@ -16,7 +16,7 @@ Official bill-of-evidence records, generated exchange index files, scanner table
 | Skill owner | Optional in the MVP. Accountable for declared skill purpose, usefulness, and maintenance. |
 | Reviewer | Reviews skill content, metadata, validation warnings, and SkillSpector assessment context. |
 | Maintainer | Owns merge authority and protects governance files, CI configuration, exchange policy, and publication rules. |
-| Exchange bot | Runs protected scheduled publication, produces official BOE, commits generated exchange data, and publishes Pages output. |
+| Exchange bot | Runs protected scheduled publication, produces official BOE bundles, commits BOE evidence, and publishes Pages output. |
 
 The exchange bot is the only actor that may produce or commit official generated BOE.
 
@@ -30,14 +30,16 @@ The exchange bot is the only actor that may produce or commit official generated
 6. At least one human reviewer inspects the diff, metadata, validation output, and scanner context.
 7. A maintainer merges after required human approvals.
 8. The protected scheduled publication pipeline produces or reuses official BOE for the default branch.
-9. The exchange bot commits generated exchange data under `.exchange/generated/` when bot publication is configured.
-10. GitLab Pages publishes the updated static exchange.
+9. The exchange bot commits BOE bundles under `.exchange/generated/boe/` when bot publication is configured.
+10. GitLab Pages publishes the updated static exchange from generated CI artifacts.
 
 ## Generated Output Workflow
 
-Generated output belongs under `.exchange/generated/`. It may include BOE records, scanner reports, scanner summary tables, generated skill records, and runtime skill zip artifacts.
+Generated output belongs under `.exchange/generated/`. BOE bundles under `.exchange/generated/boe/` are the durable generated evidence committed to the repository. They may include BOE records, exact native scanner output, scanner summaries, redacted scanner configuration, and supporting hashes.
 
-Generated-output merge requests from the exchange bot may be exempt from human review only when the diff is limited to generated evidence, generated index files, scanner tables, and generated zip artifacts under `.exchange/generated/`.
+Generated index files, scanner tables, public scanner-run mirrors, generated skill records, and runtime skill zip artifacts are derived deploy artifacts. They should be generated in CI or locally and should not be committed.
+
+Generated-output merge requests from the exchange bot may be exempt from human review only when the diff is limited to BOE bundles under `.exchange/generated/boe/`.
 
 Bot generated-output merge requests must fail validation and must not automerge when they modify human-authored skill content, exchange policy files, CI configuration, documentation, or governance files.
 
@@ -58,4 +60,4 @@ Bot generated-output merge requests must fail validation and must not automerge 
 
 The MVP does not include a backend approval service, user account model, custom AI review workflow, executable evaluation harness, download tracking, or formal blocking gate based on SkillSpector findings. Those may be added later only after the static exchange data contract and governance boundary prove useful.
 
-Future services should ingest `.exchange/generated/index.json` and BOE records rather than replacing the bot-produced evidence model.
+Future services should ingest BOE bundles as the durable evidence source and may generate their own index/table projections from that evidence model.

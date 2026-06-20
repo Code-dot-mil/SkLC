@@ -308,7 +308,11 @@ def post_review_comment(body: str) -> str:
 
 
 def commit_generated_outputs(*, repo_root: Path, generated_dir: Path) -> dict[str, Any]:
-    relative_generated_dir = relative_to_repo(repo_root, generated_dir)
+    boe_dir = generated_dir / "boe"
+    if not boe_dir.exists():
+        return {"committed": False, "pushed": False, "reason": "no BOE generated"}
+
+    relative_generated_dir = relative_to_repo(repo_root, boe_dir)
     run_git(repo_root, "config", "user.name", os.environ.get("EXCHANGE_BOT_GIT_NAME", "skill-exchange-bot"))
     run_git(
         repo_root,

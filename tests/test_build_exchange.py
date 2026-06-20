@@ -62,6 +62,12 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
         "model": None,
     }
     assert "/boe/" in index["skills"][0]["boe_path"]
+    boe_dir = Path(index["skills"][0]["boe_path"]).parent
+    scanner_config = json.loads((boe_dir / "scanner-config.json").read_text())
+    support_hashes = json.loads((boe_dir / "hashes.json").read_text())
+    assert scanner_config == {"native_output_format": "skillspector-json-v2", "scan_mode": "static-only"}
+    assert support_hashes["skillspector.json"]
+    assert support_hashes["summary.json"]
     assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
     scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
     scanner_artifacts = json.loads((generated / "tables" / "scanner_artifacts.json").read_text())

@@ -19,23 +19,23 @@ Skill packages under `skills/` are exchange content. Treat changes there as skil
 
 ## Local Checks
 
-Use the root package scripts for routine development:
+Use `just` for routine cross-stack development:
 
 ```sh
-npm run lint
-npm test
-npm run test:site
-npm run typecheck
-npm run build
+just lint
+just test
+just build
 ```
 
-`npm run ci:local` runs the common local gate:
+`just ci-local` runs the common local gate:
 
 ```sh
-npm run ci:local
+just ci-local
 ```
 
-The root scripts delegate to `uv` for Python checks and to `site/package.json` for frontend checks. They are intentionally thin wrappers so local development and CI stay aligned.
+Use `uv` directly for Python-only commands and `npm --prefix site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
+
+`just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds do not rewrite tracked CI-produced BOE bundles.
 
 ## Python Tooling
 
@@ -61,7 +61,7 @@ npm --prefix site run build
 
 Node-based tests belong under `site/tests/`. Python pytest should not depend on Node, npm install state, or `site/node_modules`.
 
-The site must be able to build from a fresh checkout before scheduled generated data exists. When `.exchange/generated/` data is absent, the site should render a valid empty catalog rather than failing import resolution.
+The site must be able to build from deploy-time generated artifacts. When `.exchange/generated/` data is absent, the site should render a valid empty catalog rather than failing import resolution.
 
 ## CI Changes
 
@@ -73,12 +73,12 @@ When changing CI:
 - Keep Docker image registry, repository, tag, and full-image override variables configurable.
 - Keep environment-specific credentials, endpoints, scanner install commands, and bot settings in CI variables.
 - Do not introduce organization-specific variable names.
-- Preserve the path rules: lint, test, and audit run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; deploy runs from default-branch push pipelines.
+- Preserve the path rules: lint, test, and audit run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; deploy runs from default-branch push pipelines and schedules.
 - Validate with `glab ci lint` when GitLab access is available.
 
 ## Generated Files
 
-Do not hand-edit generated exchange data under `.exchange/generated/`. Use local publication commands or CI publication jobs to regenerate it.
+Do not hand-edit generated exchange data under `.exchange/generated/`. BOE bundles under `.exchange/generated/boe/` are durable generated evidence. Derived site data such as `index.json`, `tables/`, `skills/`, `scanner-runs/`, and `zips/` should be regenerated locally or by CI and not committed.
 
 Do not commit local caches or build output such as `site/dist/`, `site/.astro/`, `site/node_modules/`, `.pytest_cache/`, or `.venv/`.
 
@@ -97,4 +97,4 @@ Keep changes focused and reviewable. A typical platform change should include:
 - Documentation updates when operators or developers need to know about the change.
 - A conventional commit message.
 
-Before pushing, run the relevant local checks. For CI or release behavior, prefer running the full `npm run ci:local` gate plus `glab ci lint` when available.
+Before pushing, run the relevant local checks. For CI or release behavior, prefer running the full `just ci-local` gate plus `glab ci lint` when available.

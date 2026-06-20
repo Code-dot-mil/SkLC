@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,8 @@ def write_boe(
     boe_dir.mkdir(parents=True, exist_ok=True)
     skillspector_path = boe_dir / "skillspector.json"
     summary_path = boe_dir / "summary.json"
+    scanner_config_path = boe_dir / "scanner-config.json"
+    hashes_path = boe_dir / "hashes.json"
     boe_path = boe_dir / "boe.json"
     metadata = report_metadata(report)
     scanner_config = scanner_config or {}
@@ -43,6 +46,7 @@ def write_boe(
         "confidence_flags": assessment["confidence_flags"],
     }
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    scanner_config_path.write_text(json.dumps(scanner_config, indent=2, sort_keys=True) + "\n")
     boe = {
         "schema_version": "skill-exchange-boe/v0",
         "namespace": skill.metadata.namespace,
@@ -73,8 +77,21 @@ def write_boe(
         "paths": {
             "skillspector": skillspector_path.as_posix(),
             "summary": summary_path.as_posix(),
+            "scanner_config": scanner_config_path.as_posix(),
+            "hashes": hashes_path.as_posix(),
             "report_source": report_path.as_posix(),
         },
     }
     boe_path.write_text(json.dumps(boe, indent=2, sort_keys=True) + "\n")
+    hashes = {
+        "boe.json": file_sha256(boe_path),
+        "scanner-config.json": file_sha256(scanner_config_path),
+        "skillspector.json": file_sha256(skillspector_path),
+        "summary.json": file_sha256(summary_path),
+    }
+    hashes_path.write_text(json.dumps(hashes, indent=2, sort_keys=True) + "\n")
     return boe_path
+
+
+def file_sha256(path: Path) -> str:
+    return sha256(path.read_bytes()).hexdigest()

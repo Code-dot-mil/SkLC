@@ -1,14 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "lint": "npm run lint:python && npm run lint:site",
-    "lint:python": "uv run --extra test ruff check scripts tests",
-    "lint:python:fix": "uv run --extra test ruff check --fix scripts tests",
-    "lint:site": "npm --prefix site run lint",
-    "test": "uv run --extra test pytest",
-    "test:site": "npm --prefix site run test",
-    "typecheck": "npm --prefix site run typecheck",
-    "build": "npm --prefix site run build",
-    "ci:local": "npm run lint && npm test && npm run test:site && npm run build"
+    "site:build": "npm --prefix site run build",
+    "site:lint": "npm --prefix site run lint",
+    "site:test": "npm --prefix site run test",
+    "site:typecheck": "npm --prefix site run typecheck"
   }
 }

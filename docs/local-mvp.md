@@ -7,14 +7,16 @@ This repository can run the Step 1 skill exchange MVP locally without GitLab.
 Run tests:
 
 ```sh
-uv run --extra test pytest
+just test
 ```
 
-Generate official local exchange evidence for both static-only and LLM-assisted SkillSpector configurations:
+Generate official local exchange evidence and derived site data for static-only SkillSpector:
 
 ```sh
-uv run python -m skill_exchange.cli publish-local
+just generate
 ```
+
+`just generate` writes to `.exchange/local-generated/`. Use `--generated-dir` with the Python CLI only when you intentionally need a different output location.
 
 Generate only one configuration when needed:
 
@@ -26,18 +28,18 @@ uv run python -m skill_exchange.cli publish-local --scan-mode llm-assisted
 Build the static site:
 
 ```sh
-npm --prefix site install
-npm --prefix site run build
+just build
 ```
 
 ## Local Generated Outputs
 
-- `.exchange/generated/index.json` is the exchange data contract.
-- `.exchange/generated/tables/scanner_runs.json` records scanner executions.
-- `.exchange/generated/tables/scanner_artifacts.json` points to native scanner output, summaries, and BOE files.
-- `.exchange/generated/tables/scanner_findings.json` stores scanner findings while preserving each native finding object.
-- `.exchange/generated/boe/` stores official local BOE records.
-- `.exchange/generated/zips/` stores runtime skill zip downloads.
+- `.exchange/generated/boe/` stores CI-produced durable BOE bundles, including supporting scanner output and summaries.
+- `.exchange/local-generated/` stores ignored local generated data for development builds.
+- `.exchange/generated/index.json` is a derived site data contract.
+- `.exchange/generated/tables/scanner_runs.json` is a derived table of scanner executions.
+- `.exchange/generated/tables/scanner_artifacts.json` is a derived table of native scanner output, summaries, and BOE download links.
+- `.exchange/generated/tables/scanner_findings.json` is a derived table of scanner findings.
+- `.exchange/generated/zips/` stores derived runtime skill zip downloads.
 
 ## SkillSpector
 

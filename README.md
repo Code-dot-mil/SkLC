@@ -21,7 +21,7 @@ The long-term direction is to keep this exchange portable: a target environment 
 The exchange has three main layers:
 
 1. Skill packages live under `skills/`. Each package contains a `SKILL.md` file with frontmatter and skill content.
-2. Python tooling under `scripts/skill_exchange/` validates skills, runs SkillSpector, applies exchange policy, writes bill-of-evidence bundles, creates runtime zip files, and produces derived site data under `.exchange/generated/`.
+2. Python tooling under `scripts/skill_exchange/` validates skills, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), applies exchange policy, writes bill-of-evidence bundles, creates runtime zip files, and produces derived site data under `.exchange/generated/`.
 3. The Astro site under `site/` reads derived `.exchange/generated/` data and builds a static catalog that can be published by GitLab Pages.
 
 Tracked generated evidence lives under `.exchange/generated/boe/`. Other generated outputs under `.exchange/generated/` are deploy-time site inputs and should not be committed.

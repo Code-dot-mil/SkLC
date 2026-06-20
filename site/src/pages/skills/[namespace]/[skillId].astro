@@ -132,7 +132,7 @@ function flattenFrontmatterRows(value, prefix = "") {
         </div>
         <div class="hero-actions">
           <a class="primary-action" href={skill.download_path}>Download skill package</a>
-          {skill.source_url && <a class="secondary-action" href={skill.source_url}>View source</a>}
+          {skill.source_url && <a class="secondary-action" href={skill.source_url} rel="noreferrer" referrerpolicy="no-referrer">View source</a>}
         </div>
       </div>
       <aside class="trust-panel" aria-label="Trust snapshot">
@@ -178,12 +178,18 @@ function flattenFrontmatterRows(value, prefix = "") {
         Low risk maps to Safe to use, medium risk maps to Use caution, and high or critical risk maps to Avoid installing.
         LLM-assisted scans use the configured provider and model, while static-only scans skip LLM review and may carry lower-confidence flags.
       </p>
+      <p>
+        Learn more in the{" "}
+        <a class="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerpolicy="no-referrer">
+          NVIDIA SkillSpector documentation <span aria-hidden="true">↗</span>
+        </a>.
+      </p>
       <p><strong>Risk basis:</strong> {riskReason}</p>
     </dialog>
     <div class="metadata-strip">
       <span><strong>Last updated:</strong> {formatDate(skill.last_updated)}</span>
       <span><strong>First observed:</strong> {formatDate(skill.first_observed)}</span>
-      {skill.upstream_url && <a href={skill.upstream_url}>Upstream source</a>}
+      {skill.upstream_url && <a href={skill.upstream_url} rel="noreferrer" referrerpolicy="no-referrer">Upstream source</a>}
     </div>
   </header>
 
@@ -261,6 +267,49 @@ function flattenFrontmatterRows(value, prefix = "") {
     </div>
   </section>
   <script>
+    import { readQueryValue, replaceQueryState } from "../../../lib/url-state.mjs";
+
+    const tabGroups = [
+      {
+        param: "tab",
+        defaultValue: "files",
+        options: [
+          { value: "files", id: "tab-files" },
+          { value: "assessment", id: "tab-assessment" },
+        ],
+      },
+      {
+        param: "fileTab",
+        defaultValue: "instructions",
+        options: [
+          { value: "instructions", id: "tab-skill-md" },
+          { value: "files", id: "tab-file-list" },
+        ],
+      },
+    ];
+
+    tabGroups.forEach((group) => {
+      const values = group.options.map((option) => option.value);
+      const selectedValue = readQueryValue(window.location.search, group.param, group.defaultValue, values);
+      const selectedOption = group.options.find((option) => option.value === selectedValue);
+      const selectedInput = selectedOption ? document.getElementById(selectedOption.id) : null;
+      if (selectedInput instanceof HTMLInputElement) {
+        selectedInput.checked = true;
+      }
+
+      group.options.forEach((option) => {
+        const input = document.getElementById(option.id);
+        if (!(input instanceof HTMLInputElement)) {
+          return;
+        }
+        input.addEventListener("change", () => {
+          if (input.checked) {
+            replaceQueryState({ [group.param]: option.value }, { [group.param]: group.defaultValue });
+          }
+        });
+      });
+    });
+
     document.querySelectorAll("[data-dialog-target]").forEach((button) => {
       button.addEventListener("click", () => {
         const dialog = document.getElementById(button.getAttribute("data-dialog-target") || "");

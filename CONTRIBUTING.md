@@ -19,7 +19,7 @@ Skill packages under `skills/` are exchange content. Treat changes there as skil
 
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22, `npm`, `just`, and SkillSpector. SkillSpector can be on `PATH` or configured with `SKILLSPECTOR_BIN`.
+Install Python 3.12, `uv`, Node.js 22, `npm`, `just`, and [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector). SkillSpector can be on `PATH` or configured with `SKILLSPECTOR_BIN`.
 
 Install project dependencies:
 

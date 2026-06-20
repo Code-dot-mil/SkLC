@@ -152,19 +152,6 @@ def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypat
     ]
 
 
-def test_local_package_scripts_cover_common_checks():
-    root_scripts = json.loads(Path("package.json").read_text())["scripts"]
-    site_scripts = json.loads(Path("site/package.json").read_text())["scripts"]
-
-    assert root_scripts["lint"] == "npm run lint:python && npm run lint:site"
-    assert root_scripts["lint:python"] == "uv run --extra test ruff check scripts tests"
-    assert root_scripts["lint:site"] == "npm --prefix site run lint"
-    assert root_scripts["test"] == "uv run --extra test pytest"
-    assert root_scripts["build"] == "npm --prefix site run build"
-    assert site_scripts["lint"] == "npm run typecheck"
-    assert site_scripts["test"] == "node --test tests/*.test.mjs"
-
-
 def test_gitlab_ci_routes_jobs_by_expected_changes():
     config = yaml.safe_load(Path(".gitlab-ci.yml").read_text())
 

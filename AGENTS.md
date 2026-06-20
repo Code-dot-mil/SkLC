@@ -36,5 +36,8 @@ These instructions apply to this repository.
 ## Boundaries
 
 - Use `scripts/skill_exchange/ci.py` for review and publish behavior. Keep local CLI commands focused on local publication.
+- Do not leave red-green scaffolding or placeholder tests in the repository. Tests must prove real behavior, not merely lock package script strings, command spelling, or implementation trivia.
+- Python tests must not invoke Node or npm. Node-dependent behavior belongs in `site/tests/` and must run through `npm run test:site`.
+- Remove local generated artifacts after experiments. Do not leave ignored `.exchange/generated/` output, caches, or build directories around as hidden workspace state.
 - Do not commit `site/dist/`, `site/.astro/`, `site/node_modules/`, `.pytest_cache/`, `.venv/`, or other local build/cache output.
 - Keep documentation free of local machine paths and local workspace state.

@@ -250,6 +250,8 @@ confidence_flags:
 
 `SKILL_EXCHANGE_SOURCE_REPOSITORY_URL` and `SKILL_EXCHANGE_SOURCE_BRANCH` may override `site-config.json` at generation time.
 
+`SKILL_EXCHANGE_SHOW_SOURCE_LINKS` controls whether the static site renders `View source` links at Astro build time. It defaults to `true`; set it to `false`, `0`, `no`, or `off` for a build that should omit those links. Invalid values must fail the build instead of falling back silently.
+
 ## Skill Package Format
 
 Skill packages live at `skills/<namespace>/<skill-id>/`. The folder path is the authoritative identity source. Namespaces are open in the MVP and should be based on the publishing GitLab group, team, or organization. The current implementation treats namespace as one filesystem path segment. Do not store a URL as the namespace.
@@ -821,7 +823,7 @@ Recommendation sort ranks `DO_NOT_INSTALL` as 3, `CAUTION` as 2, `SAFE` as 1, an
 
 - generates static paths from the public index;
 - shows a back link to catalog;
-- leads with skill display ID, description, recommendation, download action, and optional source link;
+- leads with skill display ID, description, recommendation, download action, and optional source link controlled by `SKILL_EXCHANGE_SHOW_SOURCE_LINKS`;
 - shows a trust snapshot with use guidance, scanner risk, scanner, scan mode, last scanned, and owner;
 - includes a recommendation info dialog explaining scanner-derived recommendation and risk basis;
 - shows last updated, first observed, and optional upstream source;

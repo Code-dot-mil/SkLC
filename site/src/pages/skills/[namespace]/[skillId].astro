@@ -2,6 +2,7 @@
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import RecommendationBadge from "../../../components/RecommendationBadge.astro";
 import ScannerFindings from "../../../components/ScannerFindings";
+import { showSourceLinks } from "../../../lib/build-options.mjs";
 import { sanitizeSkillHtml } from "../../../lib/sanitize-skill-html.mjs";
 import { createMarkdownProcessor, parseFrontmatter } from "@astrojs/markdown-remark";
 import { visit } from "unist-util-visit";
@@ -132,7 +133,7 @@ function flattenFrontmatterRows(value, prefix = "") {
         </div>
         <div class="hero-actions">
           <a class="primary-action" href={skill.download_path}>Download skill package</a>
-          {skill.source_url && <a class="secondary-action" href={skill.source_url} rel="noreferrer" referrerpolicy="no-referrer">View source</a>}
+          {showSourceLinks && skill.source_url && <a class="secondary-action" href={skill.source_url} rel="noreferrer" referrerpolicy="no-referrer">View source</a>}
         </div>
       </div>
       <aside class="trust-panel" aria-label="Trust snapshot">

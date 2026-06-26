@@ -59,6 +59,10 @@ The repository must have this shape:
               skillspector.json
               summary.json
 
+.skill-lifecycle/
+  metadata/
+    <skill-id>.yaml
+
 scripts/
   skill_exchange/
     __init__.py
@@ -255,6 +259,10 @@ confidence_flags:
 Skill packages live at `skills/<namespace>/<skill-id>/`. The folder path is the authoritative identity source. Namespaces are open in the MVP and should be based on the publishing GitLab group, team, or organization. The current implementation treats namespace as one filesystem path segment. Do not store a URL as the namespace.
 
 Each package must include `SKILL.md` with YAML frontmatter at the start of the file. Optional `references/`, `scripts/`, and `assets/` directories are included in hashes and runtime zips.
+
+Optional seed lifecycle metadata may live under `.skill-lifecycle/metadata/<skill-id>.yaml` using the same stable skill ID as the runtime package. This metadata is governance and validation context, not runtime skill instruction context, and is not included in runtime zips.
+
+MVP-0.2 lifecycle metadata includes `schema_version`, `skill_id`, `tier`, `owner`, `purpose`, `intended_users`, `use_context`, `positive_triggers`, `negative_triggers`, and `known_failure_cases`. The current exchange publisher does not enforce these files yet; they are repository-level authoring inputs for the lifecycle validation path.
 
 Minimum frontmatter:
 
@@ -922,6 +930,7 @@ The repository includes seed skills under `skills/ai4sdlc/`, including:
 
 - `benign-scanner-demo`;
 - `code-change-description`;
+- `inline-documentation`;
 - `python-secure-code-review`;
 - `unit-test-generation`.
 

@@ -1,0 +1,28 @@
+{
+  "skill": {
+    "name": "inline-documentation",
+    "source": "/apps/gitlab/dod-ai4sdlc/skill-exchange-site/skills/ai4sdlc/inline-documentation",
+    "scanned_at": "2026-06-26T18:42:05.697066+00:00"
+  },
+  "risk_assessment": {
+    "score": 0,
+    "severity": "LOW",
+    "recommendation": "SAFE"
+  },
+  "components": [
+    {
+      "path": "SKILL.md",
+      "type": "markdown",
+      "lines": 118,
+      "executable": false,
+      "size_bytes": 4927
+    }
+  ],
+  "issues": [],
+  "metadata": {
+    "has_executable_scripts": false,
+    "skillspector_version": "2.1.5",
+    "llm_requested": false,
+    "llm_available": true
+  }
+}

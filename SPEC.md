@@ -247,7 +247,7 @@ confidence_flags:
 
 ```json
 {
-  "sourceRepositoryUrl": "https://example.invalid/skill-exchange-site",
+  "sourceRepositoryUrl": "https://gitlab.mitre.org/dod-ai4sdlc/skill-exchange-site",
   "sourceBranch": "main"
 }
 ```
@@ -818,14 +818,14 @@ The first page is the usable catalog, not a marketing landing page.
 `SkillCatalog.tsx`:
 
 - supports text search across display ID, name, description, category, and tags;
-- filters by recommendation: all, `DO_NOT_INSTALL`, `CAUTION`, `REVIEW`, `SAFE`, `Unknown`;
+- filters by recommendation: all, `DO_NOT_INSTALL`, `CAUTION`, `SAFE`, `Unknown`;
 - filters by category, treating absent category as `uncategorized`;
 - sorts by name, recommendation, last updated, or last scanned;
 - persists query state with URL params `q`, `recommendation`, `category`, and `sort`;
 - removes default values from the URL and preserves unrelated params;
 - renders cards with recommendation pills, confidence flags, category, description, tags, risk, last scanned, owner, scanner, and a detail link.
 
-Recommendation sort ranks `DO_NOT_INSTALL` as 3, `CAUTION` as 2, `SAFE` as 1, and `Unknown` as 0. Unranked values, including `REVIEW`, use the default rank 0. `REVIEW` is still displayed as `Use caution`.
+Recommendation sort ranks `DO_NOT_INSTALL` as 3, `CAUTION` as 2, `SAFE` as 1, and `Unknown` as 0. Unranked values use the default rank 0.
 
 `site/src/pages/skills/[namespace]/[skillId].astro`:
 

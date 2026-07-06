@@ -47,9 +47,14 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert index["skills"][0]["recommendation"] == "SAFE"
     assert index["skills"][0]["recommendation_label"] == "Safe to use"
     assert "Low confidence" in index["skills"][0]["confidence_flags"]
-    assert index["skills"][0]["skill_files"] == [{"path": "SKILL.md", "size_bytes": 290}]
+    fixture_skill = Path("tests/fixtures/skills/ai4sdlc/sample-skill/SKILL.md")
+    assert index["skills"][0]["skill_files"] == [{"path": "SKILL.md", "size_bytes": fixture_skill.stat().st_size}]
     assert "# Sample Skill" in index["skills"][0]["skill_md_content"]
-    assert index["skills"][0]["source_url"].endswith("/tree/main/tests/fixtures/skills/ai4sdlc/sample-skill")
+    assert (
+        index["skills"][0]["source_url"]
+        == "https://gitlab.mitre.org/dod-ai4sdlc/skill-exchange-site"
+        "/-/tree/main/tests/fixtures/skills/ai4sdlc/sample-skill"
+    )
     assert datetime.fromisoformat(index["skills"][0]["last_updated"])
     assert datetime.fromisoformat(index["skills"][0]["first_observed"])
     assert datetime.fromisoformat(index["skills"][0]["last_scanned"])

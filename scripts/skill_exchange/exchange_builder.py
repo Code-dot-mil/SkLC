@@ -604,7 +604,7 @@ def source_url(site_config: dict[str, Any], source_path: str) -> str | None:
     branch = str(site_config.get("sourceBranch") or "main").strip("/")
     if not repository_url:
         return None
-    return f"{repository_url}/tree/{branch}/{source_path}"
+    return f"{repository_url}/-/tree/{branch}/{source_path}"
 
 
 def skill_last_updated(skill) -> str:

@@ -930,7 +930,6 @@ Generated-output MRs from the exchange bot may be exempt from human review only 
 
 The repository includes seed skills under `skills/ai4sdlc/`, including:
 
-- `benign-scanner-demo`;
 - `code-change-description`;
 - `inline-documentation`;
 - `python-secure-code-review`;

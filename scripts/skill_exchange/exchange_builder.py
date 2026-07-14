@@ -594,8 +594,9 @@ def load_site_config(exchange_dir: Path) -> dict[str, Any]:
     source_repository_url = os.environ.get("SKILL_EXCHANGE_SOURCE_REPOSITORY_URL") or os.environ.get("CI_PROJECT_URL")
     source_branch = (
         os.environ.get("SKILL_EXCHANGE_SOURCE_BRANCH")
-        or os.environ.get("CI_COMMIT_REF_NAME")
+        or config.get("sourceBranch")
         or os.environ.get("CI_DEFAULT_BRANCH")
+        or os.environ.get("CI_COMMIT_REF_NAME")
     )
     source_path_prefix = os.environ.get("SKILL_EXCHANGE_SOURCE_PATH_PREFIX")
     if source_repository_url:

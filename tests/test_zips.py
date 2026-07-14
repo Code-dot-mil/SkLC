@@ -21,7 +21,7 @@ def _skill_package(path: Path) -> SkillPackage:
     )
 
 
-def test_skill_zip_preserves_runtime_package_layout(tmp_path: Path):
+def test_skill_zip_places_skill_files_at_archive_root(tmp_path: Path):
     skill_dir = tmp_path / "skills" / "ai4sdlc" / "sample-skill"
     (skill_dir / "references").mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text("# Sample Skill\n")
@@ -31,8 +31,8 @@ def test_skill_zip_preserves_runtime_package_layout(tmp_path: Path):
 
     with ZipFile(zip_path) as archive:
         assert sorted(archive.namelist()) == [
-            "ai4sdlc/sample-skill/SKILL.md",
-            "ai4sdlc/sample-skill/references/guide.md",
+            "SKILL.md",
+            "references/guide.md",
         ]
 
 
@@ -49,4 +49,3 @@ def test_skill_zip_rejects_symlinks(tmp_path: Path):
 
     with pytest.raises(ValueError, match="symlink"):
         hash_skill_package(skill_dir)
-

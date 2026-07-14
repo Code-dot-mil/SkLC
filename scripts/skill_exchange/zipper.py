@@ -12,6 +12,6 @@ def write_skill_zip(skill: SkillPackage, output_dir: Path) -> Path:
     zip_path = output_dir / f"{skill.metadata.namespace}--{skill.metadata.skill_id}.zip"
     with ZipFile(zip_path, "w", compression=ZIP_DEFLATED) as archive:
         for path in package_files(skill.path):
-            rel = Path(skill.metadata.namespace) / skill.metadata.skill_id / path.relative_to(skill.path)
+            rel = path.relative_to(skill.path)
             archive.write(path, rel.as_posix())
     return zip_path

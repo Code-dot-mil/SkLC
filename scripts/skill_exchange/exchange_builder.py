@@ -27,6 +27,7 @@ def build_exchange(
     scan_modes: tuple[str, ...],
 ) -> dict[str, Any]:
     generated_dir.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(generated_dir / "zips", ignore_errors=True)
     policy = load_exchange_policy(exchange_dir)
     site_config = load_site_config(exchange_dir)
     skills = discover_skills(skills_root)
@@ -590,21 +591,31 @@ def skill_files(skill) -> list[dict[str, Any]]:
 def load_site_config(exchange_dir: Path) -> dict[str, Any]:
     path = exchange_dir / "site-config.json"
     config = json.loads(path.read_text()) if path.exists() else {}
-    source_repository_url = os.environ.get("SKILL_EXCHANGE_SOURCE_REPOSITORY_URL")
-    source_branch = os.environ.get("SKILL_EXCHANGE_SOURCE_BRANCH")
+    source_repository_url = os.environ.get("SKILL_EXCHANGE_SOURCE_REPOSITORY_URL") or os.environ.get("CI_PROJECT_URL")
+    source_branch = (
+        os.environ.get("SKILL_EXCHANGE_SOURCE_BRANCH")
+        or config.get("sourceBranch")
+        or os.environ.get("CI_DEFAULT_BRANCH")
+        or os.environ.get("CI_COMMIT_REF_NAME")
+    )
+    source_path_prefix = os.environ.get("SKILL_EXCHANGE_SOURCE_PATH_PREFIX")
     if source_repository_url:
         config["sourceRepositoryUrl"] = source_repository_url
     if source_branch:
         config["sourceBranch"] = source_branch
+    if source_path_prefix:
+        config["sourcePathPrefix"] = source_path_prefix
     return config
 
 
 def source_url(site_config: dict[str, Any], source_path: str) -> str | None:
     repository_url = str(site_config.get("sourceRepositoryUrl") or "").rstrip("/")
     branch = str(site_config.get("sourceBranch") or "main").strip("/")
+    source_path_prefix = str(site_config.get("sourcePathPrefix") or "").strip("/")
+    source_path = "/".join(part for part in (source_path_prefix, source_path.strip("/")) if part)
     if not repository_url:
         return None
-    return f"{repository_url}/tree/{branch}/{source_path}"
+    return f"{repository_url}/-/tree/{branch}/{source_path}"
 
 
 def skill_last_updated(skill) -> str:

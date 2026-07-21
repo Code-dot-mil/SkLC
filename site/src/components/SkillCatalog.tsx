@@ -25,7 +25,7 @@ type Skill = {
   };
 };
 
-const RECOMMENDATION_VALUES = ["all", "DO_NOT_INSTALL", "CAUTION", "REVIEW", "SAFE", "Unknown"];
+const RECOMMENDATION_VALUES = ["all", "DO_NOT_INSTALL", "CAUTION", "SAFE", "Unknown"];
 const SORT_VALUES = ["name", "recommendation", "last_updated", "last_scanned"];
 
 function RecommendationPills({
@@ -128,7 +128,6 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
             <option value="all">All recommendations</option>
             <option value="DO_NOT_INSTALL">Avoid installing</option>
             <option value="CAUTION">Use caution</option>
-            <option value="REVIEW">Use caution</option>
             <option value="SAFE">Safe to use</option>
             <option value="Unknown">Unknown</option>
           </select>

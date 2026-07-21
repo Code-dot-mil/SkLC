@@ -22,6 +22,9 @@ def _fake_clean_report(*, llm_requested: bool = False, recommendation: str = "SA
 
 def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     generated = tmp_path / "generated"
+    stale_zip = generated / "zips" / "ai4sdlc--stale-skill.zip"
+    stale_zip.parent.mkdir(parents=True)
+    stale_zip.write_text("stale")
 
     def fake_run_skillspector(skill_path, output_path, *, no_llm):
         report = _fake_clean_report(llm_requested=not no_llm)
@@ -47,9 +50,14 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert index["skills"][0]["recommendation"] == "SAFE"
     assert index["skills"][0]["recommendation_label"] == "Safe to use"
     assert "Low confidence" in index["skills"][0]["confidence_flags"]
-    assert index["skills"][0]["skill_files"] == [{"path": "SKILL.md", "size_bytes": 290}]
+    fixture_skill = Path("tests/fixtures/skills/ai4sdlc/sample-skill/SKILL.md")
+    assert index["skills"][0]["skill_files"] == [{"path": "SKILL.md", "size_bytes": fixture_skill.stat().st_size}]
     assert "# Sample Skill" in index["skills"][0]["skill_md_content"]
-    assert index["skills"][0]["source_url"].endswith("/tree/main/tests/fixtures/skills/ai4sdlc/sample-skill")
+    assert (
+        index["skills"][0]["source_url"]
+        == "https://gitlab.mitre.org/dod-ai4sdlc/skill-exchange-site"
+        "/-/tree/main/tests/fixtures/skills/ai4sdlc/sample-skill"
+    )
     assert datetime.fromisoformat(index["skills"][0]["last_updated"])
     assert datetime.fromisoformat(index["skills"][0]["first_observed"])
     assert datetime.fromisoformat(index["skills"][0]["last_scanned"])
@@ -70,6 +78,7 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert support_hashes["skillspector.json"]
     assert support_hashes["summary.json"]
     assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
+    assert not stale_zip.exists()
     scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
     scanner_artifacts = json.loads((generated / "tables" / "scanner_artifacts.json").read_text())
     scanner_findings = json.loads((generated / "tables" / "scanner_findings.json").read_text())

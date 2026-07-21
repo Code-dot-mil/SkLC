@@ -225,6 +225,20 @@ pages:
     - npm --prefix site run build
     - rm -rf public
     - cp -R site/dist public
+    - |
+      cat > .gitlab-ci.yml <<'YAML'
+      image: alpine:latest
+
+      create-pages:
+        stage: deploy
+        script:
+          - echo "Publishing static site from public/"
+        pages:
+          publish: public
+        rules:
+          - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      YAML
   artifacts:
     paths:
       - "public/"
+      - ".gitlab-ci.yml"

@@ -5,6 +5,7 @@ stages:
   - review
   - publish
   - deploy
+  - package
 
 workflow:
   rules:
@@ -228,3 +229,44 @@ pages:
   artifacts:
     paths:
       - "public/"
+
+package:github-pages:
+  image: "$NODE_IMAGE"
+  stage: package
+  tags:
+    - "$SKILL_EXCHANGE_RUNNER_TAG"
+  needs:
+    - job: "pages"
+      artifacts: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
+  script:
+    - mkdir -p .github/workflows
+    - |
+      cat > .github/workflows/gh-pages.yml <<'YAML'
+      name: Deploy Skill Exchange to GitHub Pages
+
+      on:
+        push:
+          branches:
+            - main
+
+      jobs:
+        deploy:
+          runs-on: ubuntu-latest
+          steps:
+            - name: Checkout site artifact
+              uses: actions/checkout@v4
+            - name: Deploy prebuilt site
+              uses: peaceiris/actions-gh-pages@v4
+              with:
+                github_token: ${{ secrets.GITHUB_TOKEN }}
+                publish_dir: ./public
+      YAML
+  artifacts:
+    name: "github-pages-$CI_COMMIT_SHORT_SHA"
+    expire_in: "1 week"
+    paths:
+      - "public/"
+      - ".github/workflows/gh-pages.yml"

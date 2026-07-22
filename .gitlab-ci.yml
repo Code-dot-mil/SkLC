@@ -251,8 +251,8 @@ package:github-pages:
 
       1. Create an empty GitHub repository.
       2. Open **Settings > Pages** in that repository.
-      3. Under **Build and deployment**, set **Source** to **GitHub Actions**. Do not create a suggested workflow.
-      4. Extract this ZIP. Keep `README.md`, `public/`, and the hidden `.github/` directory together.
+      3. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+      4. Extract the ZIP.
       5. Open a terminal in the extracted directory and run:
 
          ```sh
@@ -265,22 +265,6 @@ package:github-pages:
          ```
 
       6. Open **Actions > Deploy Skill Exchange to GitHub Pages**.
-      7. Wait for the workflow to succeed.
-      8. Open **Settings > Pages** and select the published site URL.
-
-      ## Update an Existing Deployment
-
-      1. Extract the new ZIP.
-      2. Replace `README.md`, `public/`, and `.github/workflows/gh-pages.yml` in the GitHub repository checkout.
-      3. Open a terminal in the repository checkout and run:
-
-         ```sh
-         git add -A
-         git commit -m "Update Skill Exchange site"
-         git push
-         ```
-
-      4. Open **Actions > Deploy Skill Exchange to GitHub Pages** and wait for the workflow to succeed.
       MARKDOWN
     - |
       cat > .github/workflows/gh-pages.yml <<'YAML'

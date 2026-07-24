@@ -34,6 +34,7 @@ BOE bundles are also the durable scanner cache. If a later publication computes 
 - `.gitlab-ci.yml` defines the standalone GitLab CI pipeline.
 - `CI.md` documents CI variables, schedules, review behavior, and deploy behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
+- `docs/architecture.md` documents the current component, evidence, catalog-build, and CI flows.
 - `GOVERNANCE.md` describes exchange roles, review flow, generated-output boundaries, and bot publication rules.
 - `scripts/skill_exchange/` contains Python exchange tooling and CI entry points.
 - `site/` contains the Astro static site.

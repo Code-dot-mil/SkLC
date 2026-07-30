@@ -1,6 +1,6 @@
 # Static Skill Exchange Site Spec
 
-Date: 2026-06-19
+Date: 2026-07-30
 
 ## Purpose
 
@@ -675,6 +675,13 @@ Publish authentication must keep review credentials separate from publication cr
 4. Else fail with an explicit error explaining required publication variables.
 
 Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be a review/comment token with insufficient protected-branch permissions. Silent credential substitution hides defects.
+
+## GitHub Actions Quality CI
+
+`.github/workflows/quality.yml` runs six independent Python and site lint, test, and audit checks for relevant pull
+requests and `main` pushes. The jobs use GitHub-hosted `ubuntu-latest` runners, Python 3.12, Node.js 22, read-only
+contents permission, immutable action pins, and bounded timeouts. They must not use secrets, self-hosted runners,
+SkillSpector, LLM access, BOE, publication, or deployment tooling.
 
 ## GitLab CI
 

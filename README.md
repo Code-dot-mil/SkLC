@@ -93,6 +93,9 @@ Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow de
 
 ## CI Workflow
 
+GitHub Actions runs Python and site lint, test, and audit checks on GitHub-hosted runners without invoking SkillSpector
+or publication tooling.
+
 The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`, and `deploy`.
 
 - `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, lockfiles, policy, or CI configuration changes.

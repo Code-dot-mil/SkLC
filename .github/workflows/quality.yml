@@ -1,0 +1,68 @@
+on:
+  pull_request:
+    paths: &quality-paths
+      - ".github/workflows/quality.yml"
+      - ".gitlab-ci.yml"
+      - ".exchange/*.json"
+      - ".exchange/*.yaml"
+      - "package.json"
+      - "pyproject.toml"
+      - "scripts/**"
+      - "site/**"
+      - "tests/**"
+      - "uv.lock"
+  push:
+    branches: ["main"]
+    paths: *quality-paths
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: "Python ${{ matrix.check }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: lint
+            command: |
+              uv run ruff check scripts tests
+              uv run python -m compileall scripts tests
+              uv run python -c "import yaml; yaml.safe_load(open('.gitlab-ci.yml'))"
+          - check: test
+            command: uv run pytest
+          - check: audit
+            command: uv run --with pip-audit pip-audit --progress-spinner off
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --no-cache-dir uv
+      - run: uv sync --extra test
+      - run: ${{ matrix.command }}
+
+  site:
+    name: "Site ${{ matrix.check }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: lint
+            command: npm --prefix site run lint
+          - check: test
+            command: npm --prefix site run test
+          - check: audit
+            command: npm audit --prefix site --audit-level high
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+      - run: npm ci --prefix site
+      - run: ${{ matrix.command }}

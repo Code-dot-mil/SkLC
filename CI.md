@@ -2,6 +2,12 @@
 
 The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not import external CI components.
 
+## GitHub Actions Quality Checks
+
+`.github/workflows/quality.yml` runs independent Python and site lint, test, and audit checks on GitHub-hosted runners
+for relevant pull requests and `main` pushes. It has read-only contents permission and does not use secrets,
+self-hosted runners, SkillSpector, BOE, publication, or deployment tooling.
+
 ## Pipeline Shape
 
 - `lint`, `test`, and `audit` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.

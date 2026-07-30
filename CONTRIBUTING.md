@@ -89,6 +89,7 @@ When changing CI:
 - Keep environment-specific credentials, endpoints, scanner install commands, and bot settings in CI variables.
 - Do not introduce organization-specific variable names.
 - Preserve the path rules: lint, test, and audit run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; deploy runs from default-branch push pipelines and schedules.
+- Validate changed GitHub workflows with `actionlint` and the affected local commands.
 - Validate with `glab ci lint` when GitLab access is available.
 
 ## Generated Files

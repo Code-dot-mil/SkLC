@@ -22,7 +22,7 @@ These instructions apply to this repository.
 ## CI And Publishing
 
 - The GitLab CI definition is standalone in `.gitlab-ci.yml`; do not import external CI components.
-- `lint`, `test`, and `audit` should run only for site, tooling, tests, policy, lockfile, or CI changes.
+- `lint` and `test` should run only for site, tooling, tests, policy, lockfile, or CI changes.
 - Skill review should run only for merge requests that change `skills/**/*`.
 - Scheduled publication and default-branch skill-change pipelines produce official exchange evidence and may commit BOE bundles only when bot variables are configured.
 - Deploy jobs consume generated artifacts produced by Python jobs; Node jobs must not generate exchange data.

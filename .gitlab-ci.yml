@@ -1,7 +1,6 @@
 stages:
   - lint
   - test
-  - audit
   - review
   - publish
   - deploy
@@ -26,8 +25,6 @@ variables:
   NODE_IMAGE: "$NODE_IMAGE_REGISTRY/$NODE_IMAGE_REPOSITORY:$NODE_IMAGE_TAG"
   UV_CACHE_DIR: "$CI_PROJECT_DIR/.uv-cache"
   NPM_CACHE_DIR: "$CI_PROJECT_DIR/.npm"
-  PYTHON_AUDIT_COMMAND: "uv run --with pip-audit pip-audit --progress-spinner off"
-  NPM_AUDIT_LEVEL: "high"
   SKILL_EXCHANGE_RUNNER_TAG: "mitre-no-cui"
   PAGES_RUNNER_TAG: "pages-no-cui"
   SKILLSPECTOR_INSTALL_COMMAND: ""
@@ -121,20 +118,6 @@ test:site:
   rules: *site_code_rules
   script:
     - npm --prefix site run test
-
-audit:python:
-  extends: .python_job
-  stage: audit
-  rules: *site_code_rules
-  script:
-    - $PYTHON_AUDIT_COMMAND
-
-audit:site:
-  extends: .node_job
-  stage: audit
-  rules: *site_code_rules
-  script:
-    - npm audit --prefix site --audit-level "$NPM_AUDIT_LEVEL"
 
 review:skills:
   extends: .python_job

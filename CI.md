@@ -4,7 +4,7 @@ The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not impo
 
 ## Pipeline Shape
 
-- `lint`, `test`, and `audit` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
+- `lint` and `test` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`. It validates changed skill packages, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), writes reviewer artifacts, and can post a merge request comment when comment variables are configured.
 - `publish:exchange` runs for scheduled pipelines and default-branch push pipelines that change `skills/**/*`. It generates the full `.exchange/generated/` tree for deploy artifacts and commits BOE bundles back when bot push variables are configured.
 - `generate:exchange` runs on default-branch push pipelines that do not change `skills/**/*`. It generates deploy-time `.exchange/generated/` artifacts without committing them.
@@ -15,6 +15,14 @@ The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not impo
 - By default, Python jobs use the official Docker Hub Python image and install `uv` with `PYTHON_BOOTSTRAP_COMMAND`. Override the image variables when the target environment requires an internal registry or a prebuilt image.
 
 The checked-in runner tag defaults are environment examples. Override them in the destination GitLab project instead of editing job definitions.
+
+## Dependency Vulnerability Management
+
+GitHub Dependabot is the authoritative dependency-vulnerability control. Dependabot alerts and security updates must remain enabled in repository settings, and GitHub Security is the only alert backlog; do not create a scheduled CI job that duplicates it.
+
+`.github/dependabot.yml` covers the root `pyproject.toml` and `uv.lock` with the `uv` ecosystem and `site/package.json` and `site/package-lock.json` with the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, while major updates remain separate. Dependabot uses its default dependency and ecosystem labels and assigns update pull requests to `Fnorgh2`.
+
+`Fnorgh2` owns alert triage and must receive GitHub notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received; the remaining backlog is reviewed weekly. Alerts that cannot be remediated promptly are escalated to repository administrator `scotluns`. The former GitLab dependency-audit jobs are not retained because there is no separate compliance requirement for an advisory CI artifact.
 
 ## Required Schedule
 
@@ -49,7 +57,7 @@ All environment-specific values are CI variables:
 - `PYTHON_IMAGE_REGISTRY`, `PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and `PYTHON_IMAGE` select the Python runner image.
 - `PYTHON_BOOTSTRAP_COMMAND` installs Python job prerequisites when the selected image does not already include them. Set it to an empty string when using a prebuilt image with `uv` installed.
 - `NODE_IMAGE_REGISTRY`, `NODE_IMAGE_REPOSITORY`, `NODE_IMAGE_TAG`, and `NODE_IMAGE` select the Node runner image.
-- `SKILL_EXCHANGE_RUNNER_TAG` selects the runner tag for lint, test, audit, review, and publish jobs.
+- `SKILL_EXCHANGE_RUNNER_TAG` selects the runner tag for lint, test, review, and publish jobs.
 - `PAGES_RUNNER_TAG` selects the GitLab Pages runner tag.
 - `SKILLSPECTOR_INSTALL_COMMAND` installs SkillSpector when the runner image does not already include it.
 - `SKILLSPECTOR_BIN` points to a SkillSpector binary when it is not on `PATH`.

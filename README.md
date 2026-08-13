@@ -93,13 +93,14 @@ Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow de
 
 ## CI Workflow
 
-The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`, and `deploy`.
+The GitLab pipeline has five stages: `lint`, `test`, `review`, `publish`, and `deploy`.
 
-- `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, lockfiles, policy, or CI configuration changes.
+- `lint` and `test` run only when site code, exchange tooling, tests, lockfiles, policy, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`.
 - `publish:exchange` runs from scheduled pipelines and default-branch skill-change pipelines, and can commit BOE bundles when bot variables are configured.
 - `generate:exchange` runs on default-branch push pipelines that do not change skills, and produces deploy-time generated site artifacts.
 - `pages` runs on default-branch push pipelines and scheduled publication pipelines, consuming generated artifacts and publishing a top-level `public/` artifact for GitLab Pages.
+- GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
 
 See [CI.md](CI.md) for the full configuration reference.
 
@@ -113,7 +114,7 @@ Configuration is part of the portability model. Do not hardcode network-specific
 - LLM-assisted scan provider endpoint, model, and API key.
 - Merge request comment token behavior.
 - Scheduled publication branch, bot identity, push URL, and token.
-- Audit thresholds and scan modes.
+- Scan modes.
 
 Secrets should be configured as masked CI variables in the target environment and must not be committed.
 

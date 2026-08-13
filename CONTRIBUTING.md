@@ -88,7 +88,8 @@ When changing CI:
 - Keep Docker image registry, repository, tag, and full-image override variables configurable.
 - Keep environment-specific credentials, endpoints, scanner install commands, and bot settings in CI variables.
 - Do not introduce organization-specific variable names.
-- Preserve the path rules: lint, test, and audit run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; deploy runs from default-branch push pipelines and schedules.
+- Preserve the path rules: lint and test run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; deploy runs from default-branch push pipelines and schedules.
+- Keep dependency-vulnerability triage in GitHub Security; do not add a scheduled CI job that duplicates the Dependabot backlog.
 - Validate with `glab ci lint` when GitLab access is available.
 
 ## Generated Files

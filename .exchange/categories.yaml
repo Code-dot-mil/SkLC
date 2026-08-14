@@ -1,9 +1,0 @@
-categories:
-  - id: security
-    label: Security
-  - id: testing
-    label: Testing
-  - id: documentation
-    label: Documentation
-  - id: collaboration
-    label: Collaboration

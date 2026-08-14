@@ -1,9 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "site:build": "npm --prefix site run build",
-    "site:lint": "npm --prefix site run lint",
-    "site:test": "npm --prefix site run test",
-    "site:typecheck": "npm --prefix site run typecheck"
-  }
-}

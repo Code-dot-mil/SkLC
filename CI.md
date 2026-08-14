@@ -8,7 +8,7 @@ The `CI` workflow runs on every pull request targeting `main` and every push to 
 
 ## GitLab Pipeline Shape
 
-- `lint` and `test` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
+- `lint`, `test`, and `audit` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`. It validates changed skill packages, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), writes reviewer artifacts, and can post a merge request comment when comment variables are configured.
 - `publish:exchange` runs for scheduled pipelines and default-branch push pipelines that change `skills/**/*`. It generates the full `.exchange/generated/` tree for deploy artifacts and commits BOE bundles back when bot push variables are configured.
 - `generate:exchange` runs on default-branch push pipelines that do not change `skills/**/*`. It generates deploy-time `.exchange/generated/` artifacts without committing them.
@@ -26,7 +26,7 @@ GitHub Dependabot is the authoritative dependency-vulnerability control. Dependa
 
 `.github/dependabot.yml` covers the root `pyproject.toml` and `uv.lock` with the `uv` ecosystem and `site/package.json` and `site/package-lock.json` with the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, while major updates remain separate. Dependabot uses its default dependency and ecosystem labels and assigns update pull requests to `Fnorgh2`.
 
-`Fnorgh2` owns alert triage and must receive GitHub notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received; the remaining backlog is reviewed weekly. Alerts that cannot be remediated promptly are escalated to repository administrator `scotluns`. The former GitLab dependency-audit jobs are not retained because there is no separate compliance requirement for an advisory CI artifact.
+`Fnorgh2` owns alert triage and must receive GitHub notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received; the remaining backlog is reviewed weekly. Alerts that cannot be remediated promptly are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
 
 ## Required Schedule
 
@@ -61,7 +61,7 @@ All environment-specific values are CI variables:
 - `PYTHON_IMAGE_REGISTRY`, `PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and `PYTHON_IMAGE` select the Python runner image.
 - `PYTHON_BOOTSTRAP_COMMAND` installs Python job prerequisites when the selected image does not already include them. Set it to an empty string when using a prebuilt image with `uv` installed.
 - `NODE_IMAGE_REGISTRY`, `NODE_IMAGE_REPOSITORY`, `NODE_IMAGE_TAG`, and `NODE_IMAGE` select the Node runner image.
-- `SKILL_EXCHANGE_RUNNER_TAG` selects the runner tag for lint, test, review, and publish jobs.
+- `SKILL_EXCHANGE_RUNNER_TAG` selects the runner tag for lint, test, audit, review, and publish jobs.
 - `PAGES_RUNNER_TAG` selects the GitLab Pages runner tag.
 - `SKILLSPECTOR_INSTALL_COMMAND` installs SkillSpector when the runner image does not already include it.
 - `SKILLSPECTOR_BIN` points to a SkillSpector binary when it is not on `PATH`.

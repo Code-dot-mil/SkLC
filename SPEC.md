@@ -692,6 +692,7 @@ Stages:
 stages:
   - lint
   - test
+  - audit
   - review
   - publish
   - deploy
@@ -714,7 +715,7 @@ Global CI defaults:
 
 Path rules:
 
-- `lint` and `test` run only when site code, exchange tooling, tests, policy, lockfiles, or CI configuration changes.
+- `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, policy, lockfiles, or CI configuration changes.
 - `review:skills` runs only for merge requests with `skills/**/*` changes.
 - `publish:exchange` runs on schedules and default-branch push pipelines with `skills/**/*` changes.
 - `generate:exchange` runs on default-branch push pipelines that do not change skills.
@@ -740,6 +741,8 @@ Jobs:
 - `lint:site`: `npm --prefix site run lint`.
 - `test:python`: `uv run pytest`.
 - `test:site`: `npm --prefix site run test`.
+- `audit:python`: configurable `PYTHON_AUDIT_COMMAND`.
+- `audit:site`: `npm audit --prefix site --audit-level "$NPM_AUDIT_LEVEL"`.
 - `review:skills`: installs or locates SkillSpector, runs CI review, stores `review-artifacts/`.
 - `publish:exchange`: installs or locates SkillSpector, runs CI publish, stores `.exchange/generated/` and result JSON.
 - `generate:exchange`: same as publish but without committing BOE.
@@ -755,7 +758,7 @@ GitHub Dependabot is the authoritative dependency-vulnerability control. Reposit
 
 The Dependabot configuration must cover the root Python `pyproject.toml` and `uv.lock` through the `uv` ecosystem and the Node `site/package.json` and `site/package-lock.json` through the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, major updates remain separate, default dependency and ecosystem labels are used, and pull requests are assigned to `Fnorgh2`.
 
-`Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`. No GitLab dependency-audit job is retained because there is no separate compliance requirement for an advisory CI artifact.
+`Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
 
 ## CI Configuration And Permissions
 

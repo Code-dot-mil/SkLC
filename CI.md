@@ -1,8 +1,12 @@
 # Skill Exchange CI
 
-The repository owns its GitLab CI directly in `.gitlab-ci.yml`. It does not import external CI components.
+The repository owns GitHub validation in `.github/workflows/ci.yml` and GitLab CI in `.gitlab-ci.yml`.
 
-## Pipeline Shape
+## GitHub Validation
+
+The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute the Python and site lint and test commands defined by the local `Justfile`; any failed command fails the workflow.
+
+## GitLab Pipeline Shape
 
 - `lint` and `test` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
 - `review:skills` runs only for merge requests that change `skills/**/*`. It validates changed skill packages, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), writes reviewer artifacts, and can post a merge request comment when comment variables are configured.

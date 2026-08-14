@@ -1,6 +1,6 @@
 # Skill Exchange CI
 
-The repository owns GitHub validation in `.github/workflows/quality.yml` and GitLab CI in `.gitlab-ci.yml`.
+The repository owns GitHub validation in `.github/workflows/ci.yml` and GitLab CI in `.gitlab-ci.yml`.
 
 ## GitHub Validation
 

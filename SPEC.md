@@ -678,7 +678,7 @@ Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be
 
 ## GitHub Validation
 
-The repository owns `.github/workflows/quality.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
+The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
 
 Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check.
 

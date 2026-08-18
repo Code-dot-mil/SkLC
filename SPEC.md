@@ -63,6 +63,15 @@ The repository must have this shape:
   metadata/
     <skill-id>.yaml
 
+contracts/
+  README.md
+  skill-package/v1/
+  assessment-result/v1/
+  boe/v1/
+  catalog/v1/
+  catalog-policy/v1/
+  release-manifest/v1/
+
 scripts/
   skill_exchange/
     __init__.py
@@ -148,6 +157,16 @@ uv.toml
 ```
 
 Durable generated evidence is limited to `.exchange/generated/boe/`. Derived generated outputs such as `.exchange/generated/index.json`, `.exchange/generated/tables/`, `.exchange/generated/skills/`, `.exchange/generated/scanner-runs/`, `.exchange/generated/zips/`, `site/public/downloads/`, and `site/dist/` are deploy-time or local build artifacts and must not be committed.
+
+### Cross-product contract sources
+
+`contracts/` is a source-governance boundary for serialized formats shared by independently releasable products. It is not a runtime package or an additional product. It contains versioned schemas, examples, and explanatory contract documents only; it must not contain executable implementation, CI, deployment configuration, policy instances, or release assembly logic.
+
+A contract belongs under `contracts/` only when at least two products must agree on its serialized representation. Each contract names a governing product, and product releases vendor the exact schemas they produce or consume so installed products do not depend on the repository's `contracts/` directory at runtime.
+
+The checked-in `v1` contracts are a first-pass target boundary for the near-term product separation. The current publisher still emits and consumes the implemented `skill-exchange-boe/v0` and generated-data formats documented below; adding the contract sources does not claim that current runtime output already conforms to `v1`. Migration requires explicit implementation and tests.
+
+Contract major versions change when a required field, field meaning, or serialized shape changes incompatibly. Current catalog materialization will support only its declared current BOE major version. Legacy BOE may remain tracked as historical evidence, but it is not eligible for the current catalog and its presence alone is not an error. Currently served skill content without matching BOE in the supported schema must be reassessed or excluded.
 
 `.gitignore` must ignore `.exchange/generated/*` while re-including `.exchange/generated/.gitkeep` and `.exchange/generated/boe/**`. It must also ignore `.exchange/local-generated/`, site build output, Node dependencies, Python caches, `.uv-cache/`, `.venv/`, and bytecode.
 

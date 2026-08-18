@@ -752,6 +752,14 @@ Jobs:
 
 Merges to the default branch that change skills must run `publish:exchange` before `pages` so the first deploy of changed skills uses committed BOE instead of waiting for scheduled backfill.
 
+## Dependency Vulnerability Management
+
+GitHub Dependabot is the authoritative dependency-vulnerability control. Repository settings must enable Dependabot alerts and Dependabot security updates. Alert triage occurs only in GitHub Security; scheduled CI must not create a duplicate issue backlog.
+
+The Dependabot configuration must cover the root Python `pyproject.toml` and `uv.lock` through the `uv` ecosystem and the Node `site/package.json` and `site/package-lock.json` through the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, major updates remain separate, default dependency and ecosystem labels are used, and pull requests are assigned to `Fnorgh2`.
+
+`Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
+
 ## CI Configuration And Permissions
 
 All environment-specific values must be configured through generic CI variables. Do not add organization-specific variable names, registry names, credentials, or provider names.

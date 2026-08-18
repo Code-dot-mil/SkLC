@@ -100,6 +100,7 @@ The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`
 - `publish:exchange` runs from scheduled pipelines and default-branch skill-change pipelines, and can commit BOE bundles when bot variables are configured.
 - `generate:exchange` runs on default-branch push pipelines that do not change skills, and produces deploy-time generated site artifacts.
 - `pages` runs on default-branch push pipelines and scheduled publication pipelines, consuming generated artifacts and publishing a top-level `public/` artifact for GitLab Pages.
+- GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
 
 See [CI.md](CI.md) for the full configuration reference.
 

@@ -34,6 +34,28 @@ jobs:
       - name: Run check
         run: ${{ matrix.command }}
 
+  skill-catalog:
+    name: Skill catalog and BOE artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Assemble skill catalog and BOE
+        run: |
+          mkdir -p skill-catalog/skills
+          cp -R skills/ai4sdlc/. skill-catalog/skills/
+          cp -R .exchange skill-catalog/
+          test -n "$(find skill-catalog/skills -mindepth 2 -maxdepth 2 -name SKILL.md -print -quit)"
+          test -n "$(find skill-catalog/.exchange/generated/boe -name boe.json -print -quit)"
+      - name: Upload skill catalog and BOE
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: skill-catalog-and-boe
+          path: skill-catalog/
+          if-no-files-found: error
+          include-hidden-files: true
+
   site:
     name: "Site ${{ matrix.check }}"
     runs-on: ubuntu-latest

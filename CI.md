@@ -4,7 +4,9 @@ The repository owns GitHub validation in `.github/workflows/ci.yml` and GitLab C
 
 ## GitHub Validation
 
-The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute the Python and site lint and test commands defined by the local `Justfile`; any failed command fails the workflow.
+The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute the Python and site lint and test commands defined by the local `Justfile`; any failed command blocks the final artifact job. A Python producer checks out full history, derives site data and skill downloads only from successful exact-current-content tracked BOE, and cannot invoke SkillSpector or an LLM. Repository and immutable commit context from the pull-request head or push override the placeholder site configuration so generated source links target the revision being built, including for fork pull requests. The Node.js consumer downloads that data, builds `site/dist/`, verifies that the catalog, detail pages, and skill downloads are present, and uploads the downloadable `static-site` zip artifact.
+
+Reuse-only generation intentionally fails when a valid skill lacks successful exact-current-content tracked BOE. Until a protected GitHub publication workflow supplies that evidence, new or changed skills cannot produce the static-site artifact in this workflow.
 
 ## GitLab Pipeline Shape
 

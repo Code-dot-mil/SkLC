@@ -495,6 +495,7 @@ Human contributors must not hand-author BOE. Official BOE comes from protected p
 - `exchange_dir`
 - `generated_dir`
 - tuple `scan_modes`
+- `reuse_boe_only`, default false
 
 Behavior:
 
@@ -505,7 +506,9 @@ Behavior:
 5. Build an in-memory scanner cache by `scan_cache_key` using the latest `last_scanned`.
 6. For each skill, validate metadata. If validation has errors, add display ID to `invalid_skills` and skip all outputs for that skill.
 7. For each requested scan mode:
-   - compute scanner version, scanner config, and scan cache key;
+   - when `reuse_boe_only` is true, preflight exact-current-content tracked BOE for every valid skill and requested mode, require a complete symlink-free bundle with matching declared SHA-256 hashes, recomputed scan key, scanner version/mode, LLM provenance, a successful scanner report with the expected issue and risk-assessment shape and no error markers, and assessment fields consistent across the report, summary, and BOE, select the newest valid bundle deterministically by scan timestamp and scan cache key, and fail with the missing skill/mode list before writing derived output;
+   - the reuse-only path obtains scanner version, configuration, report, and provenance from tracked BOE and never calls SkillSpector, computes a live scanner configuration, reads live LLM configuration, or writes BOE;
+   - otherwise compute scanner version, scanner config, and scan cache key;
    - first reuse matching current scanner-run table entries when the native report still exists;
    - otherwise reuse matching tracked BOE bundles from `.exchange/generated/boe/`;
    - otherwise run SkillSpector;
@@ -606,6 +609,8 @@ uv run python -m skill_exchange.cli publish-local --generated-dir .exchange/loca
 
 `--scan-mode` may be repeated. If omitted, local publication runs both `static-only` and `llm-assisted`. The `Justfile` should call local generation with `.exchange/local-generated/` and default to `static-only` so developers do not rewrite tracked CI BOE for convenience.
 
+`--reuse-boe-only` reconstructs disposable index, table, scanner-run, detail, and zip output from tracked BOE for exact current skill content. It fails when any requested skill/mode lacks valid tracked evidence and when the resulting public index is empty. This mode cannot run SkillSpector or an LLM.
+
 ## CI Helper CLI
 
 `ci.py` provides GitLab-focused commands:
@@ -680,7 +685,7 @@ Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be
 
 The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
 
-Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check.
+Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation, builds `site/dist/`, verifies catalog detail pages and skill downloads, and uploads its contents as the downloadable `static-site` zip artifact.
 
 ## GitLab CI
 
@@ -997,6 +1002,8 @@ Python tests must cover:
 - scanner failure becoming `Unknown` when display policy allows unknowns;
 - cache reuse from current generated scanner tables;
 - cache reuse from tracked BOE when derived outputs are absent;
+- reuse-BOE-only generation selecting current-content evidence without entering scanner, scanner-version, scanner-config, or LLM paths;
+- reuse-BOE-only generation failing when requested current-content BOE is missing;
 - scan cache key differences across mode/model/config;
 - scanner finding row preservation;
 - aggregation preferring latest run with LLM-assisted tie-break;

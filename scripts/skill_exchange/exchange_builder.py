@@ -18,6 +18,15 @@ from .skillspector import run_skillspector, skillspector_llm_config, skillspecto
 from .validation import validate_skill
 from .zipper import write_skill_zip
 
+TRACKED_BOE_FILES = {
+    "boe.json",
+    "hashes.json",
+    "scanner-config.json",
+    "skillspector.json",
+    "summary.json",
+}
+TRACKED_BOE_HASHED_FILES = TRACKED_BOE_FILES - {"hashes.json"}
+
 
 def build_exchange(
     *,
@@ -25,6 +34,7 @@ def build_exchange(
     exchange_dir: Path,
     generated_dir: Path,
     scan_modes: tuple[str, ...],
+    reuse_boe_only: bool = False,
 ) -> dict[str, Any]:
     generated_dir.mkdir(parents=True, exist_ok=True)
     policy = load_exchange_policy(exchange_dir)
@@ -32,9 +42,11 @@ def build_exchange(
     skills = discover_skills(skills_root)
     records: list[dict[str, Any]] = []
     skill_rows: list[dict[str, Any]] = []
-    scanner_run_rows: list[dict[str, Any]] = [
-        row for row in existing_table_rows(generated_dir, "scanner_runs") if row.get("scan_cache_key")
-    ]
+    scanner_run_rows: list[dict[str, Any]] = []
+    if not reuse_boe_only:
+        scanner_run_rows = [
+            row for row in existing_table_rows(generated_dir, "scanner_runs") if row.get("scan_cache_key")
+        ]
     historical_run_ids = {row["id"] for row in scanner_run_rows}
     scanner_artifact_rows: list[dict[str, Any]] = [
         row
@@ -49,36 +61,57 @@ def build_exchange(
     cached_scanner_runs = latest_scanner_runs_by_cache_key(scanner_run_rows)
     reused_scans = 0
     invalid_skills: list[str] = []
+    valid_skills = []
+    reusable_boes: dict[tuple[str, str], dict[str, Any]] = {}
+    missing_boes: list[str] = []
 
     for skill in skills:
         validation = validate_skill(skill, policy)
         if validation.errors:
             invalid_skills.append(skill.metadata.display_id)
             continue
+        valid_skills.append((skill, validation))
+
+    if reuse_boe_only:
+        for skill, _validation in valid_skills:
+            for mode in scan_modes:
+                cached_boe = read_latest_tracked_boe(generated_dir=generated_dir, skill=skill, mode=mode)
+                if cached_boe is None:
+                    missing_boes.append(f"{skill.metadata.display_id} ({mode})")
+                    continue
+                reusable_boes[(skill.metadata.display_id, mode)] = cached_boe
+        if missing_boes:
+            raise RuntimeError("missing tracked BOE for exact skill content: " + ", ".join(missing_boes))
+
+    for skill, validation in valid_skills:
         skill_scanner_runs: list[dict[str, Any]] = []
         last_updated = skill_last_updated(skill)
         first_observed = skill_first_observed(skill)
         latest_source_commit_sha = skill_latest_source_commit_sha(skill)
         for mode in scan_modes:
-            no_llm = mode == "static-only"
-            scanner_version = skillspector_version()
-            scanner_config = scanner_cache_config(mode)
-            scan_key = make_scan_key(
-                namespace=skill.metadata.namespace,
-                skill_id=skill.metadata.skill_id,
-                content_hash=skill.content_hash,
-                scanner_version=scanner_version,
-                mode=mode,
-                scanner_config=scanner_config,
-            )
-            cached_scanner_run = cached_scanner_runs.get(scan_key)
-            cached_report = read_cached_report(cached_scanner_run) if cached_scanner_run else None
-            if cached_scanner_run and cached_report:
-                reused_scans += 1
-                skill_scanner_runs.append(cached_scanner_run)
-                continue
-
-            cached_boe = read_cached_boe(generated_dir=generated_dir, skill=skill, scan_key=scan_key)
+            if reuse_boe_only:
+                cached_boe = reusable_boes[(skill.metadata.display_id, mode)]
+                scanner_version = cached_boe["scanner_version"]
+                scanner_config = cached_boe["scanner_config"]
+                scan_key = cached_boe["scan_key"]
+            else:
+                scanner_version = skillspector_version()
+                scanner_config = scanner_cache_config(mode)
+                scan_key = make_scan_key(
+                    namespace=skill.metadata.namespace,
+                    skill_id=skill.metadata.skill_id,
+                    content_hash=skill.content_hash,
+                    scanner_version=scanner_version,
+                    mode=mode,
+                    scanner_config=scanner_config,
+                )
+                cached_scanner_run = cached_scanner_runs.get(scan_key)
+                cached_report = read_cached_report(cached_scanner_run) if cached_scanner_run else None
+                if cached_scanner_run and cached_report:
+                    reused_scans += 1
+                    skill_scanner_runs.append(cached_scanner_run)
+                    continue
+                cached_boe = read_cached_boe(generated_dir=generated_dir, skill=skill, scan_key=scan_key)
             if cached_boe:
                 report = cached_boe["report"]
                 assessment = assess_report(report)
@@ -114,6 +147,7 @@ def build_exchange(
                 scanner_finding_rows.extend(scanner_finding_rows_for(scanner_run["id"], report))
                 continue
 
+            no_llm = mode == "static-only"
             report_source = (
                 generated_dir
                 / "tmp"
@@ -319,7 +353,14 @@ def scanner_run_row(
     metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
     risk_assessment = report.get("risk_assessment") if isinstance(report.get("risk_assessment"), dict) else {}
     mode = scan_mode(report)
-    llm_config = skillspector_llm_config() if mode == "llm-assisted" else {"provider": None, "model": None}
+    llm_config = (
+        {
+            "provider": scanner_config.get("llm_provider"),
+            "model": scanner_config.get("llm_model"),
+        }
+        if mode == "llm-assisted"
+        else {"provider": None, "model": None}
+    )
     return {
         "id": run_id,
         "scan_cache_key": scan_key,
@@ -461,6 +502,187 @@ def read_cached_boe(*, generated_dir: Path, skill, scan_key: str) -> dict[str, A
         if boe_path.exists():
             return read_boe_bundle(boe_path=boe_path, scan_key=candidate_key)
     return None
+
+
+def read_latest_tracked_boe(*, generated_dir: Path, skill, mode: str) -> dict[str, Any] | None:
+    skill_boe_root = (
+        generated_dir
+        / "boe"
+        / skill.metadata.namespace
+        / skill.metadata.skill_id
+        / skill.content_hash
+    )
+    candidates: list[tuple[datetime, str, dict[str, Any]]] = []
+    for boe_path in sorted(skill_boe_root.glob("*/boe.json")):
+        try:
+            bundle = read_verified_tracked_boe_bundle(
+                generated_dir=generated_dir,
+                boe_path=boe_path,
+                skill=skill,
+                mode=mode,
+            )
+            if bundle is None:
+                continue
+            scan_key = bundle["scan_key"]
+            scan_timestamp = datetime.fromisoformat(bundle["scan_timestamp"])
+            if scan_timestamp.tzinfo is None:
+                continue
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        candidates.append((scan_timestamp.astimezone(UTC), scan_key, bundle))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda candidate: (candidate[0], candidate[1]))[2]
+
+
+def read_verified_tracked_boe_bundle(
+    *, generated_dir: Path, boe_path: Path, skill, mode: str
+) -> dict[str, Any] | None:
+    bundle_dir = boe_path.parent
+    required_paths = {filename: bundle_dir / filename for filename in TRACKED_BOE_FILES}
+    if any(
+        not path.is_file() or path_has_symlink_within(path=path, scope=generated_dir)
+        for path in required_paths.values()
+    ):
+        return None
+
+    hashes = json.loads(required_paths["hashes.json"].read_text())
+    if not isinstance(hashes, dict) or set(hashes) != TRACKED_BOE_HASHED_FILES:
+        return None
+    for filename in TRACKED_BOE_HASHED_FILES:
+        expected_hash = hashes.get(filename)
+        if (
+            not isinstance(expected_hash, str)
+            or re.fullmatch(r"[0-9a-f]{64}", expected_hash) is None
+            or sha256(required_paths[filename].read_bytes()).hexdigest() != expected_hash
+        ):
+            return None
+
+    boe = json.loads(required_paths["boe.json"].read_text())
+    scanner_config = json.loads(required_paths["scanner-config.json"].read_text())
+    report = json.loads(required_paths["skillspector.json"].read_text())
+    summary = json.loads(required_paths["summary.json"].read_text())
+    if not all(isinstance(value, dict) for value in (boe, scanner_config, report, summary)):
+        return None
+    if boe.get("schema_version") != "skill-exchange-boe/v0":
+        return None
+
+    scan_key = str(boe.get("scan_cache_key") or "")
+    scanner = boe.get("scanner") if isinstance(boe.get("scanner"), dict) else {}
+    scanner_version = str(scanner.get("version") or "")
+    if (
+        boe.get("namespace") != skill.metadata.namespace
+        or boe.get("skill_id") != skill.metadata.skill_id
+        or boe.get("display_id") != skill.metadata.display_id
+        or boe.get("skill_content_hash") != skill.content_hash
+        or boe.get("scan_mode") != mode
+        or scanner.get("name") != "skillspector"
+        or not scan_key
+        or not scanner_version
+        or bundle_dir.name != scan_key
+        or scanner_config.get("scan_mode") != mode
+    ):
+        return None
+
+    expected_scan_key = make_scan_key(
+        namespace=skill.metadata.namespace,
+        skill_id=skill.metadata.skill_id,
+        content_hash=skill.content_hash,
+        scanner_version=scanner_version,
+        mode=mode,
+        scanner_config=scanner_config,
+    )
+    if scan_key not in equivalent_scan_keys(expected_scan_key):
+        return None
+
+    report_metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
+    expected_llm_requested = mode == "llm-assisted"
+    if (
+        str(report_metadata.get("skillspector_version") or "") != scanner_version
+        or report_metadata.get("llm_requested") is not expected_llm_requested
+        or boe.get("provider") != scanner_config.get("llm_provider")
+        or boe.get("model") != scanner_config.get("llm_model")
+    ):
+        return None
+    if mode == "static-only" and (
+        scanner_config.get("llm_provider") is not None or scanner_config.get("llm_model") is not None
+    ):
+        return None
+    if mode == "llm-assisted" and (
+        not scanner_config.get("llm_provider") or not scanner_config.get("llm_model")
+    ):
+        return None
+
+    if not is_successful_skillspector_report(report):
+        return None
+    assessment = assess_report(report)
+    expected_summary = {
+        "risk": assessment["risk"],
+        "risk_reason": assessment["reason"],
+        "confidence_flags": assessment["confidence_flags"],
+    }
+    if (
+        assessment["risk"] == "Unknown"
+        or summary != expected_summary
+        or boe.get("risk") != assessment["risk"]
+        or boe.get("risk_reason") != assessment["reason"]
+        or boe.get("confidence_flags") != assessment["confidence_flags"]
+    ):
+        return None
+
+    scan_timestamp = boe.get("scan_timestamp") or boe.get("generated_at")
+    if not scan_timestamp:
+        return None
+    return {
+        "boe": boe,
+        "boe_path": boe_path,
+        "report": report,
+        "report_path": required_paths["skillspector.json"],
+        "scan_timestamp": str(scan_timestamp),
+        "scan_key": scan_key,
+        "scanner_config": scanner_config,
+        "scanner_version": scanner_version,
+    }
+
+
+def is_successful_skillspector_report(report: dict[str, Any]) -> bool:
+    metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
+    issues = report.get("issues")
+    risk_assessment = report.get("risk_assessment")
+    if (
+        report.get("scanner_error")
+        or metadata.get("scan_error")
+        or not isinstance(issues, list)
+        or not all(isinstance(issue, dict) for issue in issues)
+        or not isinstance(risk_assessment, dict)
+    ):
+        return False
+    score = risk_assessment.get("score")
+    severity = str(risk_assessment.get("severity") or "").lower()
+    recommendation = risk_assessment.get("recommendation")
+    return (
+        isinstance(score, (int, float))
+        and not isinstance(score, bool)
+        and 0 <= score <= 100
+        and severity in {"low", "medium", "high", "critical"}
+        and isinstance(recommendation, str)
+        and bool(recommendation.strip())
+    )
+
+
+def path_has_symlink_within(*, path: Path, scope: Path) -> bool:
+    try:
+        relative_path = path.relative_to(scope)
+    except ValueError:
+        return True
+    candidate = scope
+    if candidate.is_symlink():
+        return True
+    for part in relative_path.parts:
+        candidate /= part
+        if candidate.is_symlink():
+            return True
+    return False
 
 
 def equivalent_scan_keys(scan_key: str) -> list[str]:

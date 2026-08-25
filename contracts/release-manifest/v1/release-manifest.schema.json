@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skill-exchange:release-manifest:v1",
+  "title": "Product Release Manifest v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "product",
+    "version",
+    "source_revision",
+    "created_at",
+    "produces",
+    "consumes",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "const": "skill-exchange-release-manifest/v1" },
+    "product": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "produces": { "$ref": "#/$defs/contractsByName" },
+    "consumes": { "$ref": "#/$defs/contractsByName" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "$ref": "#/$defs/relativePath" },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "contractsByName": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 },
+        "minItems": 1,
+        "uniqueItems": true
+      }
+    },
+    "relativePath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

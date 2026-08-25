@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skill-exchange:catalog-policy:v1",
+  "title": "Catalog Admission Policy v1",
+  "type": "object",
+  "required": ["schema_version", "allowed_risks", "allow_unknown", "excluded_skills"],
+  "properties": {
+    "schema_version": { "const": "skill-exchange-catalog-policy/v1" },
+    "allowed_risks": {
+      "type": "array",
+      "items": { "enum": ["Low", "Medium", "High"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "allow_unknown": { "type": "boolean" },
+    "excluded_skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["namespace", "skill_id"],
+        "properties": {
+          "namespace": { "type": "string", "minLength": 1 },
+          "skill_id": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

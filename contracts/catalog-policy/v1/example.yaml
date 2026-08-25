@@ -1,0 +1,11 @@
+schema_version: skill-exchange-catalog-policy/v1
+
+allowed_risks:
+  - Low
+  - Medium
+
+allow_unknown: false
+
+excluded_skills:
+  - namespace: example
+    skill_id: intentionally-excluded-skill

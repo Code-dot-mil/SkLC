@@ -309,9 +309,10 @@ The workstreams do not imply fully staffed implementation lanes. Limit implement
 1. Define one deployment-kit release with prebuilt and operator consumption modes.
 2. Deliver the prebuilt static-site package as the earliest thin slice: final static files, downloads, manifests/checksums, and complete verification/deployment CI for GitLab Pages or a generic static host. It contains no assessment or customization tooling.
 3. Deliver the operator kit with released assessment and catalog commands, reference site/build tooling, explicit configuration, and a consumer-owned local overlay for skills, BOE, catalog policy, and supported customizations.
-4. Ship a complete `.gitlab-ci.yml` or bundled local includes that work without remote maintainer CI components. The operator path covers validation, tests, audits, merge-request skill review/comments, trusted assessment, BOE verification/persistence, catalog materialization, Astro build, GitLab Pages, and generic static-host artifacts.
-5. Define safe updates that verify and stage releases, replace delivered product content, preserve consumer-owned content, and record applied versions.
-6. Support assessment-kit-only and catalog-only updates for operators that retain a customized deployment implementation. Do not claim arbitrary site compatibility.
+4. Ship a deployment-only `.gitlab-ci.yml` with the prebuilt package. It deploys final static files to GitLab Pages or a generic static host and contains no assessment, catalog-materialization, customization, or maintainer-release behavior.
+5. Ship complete, self-contained downstream GitLab CI with the operator kit. It may use bundled local includes and covers validation, tests, audits, merge-request skill review/comments, trusted assessment, BOE verification/persistence, catalog materialization, Astro build, GitLab Pages, and generic static-host artifacts.
+6. Define safe updates that verify and stage releases, replace delivered product content, preserve consumer-owned content, and record applied versions.
+7. Support assessment-kit-only and catalog-only updates for operators that retain a customized deployment implementation. Do not claim arbitrary site compatibility.
 
 ### Operator layout target
 
@@ -328,6 +329,56 @@ local/
   catalog.yaml          Consumer-owned catalog-admission policy
 ```
 
+### Deployment-kit source and release layouts
+
+The deployment kit keeps customer documentation and GitLab CI entrypoints separate
+for its prebuilt and operator consumption modes. Release assembly maps those source
+files into the root-relative locations expected by each downstream GitLab project.
+
+```text
+products/deployment-kit/
+  docs/
+    prebuilt/
+      README.md
+      install.md
+      deploy.md
+    operator/
+      README.md
+      install.md
+      deploy.md
+      update.md
+  ci/gitlab/
+    prebuilt/
+      .gitlab-ci.yml
+    operator/
+      .gitlab-ci.yml
+```
+
+The prebuilt artifact contains only final static files, downloads,
+manifests/checksums, deployment-only CI, and its customer documentation:
+
+```text
+README.md
+docs/
+  install.md
+  deploy.md
+.gitlab-ci.yml
+public/
+downloads/
+manifest.json
+checksums.txt
+```
+
+Release assembly maps `docs/prebuilt/README.md` to the artifact-root `README.md`,
+the installation and deployment guides to `docs/`, and
+`ci/gitlab/prebuilt/.gitlab-ci.yml` to the artifact-root `.gitlab-ci.yml`.
+
+The operator artifact has its own root README, documentation, and CI entrypoint,
+along with the complete operator layout above. Release assembly maps the
+corresponding `docs/operator/` and `ci/gitlab/operator/` sources into that
+artifact. The `local/` subtree remains customer-owned and supported updates must
+preserve it.
+
 ### Completion criteria
 
 - A consumer can host the unchanged prebuilt release with deployment-only CI.
@@ -343,7 +394,7 @@ local/
 1. Create an internal GitLab product-installation repository that begins from downloaded GitHub releases rather than a source mirror.
 2. Automate clean, repeatable fixtures for standalone assessment, standalone catalog consumption, prebuilt deployment, operator installation, and full/partial updates.
 3. Test checksums, catalog/BOE verification, site/download presence, Pages artifacts, local-content preservation, and assessment-tool absence from the prebuilt package.
-4. Write and test operator guidance covering prerequisites, explicit configuration and defaults, runner choices, policy ownership and precedence, assessment paths, deployment, troubleshooting, and updates.
+4. Write and test prebuilt customer guidance covering artifact installation, explicit configuration and defaults, deployment, and troubleshooting. Write and test separate operator guidance covering runner choices, policy ownership and precedence, assessment paths, deployment, troubleshooting, and updates.
 5. Feed installation failures and ambiguous contracts back into release acceptance throughout implementation.
 
 ### Completion criteria

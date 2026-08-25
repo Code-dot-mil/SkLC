@@ -535,7 +535,7 @@ Behavior:
    - write BOE;
    - mirror run artifacts into `.exchange/generated/scanner-runs/<run-id>/`;
    - append rows for scanner runs, scanner artifacts, and scanner findings.
-8. Write a runtime skill zip to `.exchange/generated/zips/<namespace>--<skill-id>.zip`.
+8. Write a runtime skill zip to `.exchange/generated/zips/<namespace>--<skill-id>.zip` and remove ZIPs that do not belong to the current valid skill set.
 9. Write a skill detail JSON record under `.exchange/generated/skills/<namespace>--<skill-id>.json`.
 10. Select the display assessment from the latest scanner run, using scan mode tie-breaker where `llm-assisted` outranks `static-only`.
 11. Include the skill in `.exchange/generated/index.json` only when risk is not `Unknown` or `show_unknown_risk` is true.
@@ -1017,6 +1017,7 @@ Python tests must cover:
 - generic LLM environment mapping;
 - absence of legacy organization-specific LLM variable names in key docs/code;
 - exchange build writing index, BOE, zip, tables, recommendation, risk, provenance, source URL, timestamps, and content hash;
+- stale runtime ZIP removal when a skill is no longer in the current valid skill set;
 - invalid metadata blocking publication output;
 - scanner failure becoming `Unknown` when display policy allows unknowns;
 - cache reuse from current generated scanner tables;

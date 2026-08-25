@@ -152,6 +152,46 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert index["skills"][0]["scanner_run_ids"][0] == scanner_runs["rows"][0]["id"]
 
 
+def test_build_exchange_removes_stale_skill_zips(monkeypatch, tmp_path: Path):
+    generated, _bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+    zip_dir = generated / "zips"
+    zip_dir.mkdir(parents=True)
+    (zip_dir / "retired--stale-skill.zip").write_bytes(b"stale")
+
+    build_exchange(
+        skills_root=Path("tests/fixtures/skills"),
+        exchange_dir=Path(".exchange"),
+        generated_dir=generated,
+        scan_modes=("static-only",),
+        reuse_boe_only=True,
+    )
+
+    assert {path.name for path in zip_dir.iterdir()} == {"ai4sdlc--sample-skill.zip"}
+
+
+def test_build_exchange_does_not_clean_zips_outside_generated_dir(monkeypatch, tmp_path: Path):
+    generated, _bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    outside_zip = outside / "unrelated.zip"
+    outside_zip.write_bytes(b"keep")
+    try:
+        (generated / "zips").symlink_to(outside, target_is_directory=True)
+    except OSError as error:
+        pytest.skip(f"directory symlinks are unavailable: {error}")
+
+    with pytest.raises(ValueError, match="generated ZIP directory must stay within generated directory"):
+        build_exchange(
+            skills_root=Path("tests/fixtures/skills"),
+            exchange_dir=Path(".exchange"),
+            generated_dir=generated,
+            scan_modes=("static-only",),
+            reuse_boe_only=True,
+        )
+
+    assert outside_zip.read_bytes() == b"keep"
+
+
 def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monkeypatch, tmp_path: Path):
     generated = tmp_path / "generated"
     calls = 0

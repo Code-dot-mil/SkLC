@@ -83,6 +83,10 @@ def build_exchange(
         if missing_boes:
             raise RuntimeError("missing tracked BOE for exact skill content: " + ", ".join(missing_boes))
 
+    zip_dir = generated_dir / "zips"
+    if zip_dir.is_symlink() or zip_dir.is_junction() or not zip_dir.resolve().is_relative_to(generated_dir.resolve()):
+        raise ValueError("generated ZIP directory must stay within generated directory")
+
     for skill, validation in valid_skills:
         skill_scanner_runs: list[dict[str, Any]] = []
         last_updated = skill_last_updated(skill)
@@ -207,7 +211,7 @@ def build_exchange(
             cached_scanner_runs[scan_key] = scanner_run
             scanner_artifact_rows.extend(scanner_artifact_rows_for(scanner_run))
             scanner_finding_rows.extend(scanner_finding_rows_for(scanner_run["id"], report))
-        zip_path = write_skill_zip(skill, generated_dir / "zips")
+        zip_path = write_skill_zip(skill, zip_dir)
         detail_path = generated_dir / "skills" / f"{skill.metadata.namespace}--{skill.metadata.skill_id}.json"
         detail_path.parent.mkdir(parents=True, exist_ok=True)
         aggregate = aggregate_assessment(skill_scanner_runs)
@@ -255,6 +259,11 @@ def build_exchange(
 
         if aggregate["risk"] != "Unknown" or policy.show_unknown_risk:
             records.append(record)
+
+    current_zip_paths = {Path(row["zip_path"]) for row in skill_rows}
+    for zip_path in zip_dir.glob("*.zip"):
+        if zip_path not in current_zip_paths:
+            zip_path.unlink()
 
     write_table(generated_dir, "skills", skill_rows)
     write_table(generated_dir, "scanner_runs", scanner_run_rows)

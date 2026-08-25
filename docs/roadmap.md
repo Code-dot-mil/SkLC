@@ -105,6 +105,10 @@ flowchart LR
 
 *Target product topology. One GitHub maintainer repository publishes four independently consumable products. Versioned file contracts—not shared runtime code—connect products, and downstream GitLab repositories install releases rather than mirror maintainer source.*
 
+![Skill Exchange product flow](assets/product-flow.drawio.png)
+
+*Customer product flow. The CI product pipeline produces the four roadmap products and shows the deployment kit's prebuilt and operator delivery paths to GitLab Pages.*
+
 ### Product granularity and primary sources
 
 The current-source column describes where capability exists today; it is not the desired release layout.

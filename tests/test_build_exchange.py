@@ -152,6 +152,31 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert index["skills"][0]["scanner_run_ids"][0] == scanner_runs["rows"][0]["id"]
 
 
+def test_build_exchange_removes_stale_skill_zips(monkeypatch, tmp_path: Path):
+    generated = tmp_path / "generated"
+    zip_dir = generated / "zips"
+    zip_dir.mkdir(parents=True)
+    (zip_dir / "ai4sdlc--removed-skill.zip").write_bytes(b"stale")
+
+    def fake_run_skillspector(skill_path, output_path, *, no_llm):
+        report = _fake_clean_report(llm_requested=not no_llm)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report))
+        return report
+
+    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
+    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
+
+    build_exchange(
+        skills_root=Path("tests/fixtures/skills"),
+        exchange_dir=Path(".exchange"),
+        generated_dir=generated,
+        scan_modes=("static-only",),
+    )
+
+    assert sorted(path.name for path in zip_dir.iterdir()) == ["ai4sdlc--sample-skill.zip"]
+
+
 def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monkeypatch, tmp_path: Path):
     generated = tmp_path / "generated"
     calls = 0

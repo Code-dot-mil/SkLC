@@ -618,6 +618,8 @@ The archive must preserve the skill directory:
 
 Only files from the skill package are included. Exchange governance files, BOE, generated data, and repository tooling are not included. Zip creation uses `package_files()`, so symlinks and oversized packages are rejected consistently with hashing.
 
+Each exchange build clears the generated `zips/` directory before packaging the current valid skill set, so archives from prior builds are not retained after a skill is removed or becomes invalid.
+
 ## Local CLI
 
 `cli.py` provides local publication:

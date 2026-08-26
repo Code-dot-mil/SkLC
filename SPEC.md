@@ -422,16 +422,15 @@ Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set 
 - Else return `Low`.
 - Static-only reports where `metadata.llm_requested` is false include confidence flag `Low confidence`.
 
-Generated records also preserve SkillSpector native recommendation. `exchange_builder.recommendation_label()` maps:
+Generated records preserve supported SkillSpector recommendations and normalize unsupported or missing values to `Unknown`. `exchange_builder.recommendation_label()` maps:
 
 | Native recommendation | Label |
 |---|---|
 | `SAFE` | `Safe to use` |
 | `CAUTION` | `Use caution` |
-| `REVIEW` | `Use caution` |
 | `DO_NOT_INSTALL` | `Avoid installing` |
 | `BLOCK` | `Avoid installing` |
-| Unknown/other | Original value or `Unknown` |
+| `Unknown` | `Unknown` |
 
 The UI leads with recommendation labels because users need direct usage guidance. Scanner risk remains visible as supporting evidence.
 
@@ -856,14 +855,14 @@ The first page is the usable catalog, not a marketing landing page.
 `SkillCatalog.tsx`:
 
 - supports text search across display ID, name, description, category, and tags;
-- filters by recommendation: all, `DO_NOT_INSTALL`, `CAUTION`, `REVIEW`, `SAFE`, `Unknown`;
+- filters by recommendation: all, `DO_NOT_INSTALL`, `CAUTION`, `SAFE`, `Unknown`;
 - filters by category, treating absent category as `uncategorized`;
 - sorts by name, recommendation, last updated, or last scanned;
 - persists query state with URL params `q`, `recommendation`, `category`, and `sort`;
 - removes default values from the URL and preserves unrelated params;
 - renders cards with recommendation pills, confidence flags, category, description, tags, risk, last scanned, owner, scanner, and a detail link.
 
-Recommendation sort ranks `DO_NOT_INSTALL` as 3, `CAUTION` as 2, `SAFE` as 1, and `Unknown` as 0. Unranked values, including `REVIEW`, use the default rank 0. `REVIEW` is still displayed as `Use caution`.
+Recommendation sort ranks `DO_NOT_INSTALL` as 3, `CAUTION` as 2, `SAFE` as 1, and `Unknown` as 0. Unranked values use the default rank 0.
 
 `site/src/pages/skills/[namespace]/[skillId].astro`:
 
@@ -1026,7 +1025,7 @@ Python tests must cover:
 - scan cache key differences across mode/model/config;
 - scanner finding row preservation;
 - aggregation preferring latest run with LLM-assisted tie-break;
-- plain-language recommendation labels;
+- supported recommendation normalization and plain-language labels;
 - changed skill path detection;
 - review artifact writing;
 - review comment inclusion of every scanner finding;
@@ -1039,7 +1038,7 @@ Python tests must cover:
 
 Node tests must cover:
 
-- query-state read/update behavior;
+- recommendation option and query-state read/update behavior;
 - skill Markdown sanitizer removing executable HTML;
 - copy-downloads source containment, destination containment, and rebasing absolute generated artifact paths from another checkout.
 

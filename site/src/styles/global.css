@@ -388,8 +388,7 @@ a:focus-visible {
 }
 
 .risk-medium,
-.recommendation-caution,
-.recommendation-review {
+.recommendation-caution {
   background: rgb(255 209 102 / 0.14);
   color: var(--amber);
   border: 1px solid rgb(255 209 102 / 0.34);

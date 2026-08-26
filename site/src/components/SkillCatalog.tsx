@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { RECOMMENDATION_OPTIONS, RECOMMENDATION_VALUES } from "../lib/recommendation-options.mjs";
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 
 type Skill = {
@@ -25,7 +26,6 @@ type Skill = {
   };
 };
 
-const RECOMMENDATION_VALUES = ["all", "DO_NOT_INSTALL", "CAUTION", "REVIEW", "SAFE", "Unknown"];
 const SORT_VALUES = ["name", "recommendation", "last_updated", "last_scanned"];
 
 function RecommendationPills({
@@ -125,12 +125,9 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
         <label>
           <span>Recommendation</span>
           <select value={recommendation} onChange={(event) => setRecommendation(event.target.value)}>
-            <option value="all">All recommendations</option>
-            <option value="DO_NOT_INSTALL">Avoid installing</option>
-            <option value="CAUTION">Use caution</option>
-            <option value="REVIEW">Use caution</option>
-            <option value="SAFE">Safe to use</option>
-            <option value="Unknown">Unknown</option>
+            {RECOMMENDATION_OPTIONS.map((option) => (
+              <option value={option.value} key={option.value}>{option.label}</option>
+            ))}
           </select>
         </label>
         <label>
@@ -213,23 +210,20 @@ function formatRecommendation(value: string) {
   if (value === "CAUTION") {
     return "Use caution";
   }
-  if (value === "REVIEW") {
-    return "Use caution";
-  }
   if (value === "SAFE") {
     return "Safe to use";
   }
   if (value === "BLOCK") {
     return "Avoid installing";
   }
-  return value;
+  return "Unknown";
 }
 
 function recommendationToRisk(value: string) {
   if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
     return "High";
   }
-  if (value === "CAUTION" || value === "REVIEW") {
+  if (value === "CAUTION") {
     return "Medium";
   }
   if (value === "SAFE") {

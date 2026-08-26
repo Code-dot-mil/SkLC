@@ -9,16 +9,13 @@ function formatRecommendation(value) {
   if (value === "CAUTION") {
     return "Use caution";
   }
-  if (value === "REVIEW") {
-    return "Use caution";
-  }
   if (value === "SAFE") {
     return "Safe to use";
   }
   if (value === "BLOCK") {
     return "Avoid installing";
   }
-  return value;
+  return "Unknown";
 }
 ---
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { RECOMMENDATION_VALUES } from "../src/lib/recommendation-options.mjs";
 import { readQueryValue, updateQueryString } from "../src/lib/url-state.mjs";
 
 test("query state reads valid values and rejects unsupported options", () => {
@@ -11,6 +12,11 @@ test("query state reads valid values and rejects unsupported options", () => {
   assert.equal(readQueryValue(search, "sort", "name", ["name", "last_scanned"]), "last_scanned");
   assert.equal(readQueryValue("?sort=unexpected", "sort", "name", ["name", "last_scanned"]), "name");
   assert.equal(readQueryValue("?tab=unknown", "tab", "files", ["files", "assessment"]), "files");
+});
+
+test("recommendation query state rejects the removed review value", () => {
+  assert.deepEqual(RECOMMENDATION_VALUES, ["all", "DO_NOT_INSTALL", "CAUTION", "SAFE", "Unknown"]);
+  assert.equal(readQueryValue("?recommendation=REVIEW", "recommendation", "all", RECOMMENDATION_VALUES), "all");
 });
 
 test("query state updates remove defaults and preserve unrelated params", () => {

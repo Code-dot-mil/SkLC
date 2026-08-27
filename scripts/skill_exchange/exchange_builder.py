@@ -329,6 +329,12 @@ def scanner_cache_config(mode: str) -> dict[str, Any]:
         llm_config = skillspector_llm_config()
         config["llm_provider"] = llm_config["provider"]
         config["llm_model"] = llm_config["model"]
+        if llm_config.get("deployment"):
+            config["llm_deployment"] = llm_config["deployment"]
+        if llm_config.get("api_version"):
+            config["llm_api_version"] = llm_config["api_version"]
+        if llm_config.get("endpoint_hash"):
+            config["llm_endpoint_hash"] = llm_config["endpoint_hash"]
     return config
 
 

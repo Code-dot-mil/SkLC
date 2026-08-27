@@ -177,6 +177,30 @@ def test_build_exchange_removes_stale_skill_zips(monkeypatch, tmp_path: Path):
     assert sorted(path.name for path in zip_dir.iterdir()) == ["ai4sdlc--sample-skill.zip"]
 
 
+def test_scanner_cache_config_includes_azure_deployment_api_version_and_hashed_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        exchange_builder,
+        "skillspector_llm_config",
+        lambda: {
+            "provider": "azure_openai",
+            "model": "gpt-5",
+            "deployment": "production-gpt-5",
+            "api_version": "2025-04-01-preview",
+            "endpoint_hash": "endpoint-sha256",
+        },
+    )
+
+    assert exchange_builder.scanner_cache_config("llm-assisted") == {
+        "native_output_format": "skillspector-json-v2",
+        "scan_mode": "llm-assisted",
+        "llm_provider": "azure_openai",
+        "llm_model": "gpt-5",
+        "llm_deployment": "production-gpt-5",
+        "llm_api_version": "2025-04-01-preview",
+        "llm_endpoint_hash": "endpoint-sha256",
+    }
+
+
 def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monkeypatch, tmp_path: Path):
     generated = tmp_path / "generated"
     calls = 0

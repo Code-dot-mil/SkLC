@@ -1,12 +1,33 @@
 # Skill Exchange CI
 
-The repository owns GitHub validation in `.github/workflows/ci.yml` and GitLab CI in `.gitlab-ci.yml`.
+The repository owns GitHub validation in `.github/workflows/ci.yml`, protected SkillSpector review and publication in `.github/workflows/skillspector.yml`, and the legacy GitLab pipeline in `.gitlab-ci.yml`.
 
 ## GitHub Validation
 
-The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute the Python and site lint and test commands defined by the local `Justfile`; any failed command blocks the final artifact job. A Python producer checks out full history, derives site data and skill downloads only from successful exact-current-content tracked BOE, and cannot invoke SkillSpector or an LLM. Repository and immutable commit context from the pull-request head or push override the placeholder site configuration so generated source links target the revision being built, including for fork pull requests. The Node.js consumer downloads that data, builds `site/dist/`, verifies that the catalog, detail pages, and skill downloads are present, and uploads the downloadable `static-site` zip artifact.
+The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute Python and site lint and tests; any failed command blocks the final artifact job. A Python producer checks out full history, reuses successful exact-current-content tracked BOE, and runs pinned upstream SkillSpector 2.10.0 in static-only mode when preview evidence is missing. Repository and immutable commit context from the pull-request head or push override the placeholder site configuration so generated source links target the revision being built, including for fork pull requests. This preview generation never uses an LLM and never commits BOE. The Node.js consumer downloads the generated data, builds `site/dist/`, verifies that the catalog, detail pages, and skill downloads are present, and uploads the downloadable `static-site` zip artifact.
 
-Reuse-only generation intentionally fails when a valid skill lacks successful exact-current-content tracked BOE. Until a protected GitHub publication workflow supplies that evidence, new or changed skills cannot produce the static-site artifact in this workflow.
+## GitHub SkillSpector Workflow
+
+The `SkillSpector` workflow replaces the GitLab-specific private scanner installation and publication jobs:
+
+- Pull requests that change `skills/**` run package validation and SkillSpector review. Same-repository pull requests use Azure OpenAI LLM assistance. Fork pull requests explicitly use static-only review because GitHub does not provide repository secrets to fork workflows. Review output is added to the job summary and retained as a workflow artifact; it is advisory and is never committed as official evidence.
+- Pushes to `main` that change `skills/**`, the nightly schedule, and manual dispatches run official `static-only,llm-assisted` publication.
+- Publication installs upstream SkillSpector 2.10.0 through the locked `scan` dependency extra, pinned to NVIDIA's immutable `v2.10.0` Git commit because that release is not available from PyPI. No custom SkillSpector fork, model proxy, or model container is required.
+- Publication commits only `.exchange/generated/boe/` and pushes it to the default branch with the job-scoped `GITHUB_TOKEN`. Full generated output and `publish-result.json` are retained as workflow artifacts.
+- Exact tracked BOE cache keys are reused. Azure endpoint identity is represented in the cache configuration by a SHA-256 digest; the endpoint and API key are not written to BOE.
+
+Configure these GitHub repository settings before enabling the workflow:
+
+| Kind | Name | Value |
+|---|---|---|
+| Actions secret | `SKILL_EXCHANGE_LLM_API_KEY` | Azure OpenAI API key |
+| Actions variable | `SKILL_EXCHANGE_LLM_PROVIDER` | `azure_openai` |
+| Actions variable | `SKILL_EXCHANGE_LLM_BASE_URL` | Azure resource endpoint, such as `https://RESOURCE.openai.azure.com/` |
+| Actions variable | `SKILL_EXCHANGE_LLM_MODEL` | Model label used for SkillSpector token metadata |
+| Actions variable | `SKILL_EXCHANGE_LLM_DEPLOYMENT` | Azure deployment name |
+| Actions variable | `SKILL_EXCHANGE_LLM_API_VERSION` | Azure OpenAI API version supported by the resource |
+
+The repository or organization Actions policy must allow `GITHUB_TOKEN` write access, and the `main` branch ruleset must allow the GitHub Actions publication identity to push the generated-evidence commit. The workflow requests only `contents: write` for the protected publication job; review jobs remain read-only. If branch policy forbids direct bot pushes, configure an equivalent ruleset bypass for the publication workflow before running it. Do not replace `GITHUB_TOKEN` with the Azure credential or reuse the Azure credential for repository access.
 
 ## GitLab Pipeline Shape
 
@@ -30,7 +51,7 @@ GitHub Dependabot is the authoritative dependency-vulnerability control. Dependa
 
 `Fnorgh2` owns alert triage and must receive GitHub notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received; the remaining backlog is reviewed weekly. Alerts that cannot be remediated promptly are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
 
-## Required Schedule
+## Legacy GitLab Schedule
 
 Create a GitLab pipeline schedule for the default branch using the cadence required by the target environment, such as nightly. The schedule should run with `CI_PIPELINE_SOURCE=schedule`, which triggers `publish:exchange` followed by `pages`.
 
@@ -69,7 +90,7 @@ All environment-specific values are CI variables:
 - `SKILLSPECTOR_BIN` points to a SkillSpector binary when it is not on `PATH`.
 - `SKILL_EXCHANGE_REVIEW_SCAN_MODE` controls MR review scanning: `static-only` or `llm-assisted`.
 - `SKILL_EXCHANGE_PUBLISH_SCAN_MODES` controls official publication scanning, using comma or space separated modes. Use `static-only,llm-assisted` when official publication should include both static and LLM-backed BOE.
-- `SKILL_EXCHANGE_LLM_API_KEY`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, and `SKILL_EXCHANGE_LLM_PROVIDER` configure LLM-assisted scans without tying the repository to a specific provider.
+- `SKILL_EXCHANGE_LLM_API_KEY`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_DEPLOYMENT`, and `SKILL_EXCHANGE_LLM_API_VERSION` configure LLM-assisted scans without using provider-specific exchange variable names.
 - `SKILL_EXCHANGE_POST_REVIEW_COMMENT`, `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE`, and `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER` control optional merge request comments.
 - `EXCHANGE_PUBLISH_COMMIT`, `EXCHANGE_PUBLISH_PUSH`, `EXCHANGE_PUBLISH_BRANCH`, `EXCHANGE_PUBLISH_PUSH_URL`, `EXCHANGE_PUBLISH_TOKEN`, and `EXCHANGE_PUBLISH_USERNAME` control BOE-bundle commits. When GitLab job-token repository push is enabled and no publish token is configured, publication uses `CI_JOB_TOKEN` with the `gitlab-ci-token` username.
 - `EXCHANGE_BOT_GIT_NAME`, `EXCHANGE_BOT_GIT_EMAIL`, and `EXCHANGE_PUBLISH_COMMIT_MESSAGE` control generated commit metadata.

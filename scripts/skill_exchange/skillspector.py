@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
@@ -68,23 +69,45 @@ def skillspector_env() -> dict[str, str]:
     base_url = env.get("SKILL_EXCHANGE_LLM_BASE_URL", "").strip()
     model = env.get("SKILL_EXCHANGE_LLM_MODEL", "").strip()
     provider = env.get("SKILL_EXCHANGE_LLM_PROVIDER", "").strip()
+    deployment = env.get("SKILL_EXCHANGE_LLM_DEPLOYMENT", "").strip()
+    api_version = env.get("SKILL_EXCHANGE_LLM_API_VERSION", "").strip()
 
-    if api_key and not env.get("OPENAI_API_KEY"):
-        env["OPENAI_API_KEY"] = api_key
-    if base_url and not env.get("OPENAI_BASE_URL"):
-        env["OPENAI_BASE_URL"] = base_url
-    if model and not env.get("SKILLSPECTOR_MODEL"):
-        env["SKILLSPECTOR_MODEL"] = model
     if provider and not env.get("SKILLSPECTOR_PROVIDER"):
         env["SKILLSPECTOR_PROVIDER"] = provider
     elif (api_key or base_url or model) and not env.get("SKILLSPECTOR_PROVIDER"):
         env["SKILLSPECTOR_PROVIDER"] = "openai"
+
+    effective_provider = env.get("SKILLSPECTOR_PROVIDER", "").strip()
+    if effective_provider == "azure_openai":
+        set_if_missing(env, "AZURE_OPENAI_API_KEY", api_key)
+        set_if_missing(env, "AZURE_OPENAI_ENDPOINT", base_url)
+        set_if_missing(env, "AZURE_OPENAI_DEPLOYMENT", deployment)
+        set_if_missing(env, "AZURE_OPENAI_API_VERSION", api_version)
+    elif effective_provider == "openai":
+        set_if_missing(env, "OPENAI_API_KEY", api_key)
+        set_if_missing(env, "OPENAI_BASE_URL", base_url)
+
+    set_if_missing(env, "SKILLSPECTOR_MODEL", model)
     return env
+
+
+def set_if_missing(env: dict[str, str], name: str, value: str) -> None:
+    if value and not env.get(name):
+        env[name] = value
 
 
 def skillspector_llm_config() -> dict[str, str | None]:
     env = skillspector_env()
+    provider = env.get("SKILLSPECTOR_PROVIDER")
+    endpoint = (
+        env.get("AZURE_OPENAI_ENDPOINT")
+        if provider == "azure_openai"
+        else env.get("OPENAI_BASE_URL") if provider == "openai" else None
+    )
     return {
-        "provider": env.get("SKILLSPECTOR_PROVIDER"),
+        "provider": provider,
         "model": env.get("SKILLSPECTOR_MODEL"),
+        "deployment": env.get("AZURE_OPENAI_DEPLOYMENT") if provider == "azure_openai" else None,
+        "api_version": env.get("AZURE_OPENAI_API_VERSION") if provider == "azure_openai" else None,
+        "endpoint_hash": sha256(endpoint.encode()).hexdigest() if endpoint else None,
     }

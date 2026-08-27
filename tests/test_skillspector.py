@@ -64,7 +64,71 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
 
     assert env["OPENAI_API_KEY"] == "secret-value"
     assert env["OPENAI_BASE_URL"] == "https://llm.example/v1"
-    assert config == {"provider": "openai", "model": "gpt-5"}
+    assert config == {
+        "provider": "openai",
+        "model": "gpt-5",
+        "deployment": None,
+        "api_version": None,
+        "endpoint_hash": "d5e402bf7bacd64a5aa920e05315e0f106363e00c2fd868856660c607ce4ae22",
+    }
+
+
+def test_skillspector_env_maps_generic_azure_openai_env(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "azure-secret")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://example.openai.azure.com/")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "azure_openai")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_DEPLOYMENT", "production-gpt-5")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_VERSION", "2025-04-01-preview")
+    for name in (
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_DEPLOYMENT",
+        "AZURE_OPENAI_API_VERSION",
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "SKILLSPECTOR_PROVIDER",
+        "SKILLSPECTOR_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    env = skillspector.skillspector_env()
+    config = skillspector.skillspector_llm_config()
+
+    assert env["SKILLSPECTOR_PROVIDER"] == "azure_openai"
+    assert env["AZURE_OPENAI_API_KEY"] == "azure-secret"
+    assert env["AZURE_OPENAI_ENDPOINT"] == "https://example.openai.azure.com/"
+    assert env["AZURE_OPENAI_DEPLOYMENT"] == "production-gpt-5"
+    assert env["AZURE_OPENAI_API_VERSION"] == "2025-04-01-preview"
+    assert env["SKILLSPECTOR_MODEL"] == "gpt-5"
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_BASE_URL" not in env
+    assert config == {
+        "provider": "azure_openai",
+        "model": "gpt-5",
+        "deployment": "production-gpt-5",
+        "api_version": "2025-04-01-preview",
+        "endpoint_hash": "7bef302251509c8f87385679f5607976a809a9bd5d5433860114b812bb5bd8dd",
+    }
+
+
+def test_native_azure_openai_env_wins_over_generic_env(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "generic-secret")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://generic.example/")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "azure_openai")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "native-secret")
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://native.openai.azure.com/")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    env = skillspector.skillspector_env()
+
+    assert env["SKILLSPECTOR_PROVIDER"] == "azure_openai"
+    assert env["AZURE_OPENAI_API_KEY"] == "native-secret"
+    assert env["AZURE_OPENAI_ENDPOINT"] == "https://native.openai.azure.com/"
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_BASE_URL" not in env
 
 
 def test_legacy_provider_specific_llm_env_names_are_not_committed():

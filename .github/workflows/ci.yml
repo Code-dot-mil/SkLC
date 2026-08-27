@@ -104,12 +104,11 @@ jobs:
           python-version: "3.12"
       - name: Install uv
         run: python -m pip install --no-cache-dir uv
-      - name: Generate exchange data from tracked BOE
+      - name: Generate preview exchange data
         run: >-
-          uv run python -m skill_exchange.cli publish-local
+          uv run --extra scan python -m skill_exchange.cli publish-local
           --generated-dir .exchange/generated
           --scan-mode static-only
-          --reuse-boe-only
       - name: Verify exchange data
         run: |
           test -s .exchange/generated/index.json

@@ -4,15 +4,15 @@ Date: 2026-06-19
 
 ## Purpose
 
-This repository implements a static skill exchange for publishing agent skills with visible scanner-backed risk context, reviewer assessment context, generated bill-of-evidence bundles, runtime zip downloads, and a GitLab Pages catalog.
+This repository implements a static skill exchange for publishing agent skills with visible scanner-backed risk context, reviewer assessment context, generated bill-of-evidence bundles, runtime zip downloads, and a static catalog artifact.
 
-The exchange starts as a GitLab repository plus a GitLab Pages static site. The repository is the source of truth for skill content and exchange policy. Python tooling validates skills, runs NVIDIA SkillSpector, generates official evidence, produces deploy-time data, and packages skill downloads. The Astro site renders the generated data into a searchable catalog and detail pages.
+The exchange migrated from GitLab to GitHub. The repository remains the source of truth for skill content and exchange policy. Python tooling validates skills, runs NVIDIA SkillSpector, generates official evidence, produces deploy-time data, and packages skill downloads. The Astro site renders the generated data into a searchable catalog and detail pages. The legacy GitLab pipeline remains tracked while GitHub Actions owns current validation and protected SkillSpector publication.
 
 The design deliberately avoids a backend service, database, MCP endpoint, user account model, custom AI review workflow, executable eval harness, click tracking, view tracking, install tracking, and download tracking. CI is the publisher. The generated data contract and BOE layout are the migration path if a backend is added later.
 
 ## Goals
 
-- Publish a searchable static skill catalog for authenticated organization users through GitLab Pages.
+- Publish a searchable static skill catalog artifact.
 - Show plain-language use guidance for every displayed skill: `Safe to use`, `Use caution`, `Avoid installing`, or `Unknown`.
 - Preserve the underlying scanner risk level for every displayed skill: `Low`, `Medium`, `High`, or `Unknown`.
 - Use SkillSpector assessment output as the first scanner-backed consumer risk signal.
@@ -20,7 +20,7 @@ The design deliberately avoids a backend service, database, MCP endpoint, user a
 - Produce official BOE only from protected publication CI, not from human-authored files.
 - Reuse official BOE when the computed scan cache key already exists.
 - Support both `static-only` and `llm-assisted` SkillSpector scans.
-- Keep all environment-specific settings configurable through environment variables or GitLab CI variables.
+- Keep all environment-specific settings configurable through environment variables or hosting-platform CI variables.
 - Keep the site and tooling self-contained so the repository can move between networks without importing external CI components.
 
 ## Non-Goals
@@ -402,14 +402,18 @@ Version detection:
 
 Generic LLM environment mapping:
 
-| Exchange variable | SkillSpector/OpenAI variable |
-|---|---|
-| `SKILL_EXCHANGE_LLM_API_KEY` | `OPENAI_API_KEY` |
-| `SKILL_EXCHANGE_LLM_BASE_URL` | `OPENAI_BASE_URL` |
-| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` |
-| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
+| Exchange variable | Native OpenAI target | Native Azure OpenAI target |
+|---|---|---|
+| `SKILL_EXCHANGE_LLM_API_KEY` | `OPENAI_API_KEY` | `AZURE_OPENAI_API_KEY` |
+| `SKILL_EXCHANGE_LLM_BASE_URL` | `OPENAI_BASE_URL` | `AZURE_OPENAI_ENDPOINT` |
+| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` | `SKILLSPECTOR_MODEL` |
+| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
+| `SKILL_EXCHANGE_LLM_DEPLOYMENT` | not mapped | `AZURE_OPENAI_DEPLOYMENT` |
+| `SKILL_EXCHANGE_LLM_API_VERSION` | not mapped | `AZURE_OPENAI_API_VERSION` |
 
-Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing scanner/provider environment variables win over exchange variables. Do not add organization-specific LLM variable names.
+Select the mapping from the effective `SKILLSPECTOR_PROVIDER`. Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing native scanner/provider environment variables win over exchange variables. Do not populate OpenAI-native credentials when the effective provider is `azure_openai`. Do not add organization-specific or provider-specific exchange variable names.
+
+`skillspector_llm_config()` returns provider, model, Azure deployment, Azure API version, and a SHA-256 endpoint digest. Scanner configuration and cache hashing include the non-empty deployment, API version, and endpoint digest so evidence is not reused across materially different Azure configurations. The endpoint itself and credentials must never be written to scanner configuration or BOE.
 
 ## Risk And Recommendation Mapping
 
@@ -701,11 +705,26 @@ Publish authentication must keep review credentials separate from publication cr
 
 Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be a review/comment token with insufficient protected-branch permissions. Silent credential substitution hides defects.
 
-## GitHub Validation
+## GitHub Actions
 
 The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
 
-Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation, builds `site/dist/`, verifies catalog detail pages and skill downloads, and uploads its contents as the downloadable `static-site` zip artifact.
+Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and runs `publish-local` with the locked `scan` extra in static-only mode. It reuses successful exact-current-content tracked BOE and runs SkillSpector only for missing preview evidence. Preview generation must not use an LLM or commit BOE. The producer uploads derived data for a Node.js 22 consumer. The consumer waits for validation, builds `site/dist/`, verifies catalog detail pages and skill downloads, and uploads its contents as the downloadable `static-site` zip artifact.
+
+The repository also owns `.github/workflows/skillspector.yml`:
+
+- Trigger pull-request review only for `skills/**` changes.
+- Use LLM-assisted Azure OpenAI review for same-repository pull requests and explicitly use static-only review for fork pull requests, where GitHub withholds repository secrets.
+- Put the generated review Markdown in the job summary and retain all review artifacts without committing them.
+- Trigger protected publication for default-branch `skills/**` pushes, a nightly schedule, and manual dispatch.
+- Install upstream SkillSpector 2.10.0 from the locked `scan` optional dependency, pinned to NVIDIA's immutable `v2.10.0` Git commit because that release is not available from PyPI; do not install the legacy private GitLab fork or require a model container.
+- Require the six generic Azure configuration values before any LLM-assisted job and require the provider value to be `azure_openai`.
+- Run official publication with `static-only,llm-assisted`, commit only `.exchange/generated/boe/`, and upload full generated output plus the publication result.
+- Give only the publication job `contents: write`; all other jobs remain read-only.
+- Push official BOE with job-scoped `GITHUB_TOKEN`, the repository path from GitHub context, and the default branch from GitHub event context.
+- Reuse tracked BOE scan keys, including Azure deployment, API version, and hashed endpoint identity.
+
+GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_DEPLOYMENT`, and `SKILL_EXCHANGE_LLM_API_VERSION`. The provider variable must equal `azure_openai`. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
 
 ## GitLab CI
 
@@ -809,6 +828,8 @@ Important variables:
 - `SKILL_EXCHANGE_LLM_BASE_URL`;
 - `SKILL_EXCHANGE_LLM_MODEL`;
 - `SKILL_EXCHANGE_LLM_PROVIDER`;
+- `SKILL_EXCHANGE_LLM_DEPLOYMENT`;
+- `SKILL_EXCHANGE_LLM_API_VERSION`;
 - `EXCHANGE_PUBLISH_COMMIT`;
 - `EXCHANGE_PUBLISH_PUSH`;
 - `EXCHANGE_PUBLISH_BRANCH`;
@@ -1016,6 +1037,7 @@ Python tests must cover:
 - SkillSpector failure without report;
 - SkillSpector version normalization;
 - generic LLM environment mapping;
+- generic Azure OpenAI mapping, native-variable precedence, and non-secret endpoint hashing;
 - absence of legacy organization-specific LLM variable names in key docs/code;
 - exchange build writing index, BOE, zip, tables, recommendation, risk, provenance, source URL, timestamps, and content hash;
 - invalid metadata blocking publication output;

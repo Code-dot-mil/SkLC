@@ -6,7 +6,7 @@ default:
 local_generated := ".exchange/local-generated"
 
 generate scan_mode="static-only":
-    uv run python -m skill_exchange.cli publish-local --generated-dir {{local_generated}} --scan-mode {{scan_mode}}
+    uv run --extra scan python -m skill_exchange.cli publish-local --generated-dir {{local_generated}} --scan-mode {{scan_mode}}
 
 python-lint:
     uv run --extra test ruff check scripts tests

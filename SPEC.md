@@ -402,18 +402,18 @@ Version detection:
 
 Generic LLM environment mapping:
 
-| Exchange variable | Native OpenAI target | Native Azure OpenAI target |
-|---|---|---|
-| `SKILL_EXCHANGE_LLM_API_KEY` | `OPENAI_API_KEY` | `AZURE_OPENAI_API_KEY` |
-| `SKILL_EXCHANGE_LLM_BASE_URL` | `OPENAI_BASE_URL` | `AZURE_OPENAI_ENDPOINT` |
-| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` | `SKILLSPECTOR_MODEL` |
-| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
-| `SKILL_EXCHANGE_LLM_DEPLOYMENT` | not mapped | `AZURE_OPENAI_DEPLOYMENT` |
-| `SKILL_EXCHANGE_LLM_API_VERSION` | not mapped | `AZURE_OPENAI_API_VERSION` |
+| Exchange variable | Native OpenAI target | OpenAI-compatible target | Native Azure OpenAI target |
+|---|---|---|---|
+| `SKILL_EXCHANGE_LLM_API_KEY` | `OPENAI_API_KEY` | `SKILLSPECTOR_COMPAT_API_KEY` | `AZURE_OPENAI_API_KEY` |
+| `SKILL_EXCHANGE_LLM_BASE_URL` | `OPENAI_BASE_URL` | `SKILLSPECTOR_COMPAT_BASE_URL` | `AZURE_OPENAI_ENDPOINT` |
+| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` | `SKILLSPECTOR_MODEL` | `SKILLSPECTOR_MODEL` |
+| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` | `SKILLSPECTOR_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
+| `SKILL_EXCHANGE_LLM_DEPLOYMENT` | not mapped | not mapped | `AZURE_OPENAI_DEPLOYMENT` |
+| `SKILL_EXCHANGE_LLM_API_VERSION` | not mapped | not mapped | `AZURE_OPENAI_API_VERSION` |
 
-Select the mapping from the effective `SKILLSPECTOR_PROVIDER`. Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing native scanner/provider environment variables win over exchange variables. Do not populate OpenAI-native credentials when the effective provider is `azure_openai`. Do not add organization-specific or provider-specific exchange variable names.
+Select the mapping from the effective `SKILLSPECTOR_PROVIDER`. Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing native scanner/provider environment variables win over exchange variables. Populate only the effective provider's native credential variables. Do not add organization-specific or provider-specific exchange variable names.
 
-`skillspector_llm_config()` returns provider, model, Azure deployment, Azure API version, and a SHA-256 endpoint digest. Scanner configuration and cache hashing include the non-empty deployment, API version, and endpoint digest so evidence is not reused across materially different Azure configurations. The endpoint itself and credentials must never be written to scanner configuration or BOE.
+`skillspector_llm_config()` returns provider, model, optional Azure deployment and API version, and a SHA-256 endpoint digest. Scanner configuration and cache hashing include all non-empty values so evidence is not reused across materially different endpoint configurations. The endpoint itself and credentials must never be written to scanner configuration or BOE.
 
 ## Risk And Recommendation Mapping
 
@@ -714,17 +714,17 @@ Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run 
 The repository also owns `.github/workflows/skillspector.yml`:
 
 - Trigger pull-request review only for `skills/**` changes.
-- Use LLM-assisted Azure OpenAI review for same-repository pull requests and explicitly use static-only review for fork pull requests, where GitHub withholds repository secrets.
+- Use the OpenAI-compatible LLM gateway for same-repository pull requests and explicitly use static-only review for fork pull requests, where GitHub withholds repository secrets.
 - Put the generated review Markdown in the job summary and retain all review artifacts without committing them.
 - Trigger protected publication for default-branch `skills/**` pushes, a nightly schedule, and manual dispatch.
 - Install upstream SkillSpector 2.10.0 from the locked `scan` optional dependency, pinned to NVIDIA's immutable `v2.10.0` Git commit because that release is not available from PyPI; do not install the legacy private GitLab fork or require a model container.
-- Require the six generic Azure configuration values before any LLM-assisted job and require the provider value to be `azure_openai`.
+- Require API key, base URL, model, and provider before any LLM-assisted job and require the provider value to be `openai_compatible`.
 - Run official publication with `static-only,llm-assisted`, commit only `.exchange/generated/boe/`, and upload full generated output plus the publication result.
 - Give only the publication job `contents: write`; all other jobs remain read-only.
 - Push official BOE with job-scoped `GITHUB_TOKEN`, the repository path from GitHub context, and the default branch from GitHub event context.
-- Reuse tracked BOE scan keys, including Azure deployment, API version, and hashed endpoint identity.
+- Reuse tracked BOE scan keys, including hashed endpoint identity.
 
-GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_DEPLOYMENT`, and `SKILL_EXCHANGE_LLM_API_VERSION`. The provider variable must equal `azure_openai`. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
+GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, and `SKILL_EXCHANGE_LLM_MODEL`. The provider variable must equal `openai_compatible`. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
 
 ## GitLab CI
 
@@ -1037,7 +1037,7 @@ Python tests must cover:
 - SkillSpector failure without report;
 - SkillSpector version normalization;
 - generic LLM environment mapping;
-- generic Azure OpenAI mapping, native-variable precedence, and non-secret endpoint hashing;
+- generic OpenAI, OpenAI-compatible, and Azure OpenAI mapping, native-variable precedence, and non-secret endpoint hashing;
 - absence of legacy organization-specific LLM variable names in key docs/code;
 - exchange build writing index, BOE, zip, tables, recommendation, risk, provenance, source URL, timestamps, and content hash;
 - invalid metadata blocking publication output;

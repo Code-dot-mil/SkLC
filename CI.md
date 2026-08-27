@@ -10,24 +10,22 @@ The `CI` workflow runs on every pull request targeting `main` and every push to 
 
 The `SkillSpector` workflow replaces the GitLab-specific private scanner installation and publication jobs:
 
-- Pull requests that change `skills/**` run package validation and SkillSpector review. Same-repository pull requests use Azure OpenAI LLM assistance. Fork pull requests explicitly use static-only review because GitHub does not provide repository secrets to fork workflows. Review output is added to the job summary and retained as a workflow artifact; it is advisory and is never committed as official evidence.
+- Pull requests that change `skills/**` run package validation and SkillSpector review. Same-repository pull requests use the configured OpenAI-compatible gateway. Fork pull requests explicitly use static-only review because GitHub does not provide repository secrets to fork workflows. Review output is added to the job summary and retained as a workflow artifact; it is advisory and is never committed as official evidence.
 - Pushes to `main` that change `skills/**`, the nightly schedule, and manual dispatches run official `static-only,llm-assisted` publication.
 - Publication installs upstream SkillSpector 2.10.0 through the locked `scan` dependency extra, pinned to NVIDIA's immutable `v2.10.0` Git commit because that release is not available from PyPI. No custom SkillSpector fork, model proxy, or model container is required.
 - Publication commits only `.exchange/generated/boe/` and pushes it to the default branch with the job-scoped `GITHUB_TOKEN`. Full generated output and `publish-result.json` are retained as workflow artifacts.
-- Exact tracked BOE cache keys are reused. Azure endpoint identity is represented in the cache configuration by a SHA-256 digest; the endpoint and API key are not written to BOE.
+- Exact tracked BOE cache keys are reused. Gateway endpoint identity is represented in the cache configuration by a SHA-256 digest; the endpoint and API key are not written to BOE.
 
 Configure these GitHub repository settings before enabling the workflow:
 
 | Kind | Name | Value |
 |---|---|---|
-| Actions secret | `SKILL_EXCHANGE_LLM_API_KEY` | Azure OpenAI API key |
-| Actions variable | `SKILL_EXCHANGE_LLM_PROVIDER` | `azure_openai` |
-| Actions variable | `SKILL_EXCHANGE_LLM_BASE_URL` | Azure resource endpoint, such as `https://RESOURCE.openai.azure.com/` |
-| Actions variable | `SKILL_EXCHANGE_LLM_MODEL` | Model label used for SkillSpector token metadata |
-| Actions variable | `SKILL_EXCHANGE_LLM_DEPLOYMENT` | Azure deployment name |
-| Actions variable | `SKILL_EXCHANGE_LLM_API_VERSION` | Azure OpenAI API version supported by the resource |
+| Actions secret | `SKILL_EXCHANGE_LLM_API_KEY` | OpenAI-compatible gateway API key |
+| Actions variable | `SKILL_EXCHANGE_LLM_PROVIDER` | `openai_compatible` |
+| Actions variable | `SKILL_EXCHANGE_LLM_BASE_URL` | `https://mdevchat.apim.mitre.org/openai` |
+| Actions variable | `SKILL_EXCHANGE_LLM_MODEL` | `gpt-5.4` |
 
-The repository or organization Actions policy must allow `GITHUB_TOKEN` write access, and the `main` branch ruleset must allow the GitHub Actions publication identity to push the generated-evidence commit. The workflow requests only `contents: write` for the protected publication job; review jobs remain read-only. If branch policy forbids direct bot pushes, configure an equivalent ruleset bypass for the publication workflow before running it. Do not replace `GITHUB_TOKEN` with the Azure credential or reuse the Azure credential for repository access.
+The repository or organization Actions policy must allow `GITHUB_TOKEN` write access, and the `main` branch ruleset must allow the GitHub Actions publication identity to push the generated-evidence commit. The workflow requests only `contents: write` for the protected publication job; review jobs remain read-only. If branch policy forbids direct bot pushes, configure an equivalent ruleset bypass for the publication workflow before running it. Do not replace `GITHUB_TOKEN` with the LLM gateway credential or reuse the gateway credential for repository access.
 
 ## GitLab Pipeline Shape
 

@@ -101,7 +101,7 @@ Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow de
 
 - `CI` runs lint and tests, generates static-only preview evidence when tracked BOE is absent, builds the site, and uploads catalog artifacts.
 - `SkillSpector` reviews skill pull requests and runs protected `static-only,llm-assisted` publication on default-branch skill changes, nightly schedules, and manual dispatches.
-- Official publication uses upstream SkillSpector 2.10.0 with native Azure OpenAI support and commits only durable BOE bundles.
+- Official publication uses upstream SkillSpector 2.10.0 with its native OpenAI-compatible provider and commits only durable BOE bundles.
 - The legacy GitLab pipeline remains tracked for migration history but is not the active GitHub control.
 - GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
 

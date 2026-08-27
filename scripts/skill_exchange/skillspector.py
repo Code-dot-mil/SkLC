@@ -83,6 +83,9 @@ def skillspector_env() -> dict[str, str]:
         set_if_missing(env, "AZURE_OPENAI_ENDPOINT", base_url)
         set_if_missing(env, "AZURE_OPENAI_DEPLOYMENT", deployment)
         set_if_missing(env, "AZURE_OPENAI_API_VERSION", api_version)
+    elif effective_provider == "openai_compatible":
+        set_if_missing(env, "SKILLSPECTOR_COMPAT_API_KEY", api_key)
+        set_if_missing(env, "SKILLSPECTOR_COMPAT_BASE_URL", base_url)
     elif effective_provider == "openai":
         set_if_missing(env, "OPENAI_API_KEY", api_key)
         set_if_missing(env, "OPENAI_BASE_URL", base_url)
@@ -102,7 +105,11 @@ def skillspector_llm_config() -> dict[str, str | None]:
     endpoint = (
         env.get("AZURE_OPENAI_ENDPOINT")
         if provider == "azure_openai"
-        else env.get("OPENAI_BASE_URL") if provider == "openai" else None
+        else env.get("SKILLSPECTOR_COMPAT_BASE_URL")
+        if provider == "openai_compatible"
+        else env.get("OPENAI_BASE_URL")
+        if provider == "openai"
+        else None
     )
     return {
         "provider": provider,

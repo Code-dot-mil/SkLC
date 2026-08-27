@@ -34,8 +34,6 @@ jobs:
       SKILL_EXCHANGE_LLM_BASE_URL: "${{ vars.SKILL_EXCHANGE_LLM_BASE_URL }}"
       SKILL_EXCHANGE_LLM_MODEL: "${{ vars.SKILL_EXCHANGE_LLM_MODEL }}"
       SKILL_EXCHANGE_LLM_PROVIDER: "${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}"
-      SKILL_EXCHANGE_LLM_DEPLOYMENT: "${{ vars.SKILL_EXCHANGE_LLM_DEPLOYMENT }}"
-      SKILL_EXCHANGE_LLM_API_VERSION: "${{ vars.SKILL_EXCHANGE_LLM_API_VERSION }}"
     steps:
       - name: Check out pull request
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,7 +45,7 @@ jobs:
           python-version: "3.12"
       - name: Install uv
         run: python -m pip install --no-cache-dir uv
-      - name: Validate Azure OpenAI configuration
+      - name: Validate LLM gateway configuration
         if: env.SKILL_EXCHANGE_REVIEW_SCAN_MODE == 'llm-assisted'
         run: |
           required=(
@@ -55,8 +53,6 @@ jobs:
             SKILL_EXCHANGE_LLM_BASE_URL
             SKILL_EXCHANGE_LLM_MODEL
             SKILL_EXCHANGE_LLM_PROVIDER
-            SKILL_EXCHANGE_LLM_DEPLOYMENT
-            SKILL_EXCHANGE_LLM_API_VERSION
           )
           for name in "${required[@]}"; do
             if [ -z "${!name}" ]; then
@@ -64,8 +60,8 @@ jobs:
               exit 1
             fi
           done
-          if [ "$SKILL_EXCHANGE_LLM_PROVIDER" != "azure_openai" ]; then
-            echo "::error::SKILL_EXCHANGE_LLM_PROVIDER must be azure_openai for this workflow"
+          if [ "$SKILL_EXCHANGE_LLM_PROVIDER" != "openai_compatible" ]; then
+            echo "::error::SKILL_EXCHANGE_LLM_PROVIDER must be openai_compatible for this workflow"
             exit 1
           fi
       - name: Run SkillSpector review
@@ -99,8 +95,6 @@ jobs:
       SKILL_EXCHANGE_LLM_BASE_URL: "${{ vars.SKILL_EXCHANGE_LLM_BASE_URL }}"
       SKILL_EXCHANGE_LLM_MODEL: "${{ vars.SKILL_EXCHANGE_LLM_MODEL }}"
       SKILL_EXCHANGE_LLM_PROVIDER: "${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}"
-      SKILL_EXCHANGE_LLM_DEPLOYMENT: "${{ vars.SKILL_EXCHANGE_LLM_DEPLOYMENT }}"
-      SKILL_EXCHANGE_LLM_API_VERSION: "${{ vars.SKILL_EXCHANGE_LLM_API_VERSION }}"
       EXCHANGE_PUBLISH_COMMIT: "true"
       EXCHANGE_PUBLISH_PUSH: "true"
       EXCHANGE_PUBLISH_BRANCH: "${{ github.event.repository.default_branch }}"
@@ -123,15 +117,13 @@ jobs:
           python-version: "3.12"
       - name: Install uv
         run: python -m pip install --no-cache-dir uv
-      - name: Validate Azure OpenAI configuration
+      - name: Validate LLM gateway configuration
         run: |
           required=(
             SKILL_EXCHANGE_LLM_API_KEY
             SKILL_EXCHANGE_LLM_BASE_URL
             SKILL_EXCHANGE_LLM_MODEL
             SKILL_EXCHANGE_LLM_PROVIDER
-            SKILL_EXCHANGE_LLM_DEPLOYMENT
-            SKILL_EXCHANGE_LLM_API_VERSION
           )
           for name in "${required[@]}"; do
             if [ -z "${!name}" ]; then
@@ -139,8 +131,8 @@ jobs:
               exit 1
             fi
           done
-          if [ "$SKILL_EXCHANGE_LLM_PROVIDER" != "azure_openai" ]; then
-            echo "::error::SKILL_EXCHANGE_LLM_PROVIDER must be azure_openai for this workflow"
+          if [ "$SKILL_EXCHANGE_LLM_PROVIDER" != "openai_compatible" ]; then
+            echo "::error::SKILL_EXCHANGE_LLM_PROVIDER must be openai_compatible for this workflow"
             exit 1
           fi
       - name: Show SkillSpector version

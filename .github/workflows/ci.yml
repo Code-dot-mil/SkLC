@@ -153,14 +153,21 @@ jobs:
         run: npm ci --prefix site
       - name: Build static site
         run: npm --prefix site run build
+      - name: Add prebuilt deployment entrypoint
+        run: |
+          rm -f site/dist/.gitkeep
+          cp products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml site/dist/.gitlab-ci.yml
       - name: Verify standalone site
         run: |
           test -s site/dist/index.html
           test -n "$(find site/dist/skills -type f -name 'index.html' -print -quit)"
           test -n "$(find site/dist/downloads -type f -name '*.zip' -print -quit)"
+          test -s site/dist/.gitlab-ci.yml
+          test ! -e site/dist/.gitkeep
       - name: Upload static site
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: static-site
           path: site/dist/
           if-no-files-found: error
+          include-hidden-files: true

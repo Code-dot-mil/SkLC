@@ -21,7 +21,7 @@ SCAN_MODES = ("static-only", "llm-assisted")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="GitLab CI helpers for the static skill exchange.")
+    parser = argparse.ArgumentParser(description="CI helpers for the static skill exchange.")
     subcommands = parser.add_subparsers(dest="command", required=True)
 
     review = subcommands.add_parser("review")
@@ -376,6 +376,47 @@ def one_line(value: Any) -> str:
 
 
 def post_review_comment(body: str) -> str:
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return post_github_review_comment(body)
+    return post_gitlab_review_comment(body)
+
+
+def post_github_review_comment(body: str) -> str:
+    token = os.environ.get("GITHUB_TOKEN")
+    repository = os.environ.get("GITHUB_REPOSITORY")
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if not token:
+        return "skipped: GITHUB_TOKEN is not set"
+    if not repository or not event_path:
+        return "skipped: GitHub pull request environment is incomplete"
+
+    event = json.loads(Path(event_path).read_text())
+    pull_request_number = event.get("pull_request", {}).get("number")
+    if not pull_request_number:
+        return "skipped: GitHub pull request number is unavailable"
+
+    api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+    route = (
+        f"{api_url.rstrip('/')}/repos/{urllib.parse.quote(repository, safe='/')}"
+        f"/issues/{urllib.parse.quote(str(pull_request_number), safe='')}/comments"
+    )
+    payload = json.dumps({"body": body}).encode()
+    request = urllib.request.Request(
+        route,
+        data=payload,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "skill-exchange-review",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return f"posted: HTTP {response.status}"
+
+
+def post_gitlab_review_comment(body: str) -> str:
     token_variable = os.environ.get("SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE", "GITLAB_TOKEN")
     token = os.environ.get(token_variable)
     api_url = os.environ.get("CI_API_V4_URL")

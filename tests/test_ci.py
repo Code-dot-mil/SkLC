@@ -45,6 +45,39 @@ def test_changed_skill_paths_detects_skill_roots_only(tmp_path: Path):
     ]
 
 
+def test_post_review_comment_uses_github_pull_request_api(monkeypatch, tmp_path: Path):
+    event_path = tmp_path / "event.json"
+    event_path.write_text(json.dumps({"pull_request": {"number": 32}}))
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "github-token")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "example/skill-exchange")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    captured = {}
+
+    class Response:
+        status = 201
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def fake_urlopen(request, timeout):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(ci.urllib.request, "urlopen", fake_urlopen)
+
+    assert ci.post_review_comment("# Review\n") == "posted: HTTP 201"
+    request = captured["request"]
+    assert request.full_url == "https://api.github.com/repos/example/skill-exchange/issues/32/comments"
+    assert request.get_header("Authorization") == "Bearer github-token"
+    assert json.loads(request.data) == {"body": "# Review\n"}
+    assert captured["timeout"] == 30
+
+
 def test_review_changed_skills_writes_reviewer_artifacts(monkeypatch, tmp_path: Path):
     reviewed = _write_skill(tmp_path, "team", "reviewed-skill")
     _write_skill(tmp_path, "team", "other-skill")

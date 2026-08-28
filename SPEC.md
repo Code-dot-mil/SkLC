@@ -724,7 +724,7 @@ The repository also owns `.github/workflows/skillspector.yml`:
 - Push official BOE with job-scoped `GITHUB_TOKEN`, the repository path from GitHub context, and the default branch from GitHub event context.
 - Reuse tracked BOE scan keys, including hashed endpoint identity.
 
-GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, and `RUNNER_CA_BUNDLE_PATH`. The provider variable must equal `openai_compatible`. `RUNNER_CA_BUNDLE_PATH` must resolve, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain. The SkillSpector jobs pass it to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and fail closed when it is missing or unreadable. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
+GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, and `RUNNER_CA_BUNDLE_PATH`. The provider variable must equal `openai_compatible`. `RUNNER_CA_BUNDLE_PATH` must resolve, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain. The SkillSpector jobs pass it to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`, and fail closed when it is missing or unreadable. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
 
 ## GitLab CI
 

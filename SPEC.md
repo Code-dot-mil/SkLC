@@ -715,7 +715,7 @@ The repository also owns `.github/workflows/skillspector.yml`:
 
 - Trigger pull-request review only for `skills/**` changes.
 - Use the OpenAI-compatible LLM gateway for same-repository pull requests and explicitly use static-only review for fork pull requests, where GitHub withholds repository secrets.
-- Put the generated review Markdown in the job summary and retain all review artifacts without committing them.
+- Put the generated review Markdown in the job summary, post it as a comment on same-repository pull requests using the job-scoped `GITHUB_TOKEN` with `pull-requests: write`, and retain all review artifacts without committing them. Fork pull requests retain the artifact but do not receive comments because their workflow tokens are read-only.
 - Trigger protected publication for default-branch `skills/**` pushes, a nightly schedule, and manual dispatch.
 - Install upstream SkillSpector 2.10.0 from the locked `scan` optional dependency, pinned to NVIDIA's immutable `v2.10.0` Git commit because that release is not available from PyPI; do not install the legacy private GitLab fork or require a model container.
 - Require API key, base URL, model, and provider before any LLM-assisted job and require the provider value to be `openai_compatible`.

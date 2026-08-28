@@ -26,6 +26,9 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: self-hosted
     timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
     env:
       SKILL_EXCHANGE_REVIEW_SCAN_MODE: "${{ github.event.pull_request.head.repo.full_name == github.repository && 'llm-assisted' || 'static-only' }}"
       SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS: "true"
@@ -85,6 +88,51 @@ jobs:
       - name: Add review to job summary
         if: always() && hashFiles('review-artifacts/comment.md') != ''
         run: cat review-artifacts/comment.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Post review to pull request
+        if: >-
+          always() && hashFiles('review-artifacts/comment.md') != '' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GITHUB_TOKEN: "${{ github.token }}"
+          PULL_REQUEST_NUMBER: "${{ github.event.pull_request.number }}"
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const https = require("node:https");
+
+          const body = fs.readFileSync("review-artifacts/comment.md", "utf8");
+          const payload = Buffer.from(JSON.stringify({body}));
+          const request = https.request(
+            `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/issues/${process.env.PULL_REQUEST_NUMBER}/comments`,
+            {
+              method: "POST",
+              headers: {
+                accept: "application/vnd.github+json",
+                authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                "content-length": payload.length,
+                "content-type": "application/json",
+                "user-agent": "skill-exchange-review",
+                "x-github-api-version": "2022-11-28",
+              },
+            },
+            (response) => {
+              let responseBody = "";
+              response.setEncoding("utf8");
+              response.on("data", (chunk) => { responseBody += chunk; });
+              response.on("end", () => {
+                if (response.statusCode < 200 || response.statusCode >= 300) {
+                  console.error(`GitHub comment request failed with HTTP ${response.statusCode}: ${responseBody}`);
+                  process.exitCode = 1;
+                }
+              });
+            },
+          );
+          request.on("error", (error) => {
+            console.error(`GitHub comment request failed: ${error.message}`);
+            process.exitCode = 1;
+          });
+          request.end(payload);
+          NODE
       - name: Upload review artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

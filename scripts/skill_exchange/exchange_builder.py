@@ -44,6 +44,9 @@ def build_exchange(
     reuse_boe_only: bool = False,
 ) -> dict[str, Any]:
     generated_dir.mkdir(parents=True, exist_ok=True)
+    zip_dir = generated_dir / "zips"
+    if zip_dir.exists():
+        shutil.rmtree(zip_dir)
     policy = load_exchange_policy(exchange_dir)
     site_config = load_site_config(exchange_dir)
     skills = discover_skills(skills_root)
@@ -214,7 +217,7 @@ def build_exchange(
             cached_scanner_runs[scan_key] = scanner_run
             scanner_artifact_rows.extend(scanner_artifact_rows_for(scanner_run))
             scanner_finding_rows.extend(scanner_finding_rows_for(scanner_run["id"], report))
-        zip_path = write_skill_zip(skill, generated_dir / "zips")
+        zip_path = write_skill_zip(skill, zip_dir)
         detail_path = generated_dir / "skills" / f"{skill.metadata.namespace}--{skill.metadata.skill_id}.json"
         detail_path.parent.mkdir(parents=True, exist_ok=True)
         aggregate = aggregate_assessment(skill_scanner_runs)

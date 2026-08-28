@@ -73,20 +73,20 @@ function formatRecommendation(value) {
   if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
     return "Avoid installing";
   }
-  if (value === "CAUTION" || value === "REVIEW") {
+  if (value === "CAUTION") {
     return "Use caution";
   }
   if (value === "SAFE") {
     return "Safe to use";
   }
-  return value || "Unknown";
+  return "Unknown";
 }
 
 function recommendationToRisk(value) {
   if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
     return "High";
   }
-  if (value === "CAUTION" || value === "REVIEW") {
+  if (value === "CAUTION") {
     return "Medium";
   }
   if (value === "SAFE") {

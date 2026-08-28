@@ -26,6 +26,13 @@ TRACKED_BOE_FILES = {
     "summary.json",
 }
 TRACKED_BOE_HASHED_FILES = TRACKED_BOE_FILES - {"hashes.json"}
+RECOMMENDATION_LABELS = {
+    "SAFE": "Safe to use",
+    "CAUTION": "Use caution",
+    "DO_NOT_INSTALL": "Avoid installing",
+    "BLOCK": "Avoid installing",
+    "Unknown": "Unknown",
+}
 
 
 def build_exchange(
@@ -754,7 +761,8 @@ def write_run_artifacts(
 
 def aggregate_assessment(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
     selected = select_scanner_run(scanner_runs)
-    recommendation = selected["native_recommendation"] or "Unknown"
+    native_recommendation = selected["native_recommendation"] or "Unknown"
+    recommendation = native_recommendation if native_recommendation in RECOMMENDATION_LABELS else "Unknown"
     return {
         "risk": selected["display_risk"],
         "reason": selected["display_risk_reason"],
@@ -777,14 +785,7 @@ def select_scanner_run(scanner_runs: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def recommendation_label(recommendation: str) -> str:
-    labels = {
-        "SAFE": "Safe to use",
-        "CAUTION": "Use caution",
-        "REVIEW": "Use caution",
-        "DO_NOT_INSTALL": "Avoid installing",
-        "BLOCK": "Avoid installing",
-    }
-    return labels.get(recommendation, recommendation or "Unknown")
+    return RECOMMENDATION_LABELS.get(recommendation, "Unknown")
 
 
 def scanner_provenance(scanner_run: dict[str, Any]) -> dict[str, Any]:

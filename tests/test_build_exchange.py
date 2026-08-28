@@ -659,6 +659,24 @@ def test_aggregate_assessment_uses_latest_llm_assisted_scan_without_static_confi
     }
 
 
+def test_aggregate_assessment_rejects_removed_review_recommendation():
+    assessment = aggregate_assessment(
+        [
+            {
+                "scan_mode": "static-only",
+                "last_scanned": "2026-06-19T21:00:00+00:00",
+                "display_risk": "Medium",
+                "display_risk_reason": "Medium severity finding detected.",
+                "native_recommendation": "REVIEW",
+                "confidence_flags": [],
+            }
+        ]
+    )
+
+    assert assessment["recommendation"] == "Unknown"
+    assert assessment["recommendation_label"] == "Unknown"
+
+
 def test_recommendation_labels_are_plain_language():
     assert exchange_builder.recommendation_label("SAFE") == "Safe to use"
     assert exchange_builder.recommendation_label("CAUTION") == "Use caution"

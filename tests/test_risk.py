@@ -22,7 +22,7 @@ def test_clean_static_report_is_low_with_low_confidence():
 def test_medium_report_is_medium():
     assessment = assess_report(
         {
-            "risk_assessment": {"score": 45, "severity": "MEDIUM", "recommendation": "REVIEW"},
+            "risk_assessment": {"score": 45, "severity": "MEDIUM", "recommendation": "CAUTION"},
             "issues": [{"id": "EA3", "severity": "MEDIUM"}],
             "metadata": {"llm_requested": True, "llm_available": True},
         }

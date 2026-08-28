@@ -34,11 +34,22 @@ jobs:
       SKILL_EXCHANGE_LLM_BASE_URL: "${{ vars.SKILL_EXCHANGE_LLM_BASE_URL }}"
       SKILL_EXCHANGE_LLM_MODEL: "${{ vars.SKILL_EXCHANGE_LLM_MODEL }}"
       SKILL_EXCHANGE_LLM_PROVIDER: "${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}"
+      NODE_EXTRA_CA_CERTS: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
     steps:
       - name: Check out pull request
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - name: Validate runner CA bundle
+        run: |
+          if [ -z "${NODE_EXTRA_CA_CERTS:-}" ]; then
+            echo "::error::Set the RUNNER_CA_BUNDLE_PATH Actions variable to a readable PEM CA bundle on the self-hosted runner."
+            exit 1
+          fi
+          if [ ! -r "$NODE_EXTRA_CA_CERTS" ]; then
+            echo "::error::The runner CA bundle is not readable: $NODE_EXTRA_CA_CERTS"
+            exit 1
+          fi
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -95,6 +106,7 @@ jobs:
       SKILL_EXCHANGE_LLM_BASE_URL: "${{ vars.SKILL_EXCHANGE_LLM_BASE_URL }}"
       SKILL_EXCHANGE_LLM_MODEL: "${{ vars.SKILL_EXCHANGE_LLM_MODEL }}"
       SKILL_EXCHANGE_LLM_PROVIDER: "${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}"
+      NODE_EXTRA_CA_CERTS: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
       EXCHANGE_PUBLISH_COMMIT: "true"
       EXCHANGE_PUBLISH_PUSH: "true"
       EXCHANGE_PUBLISH_BRANCH: "${{ github.event.repository.default_branch }}"
@@ -111,6 +123,16 @@ jobs:
         with:
           fetch-depth: 0
           ref: "${{ github.event.repository.default_branch }}"
+      - name: Validate runner CA bundle
+        run: |
+          if [ -z "${NODE_EXTRA_CA_CERTS:-}" ]; then
+            echo "::error::Set the RUNNER_CA_BUNDLE_PATH Actions variable to a readable PEM CA bundle on the self-hosted runner."
+            exit 1
+          fi
+          if [ ! -r "$NODE_EXTRA_CA_CERTS" ]; then
+            echo "::error::The runner CA bundle is not readable: $NODE_EXTRA_CA_CERTS"
+            exit 1
+          fi
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:

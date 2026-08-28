@@ -1,6 +1,6 @@
 ---
 name: benign-scanner-demo
-description: Demonstrates scanner findings with inert examples for exchange UI testing.
+description: Demonstrates scanner findings with inert examples for exchange UI testing. Adding a small change to trigger ci.
 metadata:
   ai4sdlc.namespace: ai4sdlc
   ai4sdlc.category: testing

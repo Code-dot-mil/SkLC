@@ -62,5 +62,5 @@ without changing their folder structure:
 - `downloads/`
 
 The included `README.md` and `.gitlab-ci.yml` are not needed for alternate
-hosting. Then open the site's main web address and confirm that the catalog and
-downloads work.
+hosting. Make the files available at the site's main web address, rather than
+inside a subfolder. Then confirm that the catalog and downloads work.

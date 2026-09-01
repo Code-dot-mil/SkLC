@@ -1,0 +1,24 @@
+stages:
+  - deploy
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - when: never
+
+pages:
+  stage: deploy
+  tags:
+    - "$PAGES_RUNNER_TAG"
+  script:
+    - test -s index.html
+    - test -d _astro
+    - test -d skills
+    - test -d downloads
+    - rm -rf public
+    - mkdir public
+    - cp -R index.html _astro skills downloads public/
+    - test -s public/index.html
+  artifacts:
+    paths:
+      - public/

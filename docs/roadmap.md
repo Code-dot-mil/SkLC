@@ -1,514 +1,401 @@
-# Q3 2026 Skill Exchange Roadmap
+# Skill Exchange Release Roadmap
 
-## Objective
+## 1. Objective
 
-Deliver four independently consumable Skill Exchange products from one maintainer repository: skill lifecycle guidance, an assessment kit, a governed skill catalog, and a deployment kit. GitHub is the authoritative source and release system. Consumers install selected versioned releases into their GitLab instance or another supported environment without mirroring the maintainer repository or adopting maintainer release CI.
+Deliver four standalone products as independently consumable artifacts in cumulative GitHub releases: skill lifecycle guidance, the assessment kit, the initial skill catalog, and the deployment kit. Private GitHub is the source of truth and release origin for the assessment kit, initial skill catalog, and deployment kit. Skill lifecycle guidance will be published from the Code-dot-mil AI4SDLC GitHub after the team accepts the minimum useful guidance shape. Customers receive released artifacts and deploy or use them in GitLab without mirroring maintainer source or importing maintainer release workflows.
 
-This roadmap covers Q3 2026. It is a near-term sequence, not a commitment that every target product will be complete by the end of the quarter. **P0** work proves the target product model end to end. **P1** work hardens or expands it. A **decision gate** is a P0 contract decision that dependent implementation must not outrun.
+The Q3 priority is the smallest release path that proves this model: GitHub publishes a checksummed release, a clean GitLab project receives it, and GitLab Pages deploys it. Work that does not protect product independence or prove GitHub-to-GitLab delivery is deferred.
 
-## Supporting goals
+## 2. Design summary
 
-1. **Independent products from one source repository.** Co-location in GitHub must not require consumers to install all products or create runtime dependencies between them.
-2. **Explicit file and command contracts.** Stabilize the skill-package, assessment-result, BOE, catalog, catalog-policy, release-manifest, CLI, and CI interfaces that join the products.
-3. **Trusted assessment.** Establish a temporary MITRE-internal virtual-machine runner for assessment jobs that need LLM access while keeping ordinary build and release work on GitHub-hosted runners.
-4. **Complete downstream operation.** Ship supported, tested GitLab CI with the assessment and deployment products rather than expecting a consumer to adapt maintainer workflows.
-5. **GitLab installation proof.** Use an internal GitLab repository as a clean consumer environment for released products, full and partial updates, assessment, catalog generation, and deployment.
-6. **Simple first gate.** Make current behavior explicit where it is sound, remove accidental coupling, and defer speculative services, framework layers, and compatibility systems.
+### 2.1 Products
 
-## Target design summary
+- **Skill lifecycle guidance:** a parallel guidance and research track that will become a versioned guidance bundle published from the Code-dot-mil AI4SDLC GitHub after the team agrees on the minimum useful lifecycle guidance. It does not gate the assessment kit, initial catalog, or deployment kit.
+- **Assessment kit:** standalone CLI with commands and reference CI for validating and assessing skills, producing native assessor output, and maintaining BOE manifests.
+- **Initial skill catalog:** four developer-centered skills: Secure Code Review, Unit Test Generation, Inline Documentation, and Commit Message and PR Description. The released artifact includes any available BOE manifests with their assessor reports; the maintainer's publication policy is internal release governance.
+- **Deployment kit:** provides the reference implementation for the skill exchange site. It has two modes:
+  - **Prebuilt:** a ready-to-deploy static site with deployment CI and documentation.
+  - **Operator:** site source, build tooling, and reference CI for configuring, building, and deploying a skill exchange from released components.
 
-The maintainer repository contains product-aligned source roots plus a small neutral `contracts/` area for serialized formats shared across product boundaries. Maintainer GitHub Actions test and release versioned, checksummed artifacts. Each artifact vendors the contract schemas it produces or consumes; no released product imports executable code from `contracts/` or another product's source tree.
+### 2.2 How the products fit together
 
-The assessment kit turns an arbitrary skill package into verifiable BOE. The governed skill catalog contains served skill packages, matching accepted BOE, and catalog identity metadata. The deployment kit consumes a catalog in one of two ways:
+Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Product file formats and commands are defined as contracts, so the products can work together without sharing code. Shared schemas and examples live under `contracts/`. Each release includes the contracts it uses.
 
-- The **prebuilt static-site package** deploys an already-built exchange without assessment or customization capability.
-- The **operator kit** combines released assessment and catalog capabilities with the reference site, build/update tooling, full downstream GitLab CI, and a consumer-owned local overlay.
-
-Lifecycle guidance remains the fourth target product, but its source and packaging boundary with the DoW AI4SDLC GuidanceAsCode repository is a visible, non-blocking decision gate.
+| Product | Release artifact | Uses another product? | Primary use-case |
+|---|---|---|---|
+| Skill lifecycle guidance | Code-dot-mil AI4SDLC GitHub guidance | No | Help users understand and apply the skill lifecycle. |
+| Assessment kit | CLI package, contracts, docs, and optional GitLab CI profile | No | Validate skills, run assessments, and produce BOE. |
+| Skill catalog | Four skills, manifest, checksums, and optional BOE | Optional assessment-kit outputs | Seed a skill exchange or distribute skills. |
+| Deployment kit - prebuilt | `deployment-kit-prebuilt` with deployment-only GitLab CI | Released catalog artifacts and optional assessment-kit artifacts | Deploy GitLab Pages or a static hosted site from released static site artifacts. |
+| Deployment kit - operator | `deployment-kit-operator` with reference GitLab CI | Compatible SkLC release artifacts for skill catalog, assessment kit, and assessment artifacts | Build and deploy GitLab Pages or a static hosted site from released catalog and assessment-kit inputs. |
 
 ```mermaid
 flowchart LR
-  guidanceRepo[/"GuidanceAsCode repository<br/>source boundary unresolved"/]
+  lifecycle["Skill lifecycle guidance"]
+  assessment["Assessment kit"]
+  catalog["Initial skill catalog"]
 
-  subgraph github["GitHub maintainer repository — source of truth"]
-    direction TB
-    lifecycleSource[/"Lifecycle source<br/>.skill-lifecycle/ and selected docs/"/]
-    contractSource[/"Cross-product schemas and examples<br/>contracts/"/]
-    assessmentSource[/"Assessment implementation<br/>products/assessment-kit/"/]
-    catalogSource[/"Delivered skills, evidence, and catalog tooling<br/>products/skill-catalog/"/]
-    deploymentSource[/"Reference site, installation, update, and CI assets<br/>products/deployment-kit/"/]
+  subgraph deployment["Deployment kit"]
+    prebuilt["Prebuilt mode"]
+    operator["Operator mode"]
   end
 
-  guidanceRepo -. "informs boundary of" .-> lifecycleSource
-
-  subgraph releases["Versioned, independently consumable product releases"]
-    direction TB
-    lifecycle("1. Skill lifecycle guidance")
-    assessment("2. Assessment kit<br/>CLI plus supported assessment CI")
-    contracts[["Versioned contracts<br/>skill package · assessment result · BOE<br/>catalog · catalog policy · release manifest"]]
-    boe[["Current-schema BOE<br/>for served skill versions"]]
-    catalog("3. Skill catalog<br/>skill packages plus accepted BOE")
-    catalogManifest[["Catalog manifest<br/>accepted skill and BOE identities"]]
-    deployment("4. Deployment kit")
-
-    subgraph modes["Two deployment-kit consumption modes"]
-      direction LR
-      prebuilt("Prebuilt static-site package<br/>built files plus deployment CI")
-      operator("Operator kit<br/>assessment + catalog + reference site<br/>build/deploy CI + local overlay")
-    end
-  end
-
-  lifecycleSource -->|"packages"| lifecycle
-  contractSource -->|"publishes"| contracts
-  assessmentSource -->|"builds"| assessment
-  catalogSource -->|"builds"| catalog
-  deploymentSource -->|"builds"| deployment
-
-  contracts -->|"governs formats for"| assessment
-  contracts -->|"governs formats for"| catalog
-  contracts -->|"governs inputs to"| deployment
-  assessment -->|"creates and verifies"| boe
-  boe -->|"qualifies content for"| catalog
-  catalog -->|"records accepted entries in"| catalogManifest
-  deployment -->|"assembles"| prebuilt
-  deployment -->|"assembles"| operator
-  catalog -->|"is baked into"| prebuilt
-  assessment -->|"supplies capability to"| operator
-  catalog -->|"supplies delivered content to"| operator
-
-  subgraph gitlab["Downstream GitLab installation environment"]
-    direction TB
-    guidanceUse["Author, reviewer, and operator guidance"]
-    assessmentOnly["Assessment-only or custom-exchange repository"]
-    catalogOnly["Catalog-only or custom-consumer repository"]
-    staticInstall["Prebuilt-site installation repository"]
-    operatorInstall["Operator installation repository<br/>consumer-owned local/ content"]
-    host["GitLab Pages or another static host"]
-  end
-
-  lifecycle -->|"guides"| guidanceUse
-  assessment -->|"installs into"| assessmentOnly
-  catalog -->|"installs into"| catalogOnly
-  prebuilt -->|"installs into"| staticInstall
-  operator -->|"installs into"| operatorInstall
-  staticInstall -->|"publishes"| host
-  operatorInstall -->|"publishes"| host
-
-  subgraph legend["Shape legend"]
-    direction TB
-    legendSource[/Maintainer source area/]
-    legendProduct(Released product or kit)
-    legendContract[[Versioned contract or durable artifact]]
-    legendInstall[Consumer installation or host]
-  end
+  lifecycle -. "informs" .-> assessment
+  lifecycle -. "informs" .-> catalog
+  lifecycle -. "informs" .-> deployment
+  assessment -->|"adds BOE to"| catalog
+  catalog -->|"feeds"| prebuilt
+  catalog -->|"supplies"| operator
+  assessment -->|"supplies"| operator
 ```
 
-*Target product topology. One GitHub maintainer repository publishes four independently consumable products. Versioned file contracts—not shared runtime code—connect products, and downstream GitLab repositories install releases rather than mirror maintainer source.*
+Solid arrows show how released products are used together. Dotted arrows show where lifecycle guidance may later inform the products. The guidance track is parallel and non-gating until its minimum useful shape is accepted. Each product still stands alone. The assessment kit produces BOE that a catalog can include. Internal catalog policy governs which skills are released.
 
-![Skill Exchange product flow](assets/product-flow.drawio.png)
-
-*Customer product flow. The CI product pipeline produces the four roadmap products and shows the deployment kit's prebuilt and operator delivery paths to GitLab Pages.*
-
-### Product granularity and primary sources
-
-The current-source column describes where capability exists today; it is not the desired release layout.
-
-| Product | Included capability or content | Primary current source areas | Principal downstream use |
-|---|---|---|---|
-| Skill lifecycle guidance | Lifecycle method, author and reviewer guidance, and lifecycle metadata or plays | `.skill-lifecycle/`, selected `docs/`, and possibly GuidanceAsCode | Guidance for authors, reviewers, and operators; final packaging is a decision gate. |
-| Assessment kit | Skill-package validation, assessor adapters, normalized results, BOE creation and verification, CLI commands, and supported review/CI integration | Assessment-focused modules under `scripts/skill_exchange/`, relevant `.exchange/` schemas or policy, and tests | Standalone assessment or assessment capability installed by the operator kit; no catalog, site, or deployment dependency. |
-| Skill catalog | Served skill packages, accepted matching BOE, catalog identity/release metadata, and catalog-admission tooling and contract | `skills/`, `.exchange/generated/boe/`, catalog-focused modules under `scripts/skill_exchange/`, and policy files | A governed collection consumable by the reference site or another catalog consumer. |
-| Deployment kit | Catalog materialization, reference Astro site, release/install/update tooling, deployment documentation, and supported operator CI | Deployment-focused modules under `scripts/skill_exchange/`, `site/`, local orchestration, and deployment templates | Prebuilt static-site installation or customizable operator installation. |
-
-### Intended source topology
-
-Product files should move into contiguous roots so release assembly packages product directories instead of cherry-picking mixed files. The exact migration may be incremental, but new public interfaces should follow this ownership model:
+The source tree follows the same product boundaries:
 
 ```text
 contracts/
-  skill-package/v1/
-  assessment-result/v1/
-  boe/v1/
-  catalog/v1/
-  catalog-policy/v1/
-  release-manifest/v1/
-
 products/
   assessment-kit/
-    src/
-    tests/
-    ci/gitlab/
-    packaging/
   skill-catalog/
-    src/
-    content/
-    policy/
-    tests/
-    packaging/
   deployment-kit/
-    src/
     site/
-    ci/gitlab/
-    templates/
-    docs/
-  lifecycle/
-    metadata/
-    docs/
-
+    prebuilt/
+    operator/
+  lifecycle/          deferred until the guidance shape is accepted
 maintainer/
-  release/
-  validation/
 ```
 
-`contracts/` contains schemas, examples, and explanatory contract documents only. Each contract has a governing product, while its neutral location makes cross-product compatibility reviewable. Products vendor the schemas they need into releases and do not depend on `contracts/` at runtime. Shared executable code does not belong there.
+## 3. Release strategy
 
-### Contract and ownership model
+Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with manifests, `SHA256SUMS.txt`, and installation documentation. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process follows `docs/specs/release-process.md` (Status: Approved) and is assisted by the local Codex skill `.agents/skills/sklc-release-process`.
 
-| Contract or concern | Governing product | First-gate rule |
-|---|---|---|
-| Skill package | Assessment kit | Validate the package layout and metadata before assessment; catalog tooling may validate against the vendored schema without importing the assessment runtime. |
-| Assessment result and normalization | Assessment kit | Normalize native results to `Low`, `Medium`, `High`, or `Unknown`; retain the native report and map native critical results to normalized `High`. |
-| BOE | Assessment kit | Create and verify schema, skill identity, content hash, scan key, required files, assessor provenance/configuration, and integrity hashes. |
-| Catalog manifest | Skill catalog | Identify exactly which skill content and matching BOE were admitted and served. |
-| Catalog-policy schema and evaluation | Skill catalog | Define the portable admission rules for any catalog, independent of a site implementation. |
-| Catalog-policy instance | Publisher or operator | Maintainers own the official catalog policy; an operator owns `local/catalog.yaml` for an operator-produced catalog. |
-| Presentation and deployment policy | Deployment kit or custom consumer | Control routes, display, sorting, static hosting, and optional further narrowing without changing what an upstream catalog claimed to accept. |
-| Release manifest | Each released product | Declare product version, checksums, source revision, produced/consumed contract majors, and composed product versions where applicable. |
+Some products include reference GitLab CI after their core behavior exists. That CI is customer-facing packaging: it shows how to run the released product in GitLab. It is not a separate product, and it does not reuse maintainer GitHub workflows.
 
-The layered catalog-policy ownership avoids tying the catalog to the site: catalog tooling owns admission semantics; a maintainer or operator supplies the policy instance; and any deployment consumes the resulting catalog. A customer building a custom exchange can consume the assessment kit alone for BOE, or add catalog tooling when it wants the governed catalog behavior.
+The sequence is release-first. Release-first means each milestone is judged by the released artifact it produces and how that artifact is verified in its target consumption path. Internal work matters only when it is required to publish, install, run, or deploy that artifact. This keeps the roadmap focused on customer delivery instead of source-tree cleanup or maintainer automation. The milestones follow this order:
 
-Catalog tooling verifies current matching BOE before applying admission policy; no policy can override invalid evidence. The operator kit ships an explicit `local/catalog.yaml` instead of relying on hidden defaults. An operator may narrow a delivered catalog, but combining delivered and local skills under operator policy creates a distinct operator catalog rather than changing the acceptance claim of the upstream release.
+1. Prove the GitHub-to-GitLab path with the prebuilt reference site.
+2. Release the standalone product artifacts whose contracts are ready: initial catalog, assessment kit, and deployment kit.
+3. Keep skill lifecycle guidance as a parallel non-gating milestone until the team accepts a minimum guidance shape.
+4. Add customer GitLab CI only where it is needed to run an already released product.
+5. Assemble the operator foundation from compatible released catalog and assessment-kit artifacts.
+6. Add operator-managed updates after the install, build, and deploy path works.
 
-### Assessment-kit public boundary
+Q3 must ship:
 
-The independently installable assessment kit exposes CLI and versioned file contracts. Python modules remain implementation details for the first gate.
+1. A GitHub release process that publishes manifests and checksums.
+2. The prebuilt reference site release installed unchanged in a clean GitLab project and deployed to GitLab Pages.
+3. Release-shaped specs for the initial catalog, assessment kit, and deployment kit, with lifecycle guidance explicitly tracked as parallel non-gating research.
+
+### 3.1 MVP — Prebuilt reference site
+
+Spec: `docs/specs/prebuilt-reference-site.md` (Status: Approved).
+
+#### 3.1.1 Customer outcome
+
+A customer can obtain a prebuilt reference skill-exchange site from GitHub Releases and deploy it unchanged to GitLab Pages.
+
+#### 3.1.2 Scope
+
+Included:
+
+- Final static files and downloads.
+- Deployment-only reference GitLab CI.
+- Installation and deployment documentation.
+
+Excluded:
+
+- Assessment tooling or execution.
+- An independently consumable initial-catalog release or site-build tooling.
+- Operator customization and update support.
+- Generic static-host validation.
+
+#### 3.1.3 Team delivery tasks
+
+1. Establish GitHub as the source of truth and implement the release process for the prebuilt site.
+2. Package the static site, downloads, manifest, checksums, deployment CI, and documentation as one release artifact.
+3. Support GitLab Pages without requiring the customer to build the site.
+4. Test the installation and deployment instructions in a clean GitLab project.
+
+#### 3.1.4 Acceptance evidence
+
+- A developer obtains the artifact from the GitHub Releases page, verifies its checksums, and deploys it unchanged to GitLab Pages in a clean GitLab project using the shipped documentation and CI.
+- The installed release serves the expected site and downloads without assessment or build tooling.
+
+### 3.2 Parallel milestone — Skill lifecycle guidance
+
+Spec: None.
+
+#### 3.2.1 Customer outcome
+
+A customer can eventually obtain released lifecycle guidance from the Code-dot-mil AI4SDLC GitHub and use it without installing the catalog, assessment kit, or deployment kit. This milestone is not on the critical path for the Q3 release proof.
+
+#### 3.2.2 Scope
+
+Included:
+
+- Research and decision work to define the minimum useful customer-facing skill lifecycle guidance.
+- A simple stage-based framing using the established lifecycle terms: Define, Build, Validate, Release, and Operate.
+- A minimal role vocabulary that stays secondary to the stages: user, author, reviewer, and operator.
+- Release-stage guidance for recording catalog approval authority without making approval a standing lifecycle role.
+
+Excluded:
+
+- Blocking the assessment kit, initial catalog, prebuilt site, or operator milestones.
+- A release-shaped guidance spec until the guidance shape is accepted.
+- A repository rename.
+- New workflow engines, wrappers, or generated guidance systems.
+- Heavy governance models, research-only lifecycle mechanisms, or mandatory evaluation programs.
+
+#### 3.2.3 Team delivery tasks
+
+1. Record the current guidance direction as a research note in the lifecycle repository.
+2. Decide the first customer-facing guidance shape, including how each stage helps someone recognize where a skill is and what to do next.
+3. Decide the smallest useful skill record and how catalog approval should be recorded at Release.
+4. Draft a release-shaped guidance spec only after those decisions are accepted.
+
+#### 3.2.4 Acceptance evidence
+
+- A dated research note records the current uncertainty, proposed direction, and open questions.
+- The roadmap identifies lifecycle guidance as a parallel non-gating milestone.
+- The assessment kit, initial catalog, and deployment kit specs can proceed without depending on lifecycle guidance.
+
+### 3.3 Release milestone — Initial skill catalog
+
+Spec: `docs/specs/initial-skill-catalog.md` (Status: Approved).
+
+#### 3.3.1 Customer outcome
+
+A customer can obtain the initial skill catalog for use in a GitLab-hosted skill exchange site or for direct distribution to developers.
+
+#### 3.3.2 Scope
+
+Included:
+
+- Published skill packages.
+- A source-controlled internal catalog policy owned by the initial catalog. It records human governance's publication decisions using exact skill names and one mode:
+  - `include-list` publishes only listed valid skills.
+  - `exclude-list` publishes every valid skill except listed skills.
+- Optional BOE manifests and their referenced native assessor reports when produced by a released assessment kit.
+- A README explaining the catalog's purpose and how to use its skills either to seed a customer catalog or provide them directly to developers and users.
+
+Excluded:
+
+- Assessment execution or required BOE production.
+- Using BOE presence or content to change which skills are published.
+- Site source, generated site data, or static-site output.
+
+#### 3.3.3 Team delivery tasks
+
+1. Assemble the initial catalog as an independently downloadable release artifact.
+2. Finalize the contracts required by the release and validate the catalog against the skill-package and release-manifest contracts. Validate BOE only when included. Use the internal catalog-policy contract only during release assembly.
+3. During release assembly, verify the published skill set from the internal `include-list` or `exclude-list` policy.
+4. Write the catalog README, including its purpose, artifact layout, verification steps, direct local agent install workflow, and both supported use cases.
+
+#### 3.3.4 Acceptance evidence
+
+- The GitHub Release contains the catalog skills, manifest, checksums, README, and any available BOE files.
+- A developer verifies the checksums in a clean temporary workspace, installs the released skills under `<workspace>/.agents/skills/*`, starts a supported agent session from that workspace, and confirms the session discovers the released workspace skills rather than any global `.agents` or `.codex` skill source. If BOE is included, each BOE entry matches its referenced assessor report.
+
+### 3.4 Release milestone — Assessment kit foundation
+
+Spec: `docs/specs/assessment-kit-foundation.md` (Status: Approved).
+
+#### 3.4.1 Customer outcome
+
+A customer can install the assessment kit and assess their own skills, retaining native assessor output and BOE manifests.
+
+#### 3.4.2 Scope
+
+Included:
+
+- Four public commands:
+  - `validate` checks that skill packages are valid.
+  - `advise` produces native assessor reports and author-facing advice. It does not create a BOE or decide publication.
+  - `assess` retains supported native assessor reports and updates each skill's BOE manifest with the path and SHA-256 digest of each report.
+  - `verify-boe` checks that a BOE is readable and that each listed report exists and matches its recorded SHA-256 digest.
+- `advise` and `assess` accept repeated `--skill <path>` arguments or `--root <path>`, which selects every skill package below that root.
+- Supported assessor versions and unchanged native assessor output.
+
+Excluded:
+
+- Reference CI and provider integrations.
+- Publication decisions or catalog-policy evaluation.
+- Catalog assembly, site build, deployment, commits, pushes, or provider API calls in the core assessment runtime.
+- A required namespace or fixed repository layout beyond valid skill packages.
+
+#### 3.4.3 Team delivery tasks
+
+1. Package and release the standalone assessment commands and their supported assessor dependency.
+2. Implement skill advice, skill assessment, native-report retention, and BOE-manifest update and verification.
+3. Document local installation, assessor configuration, command inputs, and generated files.
+4. Test the released commands in a clean temporary workspace against one or more local skill packages.
+
+#### 3.4.4 Acceptance evidence
+
+- A developer obtains the assessment-kit artifact from GitHub Releases, verifies its checksums, installs the wheel in an isolated local environment, configures the assessment kit, and runs it against one or more local skill packages without the catalog, site, deployment kit, GitLab project, or GitLab CI.
+- The local run produces advice artifacts, native reports, and BOE accepted by the released `verify-boe` command.
+
+### 3.5 Assessment-kit later release — GitLab CI profile
+
+Spec: `docs/specs/assessment-kit-gitlab-ci.md` (Status: Approved).
+
+#### 3.5.1 Customer outcome
+
+A customer can use a supported assessment-kit GitLab CI profile for skill advice and assessment without designing the jobs themselves.
+
+#### 3.5.2 Scope
+
+Included:
+
+- A minimal reference GitLab CI profile with separate advice and assessment jobs. Customers provide the skill directory, output locations, assessor settings, and credentials.
+- Advice-job artifacts containing the assessor's original reports and `advice.md`, without a BOE.
+- Assessment-job artifacts containing the assessor's original reports and the updated BOE.
+- Documentation for manually persisting verified reports and updated BOE.
+
+Excluded:
+
+- Catalog assembly, site build, or deployment.
+- Maintainer GitHub Actions.
+- Merge-request comments or bot-driven BOE commits.
+
+#### 3.5.3 Team delivery tasks
+
+1. Package the reference GitLab CI as a later assessment-kit release.
+2. Test advice and assessment with explicit skill and output locations, customer-provided assessor settings and credentials, and job-artifact retention.
+3. Document runner, credential, assessor-access, CI configuration, and manual BOE persistence requirements.
+
+#### 3.5.4 Acceptance evidence
+
+- A developer configures the reference CI in a clean GitLab project using the shipped documentation.
+- The advice job retains the documented advice and native reports without producing a BOE.
+- The assessment job retains native reports and a BOE accepted by the released `verify-boe` command.
+- The assessment job makes no source-control changes.
+
+### 3.6 Deferred internal milestone — Catalog assessment automation
+
+Spec: `docs/specs/catalog-assessment-automation.md` (Status: Draft).
+
+#### 3.6.1 Maintainer outcome
+
+SkLC maintainers use the in-repository assessment kit to advise on proposed skill changes and maintain assessment records for the initial catalog.
+
+This milestone is not part of the Q3 MVP unless BOE is required for an accepted catalog release.
+
+#### 3.6.2 Scope
+
+Included:
+
+- GitHub Actions that set up and invoke the assessment kit from the current checkout.
+- Advice for proposed skill changes before merge.
+- Assessment after skill changes reach `main`.
+- An approved maintainer runner for jobs that require assessor access.
+- Source-controlled native assessor reports and BOE manifests for the initial catalog.
+
+Excluded:
+
+- Automated publication decisions or catalog-policy changes.
+- Customer GitLab CI or operator deployment.
+- Repository-private assessment interfaces.
+
+#### 3.6.3 Team delivery tasks
+
+1. Install and secure the maintainer assessment runner with the required assessor access.
+2. Adapt maintainer GitHub Actions to set up and invoke the assessment kit from the current checkout.
+3. Run advice for proposed skill changes and assessment after skill changes reach `main`.
+4. Store verified native reports and updated BOE manifests in the source-controlled initial catalog.
+5. Keep jobs that do not require assessor access on GitHub-hosted runners.
+
+#### 3.6.4 Acceptance evidence
+
+- Maintainer advice and assessment workflows set up and use the assessment kit from the current checkout.
+- Advice on a proposed skill change does not create a BOE or alter catalog policy.
+- Assessment after a skill change reaches `main` stores native reports and an updated BOE in the initial catalog, and the checked-out `verify-boe` command accepts them.
+
+### 3.7 Release milestone — Operator foundation
+
+Spec: `docs/specs/operator-foundation.md` (Status: Draft).
+
+#### 3.7.1 Customer outcome
+
+An operator can install released components in their GitLab environment, configure and run the reference pipeline, and build and deploy a skill exchange.
+
+#### 3.7.2 Scope
+
+Included:
+
+- Compatible released catalog and assessment-kit artifacts. The initial catalog is used as the reference test input, not as a structural dependency.
+- Reference site source and build tooling.
+- Reference GitLab CI that reuses the assessment CI profile and adds site build and deployment. BOE persistence uses job artifacts and documented manual source-control steps unless later automation is justified by demonstrated customer need.
+- Operator installation, configuration, and troubleshooting documentation.
+
+Excluded:
+
+- An operator-owned local overlay.
+- Preservation of operator changes across product updates.
+
+#### 3.7.3 Team delivery tasks
+
+1. Assemble the operator release from compatible released catalog and assessment-kit artifacts plus the deployment kit's site and operator assets.
+2. Reuse the released assessment CI profile and add site-build and deployment jobs.
+3. Document runner, credential, assessor-access, catalog input validation, build, and deployment requirements.
+4. Install the release in a clean GitLab project, resolve in-scope gaps, and document supported environment constraints or deferred needs.
+
+#### 3.7.4 Acceptance evidence
+
+- A developer obtains the operator release from GitHub Releases and installs it in a clean GitLab project using the shipped documentation.
+- The reference pipeline runs advice and formal assessment for the installed catalog's skills, verifies BOE, retains BOE as artifacts, builds the site, and produces a GitLab Pages artifact.
+- The operator pipeline makes no source-control changes by default.
+- Every required customer-provided runner, credential, and configuration value is documented.
+
+### 3.8 Post-Q3 milestone — Operator-managed updates
+
+Spec: `docs/specs/operator-managed-exchange.md` (Status: Draft).
+
+#### 3.8.1 Customer outcome
+
+An operator can add locally owned skills, BOE, and catalog policy, then apply a supported full product update without modifying that local content.
+
+#### 3.8.2 Scope
+
+Included:
+
+- An operator-owned `local/` overlay for skills, BOE, and catalog policy.
+- Explicit precedence between released catalog content and the operator-owned overlay.
+- Verified and staged full operator-release updates.
+- Applied-version records plus update and recovery documentation.
 
 ```text
-skill-assessment validate <skill>
-skill-assessment assess <skill> --output <boe-directory>
-skill-assessment verify-boe <skill> <boe-directory>
-skill-assessment review <changed-skills> --output <review-artifacts>
-```
-
-The core CLI owns package parsing and validation, assessor invocation, normalized results, native-report preservation, BOE creation and verification, provider-neutral JSON/Markdown review artifacts, and meaningful CI exit statuses. It does not decide catalog admission, generate site/catalog outputs, deploy, commit or push BOE, call GitHub or GitLab APIs, or assemble releases. Shipped CI adds provider behavior around the stable commands.
-
-### BOE compatibility policy
-
-Current catalog releases support only the current BOE major schema. On a breaking BOE-contract update, the latest served version of each skill is reassessed with the latest assessment kit instead of retaining backward-compatible readers.
-
-Legacy BOE remains durable historical evidence; it is not deleted merely because it is no longer served. Catalog materialization selects only the served skill content hash and supported BOE schema, including in derived scanner projections, and does not report an error merely because legacy evidence is present. Warn/error behavior applies only when a currently served skill lacks valid matching BOE in the supported schema. Supporting historical skill versions in a served catalog would be a separate future contract.
-
-## Scope
-
-### P0 scope
-
-- One GitHub maintainer repository and GitHub Actions release system.
-- Four target products, with lifecycle packaging retained as an explicit decision gate.
-- Standalone assessment-kit and governed-catalog consumption.
-- A temporary trusted GitHub Actions runner installed directly on an approved VM.
-- Independently downloadable, versioned, checksummed product releases with vendored schemas; the first gate does not require separate release cadences.
-- Prebuilt static-site and operator consumption modes of the deployment kit.
-- Complete downstream GitLab CI for each supported consumption mode.
-- GitLab Pages and generic static-host deployment.
-- Local skills, BOE, catalog policy, and safe full or partial product updates.
-
-### Outside the initial gate
-
-- A hosted assessment API.
-- Guaranteed compatibility with arbitrary custom UIs.
-- Separate source repositories for each product.
-- Backward-compatible readers for obsolete major BOE schemas.
-- Serving historical versions of skills.
-- A speculative policy engine or broad assessor-adapter framework.
-- Long-term government compute selection and a second assessor, except for their documented P1 paths.
-
-## Capacity and sequencing
-
-The workstreams do not imply fully staffed implementation lanes. Limit implementation work in progress and integrate slices in dependency order. Assessment extraction and BOE-first catalog work can proceed in parallel after their shared contracts are approved when capacity permits.
-
-## Workstream 1: Product contracts and source-to-release topology
-
-**Priority:** P0 decision gate
-
-### Tasks
-
-1. Approve the four product boundaries and layered policy ownership described above.
-2. Establish `contracts/` schemas, examples, READMEs, ownership, and major-version rules for skill package, assessment result, BOE, catalog, and catalog policy.
-3. Define release manifests and supported full/partial update compatibility for each product.
-4. Treat CLI commands and serialized files as the assessment kit's first public interfaces; keep Python APIs private.
-5. Define `local/catalog.yaml` as an explicit operator-owned catalog-admission policy instance evaluated by catalog tooling. It may narrow delivered content and must never admit missing, mismatched, or invalid BOE.
-6. Plan and execute the minimum product-aligned file moves. Prevent duplicate source-of-truth files and verify that vendored release schemas exactly match `contracts/`.
-7. Decide the lifecycle source/packaging boundary with GuidanceAsCode and defer the repository rename until product terminology is stable.
-
-### Completion criteria
-
-- Every durable artifact, policy semantic, public command, and CI responsibility has an owning product.
-- Every promised standalone install or update path declares compatible contract majors and composed product versions.
-- Product release assembly can primarily package contiguous product roots without runtime imports across product boundaries.
-
-## Workstream 2: GitHub source and maintainer release foundation
-
-**Priority:** P0
-
-### Tasks
-
-1. Make GitHub the authoritative source and implement GitHub Actions for validation, tests, audits, advisory review, trusted assessment, catalog materialization, site build, product assembly, release publication, and GitHub Pages.
-2. Separate maintainer-only artifact assembly and publication workflows from CI delivered to consumers.
-3. Produce independently downloadable product artifacts with manifests, checksums, source revision, contract compatibility, catalog identity, and BOE provenance.
-4. Route ordinary jobs to GitHub-hosted runners and only trusted assessment to the self-hosted VM runner.
-5. Publish the reference GitHub Pages exchange as a maintainer demonstration, not as the downstream installation model.
-
-### Completion criteria
-
-- A protected GitHub revision produces traceable independent product artifacts and the reference site without using internal GitLab as a source mirror.
-- Release checks verify artifact contents and vendored contracts at product boundaries.
-
-## Workstream 3: Assessment kit and trusted assessment execution
-
-**Priority:** P0; second assessor and operational hardening are P1
-
-### Tasks
-
-1. Move package discovery, validation, assessor integration, normalization, BOE creation/verification, and review generation behind the standalone CLI and file contracts.
-2. Keep delivered skills, catalog tooling, Astro, deployment behavior, BOE commits, and provider API calls outside the core assessment runtime.
-3. Preserve advisory merge-request assessment versus trusted post-merge assessment that creates official BOE.
-4. Ship complete, tested GitLab CI for validation, merge-request review/comments, trusted assessment, BOE verification, and BOE persistence. The CI calls released commands and implements provider behavior without importing maintainer release workflows.
-5. Install the self-hosted GitHub Actions runner directly as a service on the approved temporary VM; define narrow labels, GitHub registration/authentication, Git, Python/UV, SkillSpector, image/package registry, and LLM access. Do not add a Kubernetes or Helm layer.
-6. Prove that an independent consumer can assess an arbitrary skill directory and emit BOE without the catalog or deployment kit.
-7. **P1:** add a second assessor to validate the adapter/result contract and harden runner operations after the initial path works.
-
-### Completion criteria
-
-- A consumer or trusted workflow installs only the assessment kit and produces integrity-verified BOE accepted by the catalog contract.
-- The shipped GitLab CI performs advisory and official assessment flows without maintainer release automation.
-- The approved VM executes trusted GitHub assessment jobs and returns non-CUI results and artifacts.
-
-## Workstream 4: Governed skill catalog and BOE-first publication
-
-**Priority:** P0; richer reporting and configuration cleanup are P1
-
-### Tasks
-
-1. Package served skill directories, matching accepted BOE, catalog manifest, policy digest, and release identity as an independently consumable catalog.
-2. Separate assessment from catalog materialization. Publication consumes committed BOE and never invokes an assessor.
-3. Verify supported BOE schema, skill identity, served content hash, scan key, required files, and every declared integrity hash before admission.
-4. Exclude missing, mismatched, or invalid evidence from every downstream output and write a machine-readable exclusion report. Warn/error remains an explicit recovery posture for missing current evidence.
-5. Implement catalog policy as a site-independent evaluator. Maintainer and operator policy instances use the same schema; presentation policy remains downstream.
-6. Enforce the latest-only BOE policy and filter existing derived scanner data by served content hash and supported schema.
-7. Trigger materialization for current BOE, catalog-policy, catalog-tooling, and relevant site-source changes. Pass disposable generated catalog data to the site build as CI artifacts; do not commit it.
-8. **P1:** reconcile configuration debt. `.exchange/risk-policy.yaml` is currently unused; normalized risk is hard-coded and not environment-driven. Decide whether to implement/move it as assessment-owned configuration or remove/rename it as contract documentation. Audit and either implement or remove misleading `show_confidence_flags`, `default_sort`, category labels, silent missing-policy behavior, invalid boolean parsing, assessor executable/version mismatch, and duplicated site fallback mappings.
-
-### Completion criteria
-
-- The catalog releases independently and a consumer can verify its exact served skill/BOE pairs.
-- The reference site rebuilds from current catalog inputs without scanning.
-- Legacy BOE can remain tracked without entering the current catalog or causing false missing-evidence failures.
-
-## Workstream 5: Deployment kit and downstream GitLab CI
-
-**Priority:** P0
-
-### Tasks
-
-1. Define one deployment-kit release with prebuilt and operator consumption modes.
-2. Deliver the prebuilt static-site package as the earliest thin slice: final static files, downloads, manifests/checksums, and complete verification/deployment CI for GitLab Pages or a generic static host. It contains no assessment or customization tooling.
-3. Deliver the operator kit with released assessment and catalog commands, reference site/build tooling, explicit configuration, and a consumer-owned local overlay for skills, BOE, catalog policy, and supported customizations.
-4. Ship a deployment-only `.gitlab-ci.yml` with the prebuilt package. It deploys final static files to GitLab Pages or a generic static host and contains no assessment, catalog-materialization, customization, or maintainer-release behavior.
-5. Ship complete, self-contained downstream GitLab CI with the operator kit. It may use bundled local includes and covers validation, tests, audits, merge-request skill review/comments, trusted assessment, BOE verification/persistence, catalog materialization, Astro build, GitLab Pages, and generic static-host artifacts.
-6. Define safe updates that verify and stage releases, replace delivered product content, preserve consumer-owned content, and record applied versions.
-7. Support assessment-kit-only and catalog-only updates for operators that retain a customized deployment implementation. Do not claim arbitrary site compatibility.
-
-### Operator layout target
-
-```text
-app/                    Released commands and build tooling
-skills/                 Delivered served skill packages
-boe/                    Delivered accepted BOE
-site/                   Delivered reference site source
-ci/                     Complete supported downstream GitLab CI
-
-local/
-  skills/               Consumer-added skill packages
-  boe/                  BOE for consumer-added skills
-  catalog.yaml          Consumer-owned catalog-admission policy
-```
-
-### Deployment-kit source and release layouts
-
-The deployment kit keeps customer documentation and GitLab CI entrypoints separate
-for its prebuilt and operator consumption modes. Release assembly maps those source
-files into the root-relative locations expected by each downstream GitLab project.
-
-```text
-products/deployment-kit/
-  docs/
-    prebuilt/
-      README.md
-      install.md
-      deploy.md
-    operator/
-      README.md
-      install.md
-      deploy.md
-      update.md
-  ci/gitlab/
-    prebuilt/
-      .gitlab-ci.yml
-    operator/
-      .gitlab-ci.yml
-```
-
-The prebuilt artifact contains only final static files, downloads,
-manifests/checksums, deployment-only CI, and its customer documentation:
-
-```text
-README.md
+catalog/                Compatible released catalog content
+site/                   Released site source and build tooling
+wheels/                 Released assessment kit and dependencies
+ci/                     Reference GitLab CI
 docs/
-  install.md
-  deploy.md
-.gitlab-ci.yml
-public/
-downloads/
-manifest.json
-checksums.txt
+
+local/                  Operator-owned; updates preserve this subtree
+  skills/
+  boe/
+  catalog-policy.yaml
 ```
 
-Release assembly maps `docs/prebuilt/README.md` to the artifact-root `README.md`,
-the installation and deployment guides to `docs/`, and
-`ci/gitlab/prebuilt/.gitlab-ci.yml` to the artifact-root `.gitlab-ci.yml`.
+Excluded:
 
-The operator artifact has its own root README, documentation, and CI entrypoint,
-along with the complete operator layout above. Release assembly maps the
-corresponding `docs/operator/` and `ci/gitlab/operator/` sources into that
-artifact. The `local/` subtree remains customer-owned and supported updates must
-preserve it.
+- Compatibility guarantees for arbitrary custom sites or deployment implementations.
+- Offline or air-gapped operation.
+- Historical skill serving or compatibility with obsolete assessor-output formats.
+- Assessment-kit-only partial updates until full update proof is accepted and demonstrated customer need justifies the added support.
 
-### Completion criteria
+#### 3.8.3 Team delivery tasks
 
-- A consumer can host the unchanged prebuilt release with deployment-only CI.
-- An operator can add and assess a skill, apply policy, materialize the catalog, build and deploy Pages, and persist BOE using only released tooling and shipped CI.
-- Full and partial updates preserve consumer-owned content according to the documented ownership contract.
+1. Define and document the ownership boundary between released content and the `local/` subtree.
+2. Implement update staging, integrity verification, product replacement, local-content preservation, and applied-version recording.
+3. Support full updates and catalog-only updates. Define assessment-kit-only updates only after full update proof is accepted and demonstrated customer need justifies the added support.
+4. Document update, recovery, and operator-ownership procedures.
+5. Test each supported update path in a clean GitLab project containing operator-owned skills, BOE, and policy.
 
-## Workstream 6: GitLab installation validation and operator documentation
+#### 3.8.4 Acceptance evidence
 
-**Priority:** P0, continuous
-
-### Tasks
-
-1. Create an internal GitLab product-installation repository that begins from downloaded GitHub releases rather than a source mirror.
-2. Automate clean, repeatable fixtures for standalone assessment, standalone catalog consumption, prebuilt deployment, operator installation, and full/partial updates.
-3. Test checksums, catalog/BOE verification, site/download presence, Pages artifacts, local-content preservation, and assessment-tool absence from the prebuilt package.
-4. Write and test prebuilt customer guidance covering artifact installation, explicit configuration and defaults, deployment, and troubleshooting. Write and test separate operator guidance covering runner choices, policy ownership and precedence, assessment paths, deployment, troubleshooting, and updates.
-5. Feed installation failures and ambiguous contracts back into release acceptance throughout implementation.
-
-### Completion criteria
-
-- Clean GitLab fixtures install, operate, and update every promised delivery path using only released artifacts and documented configuration.
-- The walkthroughs are executable against the supported downstream CI rather than aspirational examples.
-
-## Workstream 7: Lifecycle boundary and future hosting discovery
-
-**Priority:** parallel, non-blocking decision work; subsequent expansion is P1
-
-### Tasks
-
-1. Decide which lifecycle guidance and metadata ship here and which plays live in GuidanceAsCode; define the minimum independently consumable lifecycle deliverable.
-2. Decide the repository name and coordinate a single rename with the repository administrator after product naming stabilizes.
-3. Investigate government-owned compute, sponsor expectations, infosec requirements, and ODC constraints for the long-term trusted runner without delaying the temporary VM.
-4. **P1:** expand lifecycle plays, hosting hardening, and customer-facing lifecycle walkthroughs after initial product paths are proven.
-
-### Completion criteria
-
-- The lifecycle product has a documented source, ownership, linking, and packaging boundary.
-- The roadmap records a long-term runner decision path without making it a hidden initial-delivery prerequisite.
-
-## Dependencies and parallel execution
-
-Workstream 1 begins with a short contract pass. Implementation may prototype during that pass but must not establish public interfaces that conflict with the decision gate. Once the assessment/BOE, catalog/policy, release, and update contracts are stable enough, use these capacity-aware lanes:
-
-| Lane | Work | Dependency |
-|---|---|---|
-| Maintainer delivery | GitHub migration and release foundation | Product artifact and release-manifest outline |
-| Assessment | Assessment-kit extraction and temporary runner | Skill, result, and BOE contract majors |
-| Catalog | BOE-first split and governed catalog | BOE, catalog, and catalog-policy contract majors; does not wait for runner provisioning |
-| Consumer | GitLab fixtures and install-guide drafts | Starts with contract examples; validates every released slice |
-
-Additional sequencing rules:
-
-- Establish stable assessment commands before adapting GitHub Actions; assessment extraction does not wait for the full migration.
-- Catalog refactoring uses tracked BOE fixtures and does not wait for the trusted runner.
-- Start the prebuilt static-site slice when release assembly and the BOE-only catalog build converge; it does not wait for operator customization or a second assessor.
-- Design the operator kit in parallel, but integrate it after assessment, catalog, policy, and update contracts stabilize.
-- Run lifecycle and long-term hosting discovery concurrently without consuming the critical path unless explicitly promoted to P0.
-
-```mermaid
-flowchart TB
-  increment1["Increment 1 — Contracted target<br/>WS1 product, contract, policy, and update decisions"]
-
-  subgraph parallel["Parallel-capable lanes after the decision gate"]
-    direction LR
-    maintainer["WS2 Maintainer delivery<br/>GitHub source and release foundation"]
-    assessment["WS3 Assessment<br/>standalone kit and trusted runner"]
-    catalog["WS4 Catalog<br/>BOE-first governed publication"]
-    consumer["WS6 Consumer validation<br/>GitLab fixtures, guides, and smoke tests"]
-  end
-
-  deploymentDesign["WS5 Deployment-kit design<br/>prebuilt and operator modes"]
-  future["WS7 Non-blocking discovery<br/>lifecycle boundary, repository name,<br/>long-term government-hosted runner"]
-
-  increment1 --> maintainer
-  increment1 --> assessment
-  increment1 --> catalog
-  increment1 --> consumer
-  increment1 --> deploymentDesign
-  increment1 -. "runs concurrently" .-> future
-
-  increment2["Increment 2 — First consumable release<br/>committed-BOE catalog + prebuilt site<br/>released on GitHub and installed in GitLab"]
-  increment3["Increment 3 — Trusted evidence path<br/>post-merge BOE followed by scan-free republication"]
-  increment4["Increment 4 — Operator path<br/>local skill + policy + customized deployment<br/>full update preserves consumer content"]
-  increment5["Increment 5 — Independent updates<br/>assessment-kit and catalog-only updates"]
-  increment6["Increment 6 — Deferred decisions captured<br/>lifecycle delivery and long-term runner path"]
-
-  maintainer --> increment2
-  catalog --> increment2
-  consumer --> increment2
-
-  maintainer --> increment3
-  assessment --> increment3
-
-  increment2 --> increment4
-  increment3 --> increment4
-  deploymentDesign --> increment4
-  consumer --> increment4
-
-  increment4 --> increment5
-  consumer --> increment5
-  future --> increment6
-
-  critical["Critical implementation path<br/>contracts → assessment/BOE interfaces → BOE-first catalog<br/>→ operator integration → installation and update proof"]
-  increment1 -.-> critical
-  critical -.-> increment5
-```
-
-*Execution model. Product contracts open four parallel-capable lanes, but available staffing limits implementation work in progress. Releasable slices converge through six integration increments; lifecycle and long-term hosting discovery remain non-blocking.*
-
-## Integration increments and critical path
-
-1. **Contracted target:** approve the product map, contracts, public interfaces, layered policy ownership, release/update manifests, and minimum repository refactor.
-2. **First consumable release:** produce a catalog from committed current BOE, assemble the prebuilt site on GitHub, and deploy the released package in the GitLab installation fixture.
-3. **Trusted evidence path:** install the standalone assessment kit on the VM runner, create official BOE post-merge, and use the later BOE-triggered workflow to republish without scanning.
-4. **Operator path:** install the operator kit in GitLab, add and assess a local skill, apply catalog policy, deploy the customized site, and prove a full update preserves consumer-owned content.
-5. **Independent updates:** update only the assessment kit and/or delivered catalog while retaining the operator's deployment implementation and local content.
-6. **Deferred decisions captured:** record the minimum lifecycle-guidance delivery and long-term government-hosted runner path.
-
-The critical implementation path is:
-
-```text
-product contracts
-  -> assessment and BOE interfaces
-  -> BOE-first governed catalog
-  -> operator-kit integration
-  -> automated installation and update proof
-```
-
-GitHub release automation, temporary-runner provisioning, early GitLab fixtures, lifecycle-boundary work, and long-term hosting discovery proceed in parallel and join only where an increment consumes their output.
+- Full updates leave the operator-owned `local/` subtree unchanged.
+- A catalog-only update can be applied without disturbing local overlays or released components outside the catalog.
+- An operator can update the delivered products while retaining the local overlay.
+- A failed verification leaves the installed release and local content unchanged.

@@ -13,7 +13,7 @@ These instructions apply to this repository.
 ## Configuration Rules
 
 - Keep environment-specific settings configurable through environment variables or GitLab CI variables.
-- Do not add organization-specific or provider-specific environment variable names. Prefer generic names such as `SKILL_EXCHANGE_LLM_*`, image registry variables, and runner tag variables.
+- Do not add organization-specific or provider-specific environment variable names. Prefer generic names such as `SKLC_LLM_*`, image registry variables, and runner tag variables.
 - Do not add silent fallbacks anywhere in the codebase. Hidden substitution masks defects. If fallback behavior is truly required, make it explicit in code, document the precedence, test the intended behavior, and fail closed when no valid value is available.
 - Do not commit secrets, tokens, endpoint credentials, or generated bot credentials.
 - Docker image references must remain configurable. Use the existing image registry, repository, tag, and full-image override variables instead of hardcoding a network-specific registry.

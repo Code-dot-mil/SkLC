@@ -50,10 +50,10 @@ def test_skillspector_version_normalizes_leading_v_from_binary(monkeypatch):
 
 
 def test_skillspector_env_maps_generic_llm_env(monkeypatch):
-    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "secret-value")
-    monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://llm.example/v1")
-    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5")
-    monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("SKLC_LLM_API_KEY", "secret-value")
+    monkeypatch.setenv("SKLC_LLM_BASE_URL", "https://llm.example/v1")
+    monkeypatch.setenv("SKLC_LLM_MODEL", "gpt-5")
+    monkeypatch.setenv("SKLC_LLM_PROVIDER", "openai")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.delenv("SKILLSPECTOR_PROVIDER", raising=False)

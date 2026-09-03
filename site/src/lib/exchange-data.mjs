@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const repositoryRoot = process.env.SKILL_EXCHANGE_REPOSITORY_ROOT || resolve(process.cwd(), "..");
-const generatedRoot = process.env.SKILL_EXCHANGE_GENERATED_ROOT || resolve(repositoryRoot, ".exchange", "generated");
+const repositoryRoot = process.env.SKLC_REPOSITORY_ROOT || resolve(process.cwd(), "..");
+const generatedRoot = process.env.SKLC_GENERATED_ROOT || resolve(repositoryRoot, ".exchange", "generated");
 
 export const exchangeIndex = readGeneratedJson("index.json", { skills: [] });
 export const scannerRunsTable = readGeneratedJson("tables/scanner_runs.json", { rows: [] });

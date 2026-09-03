@@ -88,7 +88,7 @@ just generate llm-assisted
 just build llm-assisted
 ```
 
-LLM-assisted scans require the generic `SKILL_EXCHANGE_LLM_*` environment variables described in [CI.md](CI.md).
+LLM-assisted scans require the generic `SKLC_LLM_*` environment variables described in [CI.md](CI.md).
 
 Local `just` generation writes to `.exchange/local-generated/` so developers do not accidentally rewrite tracked CI-produced BOE. Use `uv` directly for Python-only checks and `npm --prefix site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
 

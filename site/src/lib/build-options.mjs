@@ -1,4 +1,4 @@
-export const showSourceLinks = readBooleanEnv("SKILL_EXCHANGE_SHOW_SOURCE_LINKS", {
+export const showSourceLinks = readBooleanEnv("SKLC_SHOW_SOURCE_LINKS", {
   defaultValue: true,
 });
 

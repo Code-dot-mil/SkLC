@@ -19,7 +19,7 @@ The design deliberately avoids a backend service, database, MCP endpoint, user a
 - Give human reviewers merge request assessment context before accepting new or changed skills.
 - Produce official BOE only from protected publication CI, not from human-authored files.
 - Reuse official BOE when the computed scan cache key already exists.
-- Support both `static-only` and `llm-assisted` SkillSpector scans.
+- Use `llm-assisted` SkillSpector scans by default and allow `static-only` only when explicitly requested.
 - Keep all environment-specific settings configurable through environment variables or GitLab CI variables.
 - Keep the site and tooling self-contained so the repository can move between networks without importing external CI components.
 
@@ -164,6 +164,23 @@ Durable generated evidence is limited to `.exchange/generated/boe/`. Derived gen
 
 A contract belongs under `contracts/` only when at least two products must agree on its serialized representation. Each contract names a governing product, and product releases vendor the exact schemas they produce or consume so installed products do not depend on the repository's `contracts/` directory at runtime.
 
+### Product release process
+
+Product releases are created from manual Git tags and a GitHub Actions release
+workflow. A release may include one or more standalone product artifacts:
+`deployment-kit-prebuilt-<version>.tar.gz`,
+`skill-catalog-<version>.tar.gz`, `assessment-kit-<version>.tar.gz`, and
+`deployment-kit-operator-<version>.tar.gz`.
+
+Each included product must complete a human-reviewed release checklist before
+tagging. Codex may assist by comparing the tag candidate to the previous release,
+recommending a SemVer bump with justification, and drafting concise user-facing
+release notes, but a maintainer makes the final version and release decision.
+Accepted release notes are committed and pushed before the tag is created, and
+the GitHub Release description uses that version's release-notes snippet. Release
+notes are not uploaded as a separate release asset. The release workflow
+publishes product artifacts, `release-manifest.json`, and `SHA256SUMS.txt`.
+
 The checked-in `v1` contracts are a first-pass target boundary for the near-term product separation. The current publisher still emits and consumes the implemented `skill-exchange-boe/v0` and generated-data formats documented below; adding the contract sources does not claim that current runtime output already conforms to `v1`. Migration requires explicit implementation and tests.
 
 Contract major versions change when a required field, field meaning, or serialized shape changes incompatibly. Current catalog materialization will support only its declared current BOE major version. Legacy BOE may remain tracked as historical evidence, but it is not eligible for the current catalog and its presence alone is not an error. Currently served skill content without matching BOE in the supported schema must be reassessed or excluded.
@@ -271,9 +288,9 @@ confidence_flags:
 }
 ```
 
-`SKILL_EXCHANGE_SOURCE_REPOSITORY_URL` and `SKILL_EXCHANGE_SOURCE_BRANCH` may override `site-config.json` at generation time.
+`SKLC_SOURCE_REPOSITORY_URL` and `SKLC_SOURCE_BRANCH` may override `site-config.json` at generation time.
 
-`SKILL_EXCHANGE_SHOW_SOURCE_LINKS` controls whether the static site renders `View source` links at Astro build time. It defaults to `true`; set it to `false`, `0`, `no`, or `off` for a build that should omit those links. Invalid values must fail the build instead of falling back silently.
+`SKLC_SHOW_SOURCE_LINKS` controls whether the static site renders `View source` links at Astro build time. It defaults to `true`; set it to `false`, `0`, `no`, or `off` for a build that should omit those links. Invalid values must fail the build instead of falling back silently.
 
 ## Skill Package Format
 
@@ -404,10 +421,10 @@ Generic LLM environment mapping:
 
 | Exchange variable | SkillSpector/OpenAI variable |
 |---|---|
-| `SKILL_EXCHANGE_LLM_API_KEY` | `OPENAI_API_KEY` |
-| `SKILL_EXCHANGE_LLM_BASE_URL` | `OPENAI_BASE_URL` |
-| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` |
-| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
+| `SKLC_LLM_API_KEY` | `OPENAI_API_KEY` |
+| `SKLC_LLM_BASE_URL` | `OPENAI_BASE_URL` |
+| `SKLC_LLM_MODEL` | `SKILLSPECTOR_MODEL` |
+| `SKLC_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
 
 Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing scanner/provider environment variables win over exchange variables. Do not add organization-specific LLM variable names.
 
@@ -624,10 +641,10 @@ Each exchange build clears the generated `zips/` directory before packaging the 
 `cli.py` provides local publication:
 
 ```sh
-uv run python -m skill_exchange.cli publish-local --generated-dir .exchange/local-generated --scan-mode static-only
+uv run python -m skill_exchange.cli publish-local --generated-dir .exchange/local-generated --scan-mode llm-assisted
 ```
 
-`--scan-mode` may be repeated. If omitted, local publication runs both `static-only` and `llm-assisted`. The `Justfile` should call local generation with `.exchange/local-generated/` and default to `static-only` so developers do not rewrite tracked CI BOE for convenience.
+`--scan-mode` may be repeated. If omitted, local publication defaults to `llm-assisted`. `static-only` must be explicitly requested, and tooling must not fall back to `static-only` when `llm-assisted` is configured but unavailable. The `Justfile` should call local generation with `.exchange/local-generated/` so developers do not rewrite tracked CI BOE for convenience.
 
 `--reuse-boe-only` reconstructs disposable index, table, scanner-run, detail, and zip output from tracked BOE for exact current skill content. It fails when any requested skill/mode lacks valid tracked evidence and when the resulting public index is empty. This mode cannot run SkillSpector or an LLM.
 
@@ -646,8 +663,8 @@ Supported scan modes are `static-only` and `llm-assisted`. `parse_scan_modes()` 
 
 The review command:
 
-- resolves base ref from explicit args, `SKILL_EXCHANGE_DIFF_BASE`, `CI_MERGE_REQUEST_DIFF_BASE_SHA`, or merge-base with the target/default branch;
-- resolves head ref from explicit args, `SKILL_EXCHANGE_DIFF_HEAD`, `CI_COMMIT_SHA`, or `HEAD`;
+- resolves base ref from explicit args, `SKLC_DIFF_BASE`, `CI_MERGE_REQUEST_DIFF_BASE_SHA`, or merge-base with the target/default branch;
+- resolves head ref from explicit args, `SKLC_DIFF_HEAD`, `CI_COMMIT_SHA`, or `HEAD`;
 - detects changed skill package roots from `git diff --name-only --diff-filter=ACMRT <base> <head> -- skills`;
 - validates only changed skill package roots;
 - runs SkillSpector for each changed valid skill;
@@ -657,7 +674,7 @@ The review command:
 - writes `review-artifacts/result.json`;
 - optionally posts a merge request comment.
 
-Review validation errors fail the job when `SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS` is true. Scanner errors fail the job only when `SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR` is true. Scanner failure otherwise appears as `Unknown` review context.
+Review validation errors fail the job when `SKLC_REVIEW_FAIL_ON_VALIDATION_ERRORS` is true. Scanner errors fail the job only when `SKLC_REVIEW_FAIL_ON_SCANNER_ERROR` is true. Scanner failure otherwise appears as `Unknown` review context.
 
 The review comment must include:
 
@@ -668,9 +685,9 @@ The review comment must include:
 
 Merge request comments use:
 
-- `SKILL_EXCHANGE_POST_REVIEW_COMMENT` to enable posting;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE` to name the token variable, default `GITLAB_TOKEN`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER` to override the header, otherwise `JOB-TOKEN` for `CI_JOB_TOKEN` or `PRIVATE-TOKEN` for other token variables.
+- `SKLC_POST_REVIEW_COMMENT` to enable posting;
+- `SKLC_REVIEW_TOKEN_VARIABLE` to name the token variable, default `GITLAB_TOKEN`;
+- `SKLC_REVIEW_TOKEN_HEADER` to override the header, otherwise `JOB-TOKEN` for `CI_JOB_TOKEN` or `PRIVATE-TOKEN` for other token variables.
 
 Posting targets:
 
@@ -731,10 +748,10 @@ Global CI defaults:
 - Python image defaults to `docker.io/library/python:3.12-bookworm`.
 - Node image defaults to `docker.io/library/node:22-bookworm-slim`.
 - `PYTHON_BOOTSTRAP_COMMAND` defaults to installing `uv`.
-- `SKILL_EXCHANGE_RUNNER_TAG` and `PAGES_RUNNER_TAG` route jobs without hardcoding one environment's runner setup.
+- `SKLC_RUNNER_TAG` and `PAGES_RUNNER_TAG` route jobs without hardcoding one environment's runner setup.
 - `SKILLSPECTOR_INSTALL_COMMAND` defaults empty and may install SkillSpector at runtime.
-- Review scan mode defaults `static-only`.
-- Publish scan modes default `static-only`.
+- Review scan mode defaults `llm-assisted`.
+- Publish scan modes default `llm-assisted`.
 - Review comments default disabled.
 - Publish commits default disabled globally but enabled in `publish:exchange`.
 
@@ -749,14 +766,14 @@ Path rules:
 Python jobs:
 
 - run in `$PYTHON_IMAGE`;
-- use `$SKILL_EXCHANGE_RUNNER_TAG`;
+- use `$SKLC_RUNNER_TAG`;
 - run `uv sync --extra test`;
 - cache `.uv-cache/`.
 
 Node jobs:
 
 - run in `$NODE_IMAGE`;
-- use `$SKILL_EXCHANGE_RUNNER_TAG` except `pages`;
+- use `$SKLC_RUNNER_TAG` except `pages`;
 - run `npm ci --prefix site --cache "$NPM_CACHE_DIR" --prefer-offline`;
 - cache `.npm/`.
 
@@ -794,21 +811,21 @@ Important variables:
 - `PYTHON_IMAGE_REGISTRY`, `PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, `PYTHON_IMAGE`;
 - `PYTHON_BOOTSTRAP_COMMAND`;
 - `NODE_IMAGE_REGISTRY`, `NODE_IMAGE_REPOSITORY`, `NODE_IMAGE_TAG`, `NODE_IMAGE`;
-- `SKILL_EXCHANGE_RUNNER_TAG`;
+- `SKLC_RUNNER_TAG`;
 - `PAGES_RUNNER_TAG`;
 - `SKILLSPECTOR_INSTALL_COMMAND`;
 - `SKILLSPECTOR_BIN`;
-- `SKILL_EXCHANGE_REVIEW_SCAN_MODE`;
-- `SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS`;
-- `SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR`;
-- `SKILL_EXCHANGE_POST_REVIEW_COMMENT`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER`;
-- `SKILL_EXCHANGE_PUBLISH_SCAN_MODES`;
-- `SKILL_EXCHANGE_LLM_API_KEY`;
-- `SKILL_EXCHANGE_LLM_BASE_URL`;
-- `SKILL_EXCHANGE_LLM_MODEL`;
-- `SKILL_EXCHANGE_LLM_PROVIDER`;
+- `SKLC_REVIEW_SCAN_MODE`;
+- `SKLC_REVIEW_FAIL_ON_VALIDATION_ERRORS`;
+- `SKLC_REVIEW_FAIL_ON_SCANNER_ERROR`;
+- `SKLC_POST_REVIEW_COMMENT`;
+- `SKLC_REVIEW_TOKEN_VARIABLE`;
+- `SKLC_REVIEW_TOKEN_HEADER`;
+- `SKLC_PUBLISH_SCAN_MODES`;
+- `SKLC_LLM_API_KEY`;
+- `SKLC_LLM_BASE_URL`;
+- `SKLC_LLM_MODEL`;
+- `SKLC_LLM_PROVIDER`;
 - `EXCHANGE_PUBLISH_COMMIT`;
 - `EXCHANGE_PUBLISH_PUSH`;
 - `EXCHANGE_PUBLISH_BRANCH`;
@@ -821,16 +838,16 @@ Important variables:
 
 Review token and publish token paths are intentionally separate. Review credentials post optional MR notes. Publish credentials push BOE to the protected default branch. If GitLab job-token repository push is enabled, publication may use `CI_JOB_TOKEN` with username `gitlab-ci-token`; otherwise configure a masked `EXCHANGE_PUBLISH_TOKEN` for a publisher identity allowed to push to the protected default branch.
 
-Schedule variables override project variables. Avoid duplicating project-level CI variables on a schedule unless the schedule intentionally needs a different value, especially `SKILL_EXCHANGE_PUBLISH_SCAN_MODES`.
+Schedule variables override project variables. Avoid duplicating project-level CI variables on a schedule unless the schedule intentionally needs a different value, especially `SKLC_PUBLISH_SCAN_MODES`.
 
 ## Site Data Loading
 
 `site/src/lib/exchange-data.mjs` reads generated JSON from:
 
-- `SKILL_EXCHANGE_GENERATED_ROOT`, when set;
+- `SKLC_GENERATED_ROOT`, when set;
 - otherwise `<repository-root>/.exchange/generated`.
 
-The repository root defaults to `SKILL_EXCHANGE_REPOSITORY_ROOT` or the parent directory of the site working directory.
+The repository root defaults to `SKLC_REPOSITORY_ROOT` or the parent directory of the site working directory.
 
 Read:
 
@@ -870,7 +887,7 @@ Recommendation sort ranks `DO_NOT_INSTALL` as 3, `CAUTION` as 2, `SAFE` as 1, an
 
 - generates static paths from the public index;
 - shows a back link to catalog;
-- leads with skill display ID, description, recommendation, download action, and optional source link controlled by `SKILL_EXCHANGE_SHOW_SOURCE_LINKS`;
+- leads with skill display ID, description, recommendation, download action, and optional source link controlled by `SKLC_SHOW_SOURCE_LINKS`;
 - shows a trust snapshot with use guidance, scanner risk, scanner, scan mode, last scanned, and owner;
 - includes a recommendation info dialog explaining scanner-derived recommendation and risk basis;
 - shows last updated, first observed, and optional upstream source;

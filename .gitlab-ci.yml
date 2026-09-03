@@ -28,17 +28,17 @@ variables:
   NPM_CACHE_DIR: "$CI_PROJECT_DIR/.npm"
   PYTHON_AUDIT_COMMAND: "uv run --with pip-audit pip-audit --progress-spinner off"
   NPM_AUDIT_LEVEL: "high"
-  SKILL_EXCHANGE_RUNNER_TAG: "mitre-no-cui"
+  SKLC_RUNNER_TAG: "mitre-no-cui"
   PAGES_RUNNER_TAG: "pages-no-cui"
   SKILLSPECTOR_INSTALL_COMMAND: ""
-  SKILL_EXCHANGE_REVIEW_SCAN_MODE: "static-only"
-  SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS: "true"
-  SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR: "false"
-  SKILL_EXCHANGE_POST_REVIEW_COMMENT: "false"
-  SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE: "GITLAB_TOKEN"
-  SKILL_EXCHANGE_REVIEW_TOKEN_HEADER: ""
-  SKILL_EXCHANGE_PUBLISH_SCAN_MODES: "static-only"
-  SKILL_EXCHANGE_SHOW_SOURCE_LINKS: "true"
+  SKLC_REVIEW_SCAN_MODE: "static-only"
+  SKLC_REVIEW_FAIL_ON_VALIDATION_ERRORS: "true"
+  SKLC_REVIEW_FAIL_ON_SCANNER_ERROR: "false"
+  SKLC_POST_REVIEW_COMMENT: "false"
+  SKLC_REVIEW_TOKEN_VARIABLE: "GITLAB_TOKEN"
+  SKLC_REVIEW_TOKEN_HEADER: ""
+  SKLC_PUBLISH_SCAN_MODES: "static-only"
+  SKLC_SHOW_SOURCE_LINKS: "true"
   EXCHANGE_PUBLISH_COMMIT: "false"
   EXCHANGE_PUBLISH_PUSH: "true"
   EXCHANGE_PUBLISH_BRANCH: "$CI_DEFAULT_BRANCH"
@@ -69,7 +69,7 @@ variables:
 .python_job:
   image: "$PYTHON_IMAGE"
   tags:
-    - "$SKILL_EXCHANGE_RUNNER_TAG"
+    - "$SKLC_RUNNER_TAG"
   before_script:
     - if [ -n "$PYTHON_BOOTSTRAP_COMMAND" ]; then sh -c "$PYTHON_BOOTSTRAP_COMMAND"; fi
     - uv --version
@@ -82,7 +82,7 @@ variables:
 .node_job:
   image: "$NODE_IMAGE"
   tags:
-    - "$SKILL_EXCHANGE_RUNNER_TAG"
+    - "$SKLC_RUNNER_TAG"
   before_script:
     - node --version
     - npm --version

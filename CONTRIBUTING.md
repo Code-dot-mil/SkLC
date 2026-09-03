@@ -50,7 +50,7 @@ Use `uv` directly for Python-only commands and `npm --prefix site` for site-only
 
 `just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds do not rewrite tracked CI-produced BOE bundles.
 
-The default scan mode is `static-only`. Use `just generate llm-assisted` or `just build llm-assisted` only after setting the generic `SKILL_EXCHANGE_LLM_*` environment variables.
+The default scan mode is `static-only`. Use `just generate llm-assisted` or `just build llm-assisted` only after setting the generic `SKLC_LLM_*` environment variables.
 
 ## Python Tooling
 

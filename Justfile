@@ -24,7 +24,7 @@ site-test:
     npm --prefix site run test
 
 site-build:
-    SKILL_EXCHANGE_GENERATED_ROOT="$PWD/{{local_generated}}" npm --prefix site run build
+    SKLC_GENERATED_ROOT="$PWD/{{local_generated}}" npm --prefix site run build
 
 lint: python-lint site-lint
 

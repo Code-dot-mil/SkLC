@@ -34,16 +34,16 @@ def main() -> None:
     review.add_argument(
         "--scan-mode",
         choices=SCAN_MODES,
-        default=os.environ.get("SKILL_EXCHANGE_REVIEW_SCAN_MODE", "static-only"),
+        default=os.environ.get("SKLC_REVIEW_SCAN_MODE", "static-only"),
     )
-    review.add_argument("--post-comment", action="store_true", default=env_flag("SKILL_EXCHANGE_POST_REVIEW_COMMENT"))
+    review.add_argument("--post-comment", action="store_true", default=env_flag("SKLC_POST_REVIEW_COMMENT"))
 
     publish = subcommands.add_parser("publish")
     publish.add_argument("--repo-root", type=Path, default=Path("."))
     publish.add_argument("--skills-root", type=Path, default=Path("skills"))
     publish.add_argument("--exchange-dir", type=Path, default=Path(".exchange"))
     publish.add_argument("--generated-dir", type=Path, default=Path(".exchange/generated"))
-    publish.add_argument("--scan-modes", default=os.environ.get("SKILL_EXCHANGE_PUBLISH_SCAN_MODES", "static-only"))
+    publish.add_argument("--scan-modes", default=os.environ.get("SKLC_PUBLISH_SCAN_MODES", "static-only"))
     publish.add_argument("--result-path", type=Path, default=Path("publish-result.json"))
     publish.add_argument("--commit-generated", action="store_true", default=env_flag("EXCHANGE_PUBLISH_COMMIT"))
 
@@ -56,8 +56,8 @@ def main() -> None:
 
 def run_review_command(args: argparse.Namespace) -> None:
     repo_root = args.repo_root.resolve()
-    base_ref = args.base_ref or env_value("SKILL_EXCHANGE_DIFF_BASE") or env_value("CI_MERGE_REQUEST_DIFF_BASE_SHA")
-    head_ref = args.head_ref or env_value("SKILL_EXCHANGE_DIFF_HEAD") or env_value("CI_COMMIT_SHA") or "HEAD"
+    base_ref = args.base_ref or env_value("SKLC_DIFF_BASE") or env_value("CI_MERGE_REQUEST_DIFF_BASE_SHA")
+    head_ref = args.head_ref or env_value("SKLC_DIFF_HEAD") or env_value("CI_COMMIT_SHA") or "HEAD"
     if not base_ref:
         base_ref = resolve_default_base_ref(head_ref, repo_root)
 
@@ -78,9 +78,9 @@ def run_review_command(args: argparse.Namespace) -> None:
     )
     print(json.dumps(result, indent=2, sort_keys=True))
 
-    if result["validation_errors"] and env_flag("SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS", default=True):
+    if result["validation_errors"] and env_flag("SKLC_REVIEW_FAIL_ON_VALIDATION_ERRORS", default=True):
         raise SystemExit(1)
-    if result["scanner_errors"] and env_flag("SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR"):
+    if result["scanner_errors"] and env_flag("SKLC_REVIEW_FAIL_ON_SCANNER_ERROR"):
         raise SystemExit(1)
 
 
@@ -376,7 +376,7 @@ def one_line(value: Any) -> str:
 
 
 def post_review_comment(body: str) -> str:
-    token_variable = os.environ.get("SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE", "GITLAB_TOKEN")
+    token_variable = os.environ.get("SKLC_REVIEW_TOKEN_VARIABLE", "GITLAB_TOKEN")
     token = os.environ.get(token_variable)
     api_url = os.environ.get("CI_API_V4_URL")
     project_id = os.environ.get("CI_PROJECT_ID")
@@ -386,7 +386,7 @@ def post_review_comment(body: str) -> str:
     if not api_url or not project_id or not mr_iid:
         return "skipped: GitLab merge request environment is incomplete"
 
-    token_header = os.environ.get("SKILL_EXCHANGE_REVIEW_TOKEN_HEADER")
+    token_header = os.environ.get("SKLC_REVIEW_TOKEN_HEADER")
     if not token_header:
         token_header = "JOB-TOKEN" if token_variable == "CI_JOB_TOKEN" else "PRIVATE-TOKEN"
     route = (

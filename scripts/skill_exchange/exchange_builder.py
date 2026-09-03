@@ -816,8 +816,8 @@ def skill_files(skill) -> list[dict[str, Any]]:
 def load_site_config(exchange_dir: Path) -> dict[str, Any]:
     path = exchange_dir / "site-config.json"
     config = json.loads(path.read_text()) if path.exists() else {}
-    source_repository_url = os.environ.get("SKLC_SOURCE_REPOSITORY_URL")
-    source_branch = os.environ.get("SKLC_SOURCE_BRANCH")
+    source_repository_url = os.environ.get("SKILL_EXCHANGE_SOURCE_REPOSITORY_URL")
+    source_branch = os.environ.get("SKILL_EXCHANGE_SOURCE_BRANCH")
     if source_repository_url:
         config["sourceRepositoryUrl"] = source_repository_url
     if source_branch:

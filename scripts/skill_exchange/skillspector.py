@@ -64,10 +64,10 @@ def normalize_version(version_value: str) -> str:
 def skillspector_env() -> dict[str, str]:
     env = os.environ.copy()
 
-    api_key = env.get("SKLC_LLM_API_KEY", "").strip()
-    base_url = env.get("SKLC_LLM_BASE_URL", "").strip()
-    model = env.get("SKLC_LLM_MODEL", "").strip()
-    provider = env.get("SKLC_LLM_PROVIDER", "").strip()
+    api_key = env.get("SKILL_EXCHANGE_LLM_API_KEY", "").strip()
+    base_url = env.get("SKILL_EXCHANGE_LLM_BASE_URL", "").strip()
+    model = env.get("SKILL_EXCHANGE_LLM_MODEL", "").strip()
+    provider = env.get("SKILL_EXCHANGE_LLM_PROVIDER", "").strip()
 
     if api_key and not env.get("OPENAI_API_KEY"):
         env["OPENAI_API_KEY"] = api_key

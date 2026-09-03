@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skill-exchange:assessment-artifacts:assessment-manifest:v1",
+  "title": "Assessment Artifact Manifest v1",
+  "type": "object",
+  "required": ["schema_version", "boe_root", "verify_log_path", "verify_log_sha256", "boe"],
+  "properties": {
+    "schema_version": { "const": "skill-exchange-assessment-artifacts/v1" },
+    "boe_root": { "const": "boe" },
+    "verify_log_path": { "const": "verify-boe.log" },
+    "verify_log_sha256": { "$ref": "#/$defs/sha256" },
+    "boe": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["skill_name", "path", "sha256", "native_reports"],
+        "properties": {
+          "skill_name": { "$ref": "#/$defs/skillName" },
+          "path": { "$ref": "#/$defs/boePath" },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "native_reports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["assessor_id", "path", "sha256"],
+              "properties": {
+                "assessor_id": { "$ref": "#/$defs/assessorId" },
+                "path": { "$ref": "#/$defs/assessmentReportPath" },
+                "sha256": { "$ref": "#/$defs/sha256" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "assessmentReportPath": {
+      "type": "string",
+      "pattern": "^boe/[a-z0-9](?:[a-z0-9-]{0,62})/assessments/[a-z0-9](?:[a-z0-9-]{0,62})/[a-f0-9]{64}\\.json$"
+    },
+    "assessorId": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62})$" },
+    "boePath": {
+      "type": "string",
+      "pattern": "^boe/[a-z0-9](?:[a-z0-9-]{0,62})/boe\\.json$"
+    },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "skillName": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62})$" }
+  }
+}

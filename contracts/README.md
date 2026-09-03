@@ -11,6 +11,7 @@ A contract belongs here only when at least two independently releasable products
 | Skill package | Assessment kit | Assessment kit, catalog tooling |
 | Assessment result | Assessment kit | BOE writer, review tooling |
 | BOE | Assessment kit | Catalog tooling |
+| Assessment artifacts | Assessment kit | GitLab CI profile, operator tooling |
 | Catalog manifest | Skill catalog | Deployment kit, custom exchanges |
 | Catalog policy | Skill catalog | Maintainer and operator catalog publication |
 | Product release manifest | Maintainer release tooling | Product installers, update tooling, operators |

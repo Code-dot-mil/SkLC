@@ -278,6 +278,7 @@ unless a later release explicitly adds and documents those aliases.
 ```text
 <output>/
   advice.md
+  advice-manifest.json
   native/
     <assessor-id>/
       <skill-name>/
@@ -303,6 +304,9 @@ findings from a successful native report.
 Native report files are the assessor's original output bytes. The kit must not
 replace native output with a SkLC-normalized report and must not modify native
 output before computing its digest. Advice output must not create BOE.
+`advice-manifest.json` must conform to the assessment-artifacts v1
+`advice-manifest.schema.json` and record `advice.md` plus every retained native
+report path and digest.
 
 `assess` writes only beneath `--boe-root`:
 
@@ -316,6 +320,11 @@ output before computing its digest. Advice output must not create BOE.
 ```
 
 `<raw-report-sha256>` is the lowercase SHA-256 hex digest of the exact native report bytes, without a prefix. Report file names use that digest plus the native report file extension documented for the assessor. BOE entries record paths relative to the directory containing `boe.json`, with no leading slash and no `..` segment.
+
+When `assess` output is retained as an assessment artifact root, the caller or
+CI profile writes `assessment-manifest.json` beside `boe/` and
+`verify-boe.log`. `assessment-manifest.json` must conform to the
+assessment-artifacts v1 `assessment-manifest.schema.json`.
 
 ## BOE update and digest rules
 
@@ -351,7 +360,7 @@ Commands report human-readable diagnostics to stderr and do not print secrets. I
 The release consumes and produces:
 
 - Skill-package contract `urn:skill-exchange:skill-package:v1`.
-- BOE-manifest contract `skill-exchange-boe/v1`.
+- BOE contract `skill-exchange-boe/v1`.
 - Assessment-artifacts contract `skill-exchange-assessment-artifacts/v1`.
 - Release-manifest contract `skill-exchange-release-manifest/v1`.
 - Native assessor output, retained unchanged.

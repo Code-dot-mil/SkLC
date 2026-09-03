@@ -150,7 +150,7 @@ release must not accept unlisted major or minor versions by range.
 The operator release consumes:
 
 - Skill-package contract.
-- BOE-manifest contract.
+- BOE contract.
 - Assessment-artifacts contract.
 - Assessment-kit CLI contract.
 - Release-manifest contract.
@@ -459,6 +459,7 @@ post-run verification. The assessment artifact contains:
 
 ```text
 .operator/artifacts/assessment/
+  assessment-manifest.json
   boe/
   verify-boe.log
 ```

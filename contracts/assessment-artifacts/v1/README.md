@@ -11,6 +11,7 @@ operator tooling, and other consumers may rely on.
 ```text
 <directory>/
   advice.md
+  advice-manifest.json
   native/
     <assessor-id>/
       <skill-name>/
@@ -38,12 +39,17 @@ Files under `native/` are assessor-native report bytes retained unchanged. The
 assessment kit computes `<raw-report-sha256>` from those exact bytes and uses
 the digest as the report filename stem.
 
+`advice-manifest.json` conforms to `advice-manifest.schema.json`. It records
+the selected skills, selected assessors, `advice.md` digest, and every retained
+native report path and digest. Paths are relative to the advice artifact root.
+
 ## Assessment Artifacts
 
 A retained assessment artifact root has this tree:
 
 ```text
 <assessment-output>/
+  assessment-manifest.json
   boe/
     <skill-name>/
       boe.json
@@ -61,6 +67,11 @@ The GitLab CI profile writes `verify-boe.log` beside `boe/` after running
 Each `boe/<skill-name>/boe.json` follows `skill-exchange-boe/v1`. Report paths
 inside `boe.json` are relative to the directory containing that `boe.json`.
 
+`assessment-manifest.json` conforms to `assessment-manifest.schema.json`. It
+records the BOE root, `verify-boe.log` digest, every retained BOE manifest path
+and digest, and the native reports retained below each BOE directory. Paths are
+relative to the assessment artifact root.
+
 ## Path Rules
 
 - `<skill-name>` follows the skill-package v1 name rules.
@@ -75,4 +86,4 @@ inside `boe.json` are relative to the directory containing that `boe.json`.
 
 The assessment kit owns this artifact layout. Assessor-native report content is
 owned by the assessor and retained byte-for-byte. BOE manifest content is owned
-by the assessment kit and governed by the BOE-manifest contract.
+by the assessment kit and governed by the BOE contract.

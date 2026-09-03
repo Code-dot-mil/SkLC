@@ -234,6 +234,7 @@ The advice job publishes:
 ```text
 $SKLC_ADVICE_OUTPUT_DIR/
   advice.md
+  advice-manifest.json
   native/
 ```
 
@@ -241,6 +242,7 @@ The assessment job publishes:
 
 ```text
 $SKLC_ASSESSMENT_OUTPUT_DIR/
+  assessment-manifest.json
   boe/
   verify-boe.log
 ```
@@ -248,7 +250,8 @@ $SKLC_ASSESSMENT_OUTPUT_DIR/
 The profile must keep native assessor reports unchanged. BOE manifests record
 report paths relative to each `boe.json` directory and SHA-256 digests produced
 by the released assessment CLI. The retained advice and assessment artifact
-trees conform to the assessment-artifacts v1 contract.
+trees conform to the assessment-artifacts v1 contract and validate against the
+matching manifest schemas.
 
 ## Manual BOE persistence
 

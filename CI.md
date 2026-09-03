@@ -16,7 +16,7 @@ Reuse-only generation intentionally fails when a valid skill lacks successful ex
 - `generate:exchange` runs on default-branch push pipelines that do not change `skills/**/*`. It generates deploy-time `.exchange/generated/` artifacts without committing them.
 - `pages` runs on default-branch push pipelines and scheduled pipelines. It deploys from generated exchange artifacts produced by `generate:exchange` or `publish:exchange` in the same pipeline.
 - Python publication jobs reuse tracked BOE bundles when the computed scan cache key already exists. Runner caches are used for dependencies only, not as the source of scanner history.
-- Non-Pages jobs use the runner tag in `SKLC_RUNNER_TAG`.
+- Non-Pages jobs use the runner tag in `SKILL_EXCHANGE_RUNNER_TAG`.
 - `pages` uses the runner tag in `PAGES_RUNNER_TAG`.
 - By default, Python jobs use the official Docker Hub Python image and install `uv` with `PYTHON_BOOTSTRAP_COMMAND`. Override the image variables when the target environment requires an internal registry or a prebuilt image.
 
@@ -36,7 +36,7 @@ Create a GitLab pipeline schedule for the default branch using the cadence requi
 
 Merges to the default branch that add or update skills also trigger `publish:exchange` before `pages`. That keeps the first deploy of a changed skill aligned with committed BOE instead of relying on a later scheduled backfill.
 
-Avoid duplicating project-level CI variables on the schedule unless the schedule intentionally needs a different value. GitLab schedule variables override project variables, so a stale schedule value can silently change publication behavior. In particular, keep `SKLC_PUBLISH_SCAN_MODES` aligned with the desired official publication modes.
+Avoid duplicating project-level CI variables on the schedule unless the schedule intentionally needs a different value. GitLab schedule variables override project variables, so a stale schedule value can silently change publication behavior. In particular, keep `SKILL_EXCHANGE_PUBLISH_SCAN_MODES` aligned with the desired official publication modes.
 
 For official BOE publication, run the schedule as the exchange bot or provide bot credentials through masked CI variables.
 
@@ -44,7 +44,7 @@ The target GitLab project also needs shared or project runners enabled for the c
 
 ## Publish Authentication
 
-Keep merge request review credentials separate from publication credentials. The token named by `SKLC_REVIEW_TOKEN_VARIABLE` is used only for optional merge request comments. It is not used to push BOE commits.
+Keep merge request review credentials separate from publication credentials. The token named by `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE` is used only for optional merge request comments. It is not used to push BOE commits.
 
 `publish:exchange` chooses push credentials in this order:
 
@@ -63,14 +63,14 @@ All environment-specific values are CI variables:
 - `PYTHON_IMAGE_REGISTRY`, `PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and `PYTHON_IMAGE` select the Python runner image.
 - `PYTHON_BOOTSTRAP_COMMAND` installs Python job prerequisites when the selected image does not already include them. Set it to an empty string when using a prebuilt image with `uv` installed.
 - `NODE_IMAGE_REGISTRY`, `NODE_IMAGE_REPOSITORY`, `NODE_IMAGE_TAG`, and `NODE_IMAGE` select the Node runner image.
-- `SKLC_RUNNER_TAG` selects the runner tag for lint, test, audit, review, and publish jobs.
+- `SKILL_EXCHANGE_RUNNER_TAG` selects the runner tag for lint, test, audit, review, and publish jobs.
 - `PAGES_RUNNER_TAG` selects the GitLab Pages runner tag.
 - `SKILLSPECTOR_INSTALL_COMMAND` installs SkillSpector when the runner image does not already include it.
 - `SKILLSPECTOR_BIN` points to a SkillSpector binary when it is not on `PATH`.
-- `SKLC_REVIEW_SCAN_MODE` controls MR review scanning: `static-only` or `llm-assisted`.
-- `SKLC_PUBLISH_SCAN_MODES` controls official publication scanning, using comma or space separated modes. Use `static-only,llm-assisted` when official publication should include both static and LLM-backed BOE.
-- `SKLC_LLM_API_KEY`, `SKLC_LLM_BASE_URL`, `SKLC_LLM_MODEL`, and `SKLC_LLM_PROVIDER` configure LLM-assisted scans without tying the repository to a specific provider.
-- `SKLC_POST_REVIEW_COMMENT`, `SKLC_REVIEW_TOKEN_VARIABLE`, and `SKLC_REVIEW_TOKEN_HEADER` control optional merge request comments.
+- `SKILL_EXCHANGE_REVIEW_SCAN_MODE` controls MR review scanning: `static-only` or `llm-assisted`.
+- `SKILL_EXCHANGE_PUBLISH_SCAN_MODES` controls official publication scanning, using comma or space separated modes. Use `static-only,llm-assisted` when official publication should include both static and LLM-backed BOE.
+- `SKILL_EXCHANGE_LLM_API_KEY`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, and `SKILL_EXCHANGE_LLM_PROVIDER` configure LLM-assisted scans without tying the repository to a specific provider.
+- `SKILL_EXCHANGE_POST_REVIEW_COMMENT`, `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE`, and `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER` control optional merge request comments.
 - `EXCHANGE_PUBLISH_COMMIT`, `EXCHANGE_PUBLISH_PUSH`, `EXCHANGE_PUBLISH_BRANCH`, `EXCHANGE_PUBLISH_PUSH_URL`, `EXCHANGE_PUBLISH_TOKEN`, and `EXCHANGE_PUBLISH_USERNAME` control BOE-bundle commits. When GitLab job-token repository push is enabled and no publish token is configured, publication uses `CI_JOB_TOKEN` with the `gitlab-ci-token` username.
 - `EXCHANGE_BOT_GIT_NAME`, `EXCHANGE_BOT_GIT_EMAIL`, and `EXCHANGE_PUBLISH_COMMIT_MESSAGE` control generated commit metadata.
 - Provider credentials and endpoints for LLM-assisted SkillSpector scans should be configured as masked CI variables, not committed to the repository.

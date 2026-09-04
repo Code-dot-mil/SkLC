@@ -110,6 +110,7 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert datetime.fromisoformat(index["skills"][0]["last_scanned"])
     assert len(index["skills"][0]["latest_source_commit_sha"]) in {0, 40}
     assert index["skills"][0]["scan_mode"] == "static-only"
+    assert index["skills"][0]["download_path"] == "downloads/ai4sdlc--sample-skill.zip"
     assert index["skills"][0]["scanner_provenance"] == {
         "name": "skillspector",
         "version": "2.1.5",
@@ -135,6 +136,7 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert scanner_runs["rows"][0]["content_hash"] == index["skills"][0]["content_hash"]
     assert scanner_runs["rows"][0]["last_scanned"] == index["skills"][0]["last_scanned"]
     native_artifact = next(row for row in scanner_artifacts["rows"] if row["artifact_kind"] == "native_report")
+    assert native_artifact["download_path"].startswith("downloads/")
     assert native_artifact["download_path"].endswith("/skillspector.json")
     assert scanner_findings["rows"] == []
 

@@ -1,0 +1,7 @@
+schema_version: skill-exchange-catalog-policy/v1
+mode: include-list
+skills:
+  - python-secure-code-review
+  - unit-test-generation
+  - inline-documentation
+  - code-change-description

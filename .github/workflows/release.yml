@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "release-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Check out tagged revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: |
+          python -m pip install --no-cache-dir uv
+          npm ci --prefix site
+      - name: Validate release tag
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          python - "$version" <<'PY'
+          import re
+          import sys
+
+          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?", sys.argv[1]):
+              raise SystemExit(f"release tag is not valid SemVer: v{sys.argv[1]}")
+          PY
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")" >> "$GITHUB_ENV"
+      - name: Run repository checks
+        run: |
+          uv run --extra test ruff check scripts tests
+          uv run --extra test pytest
+          npm --prefix site run lint
+          npm --prefix site run test
+      - name: Generate exchange data
+        env:
+          SKILL_EXCHANGE_SOURCE_REPOSITORY_URL: "${{ github.server_url }}/${{ github.repository }}"
+          SKILL_EXCHANGE_SOURCE_BRANCH: "${{ github.sha }}"
+        run: >-
+          uv run python -m skill_exchange.cli publish-local
+          --generated-dir .exchange/generated
+          --scan-mode static-only
+          --reuse-boe-only
+      - name: Build static site
+        run: npm --prefix site run build
+      - name: Build release assets
+        run: >-
+          uv run python -m skill_exchange.release build
+          --version "$RELEASE_VERSION"
+          --source-revision "$GITHUB_SHA"
+          --site-dir site/dist
+          --output-dir release
+      - name: Read accepted release notes
+        run: >-
+          uv run python -m skill_exchange.release release-notes
+          --version "$RELEASE_VERSION"
+          --notes-file RELEASE_NOTES.md
+          --output release-body.md
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "release/deployment-kit-prebuilt-${RELEASE_VERSION}.tar.gz" \
+            "release/skill-catalog-${RELEASE_VERSION}.tar.gz" \
+            release/release-manifest.json \
+            release/SHA256SUMS.txt \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-body.md

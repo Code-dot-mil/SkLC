@@ -707,6 +707,35 @@ The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull 
 
 Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation, builds `site/dist/`, verifies catalog detail pages and skill downloads, and uploads its contents as the downloadable `static-site` zip artifact.
 
+## GitHub Release Packaging
+
+The repository owns `.github/workflows/release.yml`. A maintainer creates and
+pushes a `v<semver>` tag only after accepting and committing the matching
+`## <semver>` section in `RELEASE_NOTES.md`. The tag workflow reruns the repository
+checks, generates exchange data by reusing tracked BOE, builds the static site,
+and creates a GitHub Release with that accepted section as its description.
+
+The currently releasable product assets are
+`deployment-kit-prebuilt-<version>.tar.gz` and
+`skill-catalog-<version>.tar.gz`. Each archive has a versioned root directory and
+contains its own `release-manifest.json` and `SHA256SUMS.txt`. The GitHub Release
+also includes a top-level manifest that records both archives and a top-level
+checksum file that verifies both archives and the manifest. Release notes are not
+uploaded as an asset.
+
+`scripts/skill_exchange/release.py` assembles both products from source-controlled
+policy, documentation, contracts, and the built site. It rejects symbolic links,
+unknown catalog skills, invalid skill names, missing site downloads, path escape,
+and manifest/checksum disagreement. Archive metadata uses `SOURCE_DATE_EPOCH` so
+the tag workflow produces repeatable archives from a fixed revision.
+
+The deployment package contains the unchanged built site under `public/`, a
+deployment-only GitLab Pages configuration, customer documentation, and the
+release-manifest contract. The catalog package contains exactly the four skills
+selected by `products/skill-catalog/catalog-policy.yaml`, the skill-package and
+release-manifest contracts, and no site, maintainer workflow, GitLab CI, or
+internal catalog policy.
+
 ## GitLab CI
 
 The repository owns `.gitlab-ci.yml` directly. Do not import external CI components.
@@ -925,6 +954,8 @@ It must:
 - reject destinations outside `site/public/downloads/`;
 - realpath-check existing sources to prevent symlink escape;
 - support rebasing absolute artifact paths from a previous checkout by recognizing the `.exchange/generated/scanner-runs/` suffix.
+- emit and consume site download URLs whose paths begin with `downloads/`; the
+  base document URL resolves these links from nested static pages.
 
 ## URL State
 
@@ -1037,6 +1068,11 @@ Python tests must cover:
 - publish authentication not reusing review token;
 - zip layout and symlink rejection;
 - local CLI generated-dir handling.
+- release packaging for the deployment kit and governed skill catalog;
+- internal and top-level release manifest/checksum agreement;
+- catalog policy rejection of unknown skills;
+- missing or unsafe prebuilt download rejection;
+- accepted release-note section extraction.
 
 Node tests must cover:
 

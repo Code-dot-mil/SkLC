@@ -22,7 +22,7 @@ test("copy-downloads rejects artifact sources outside the generated scanner tree
       rows: [
         {
           path: "secret.txt",
-          download_path: "/downloads/scanner-runs/run-1/secret.txt",
+          download_path: "downloads/scanner-runs/run-1/secret.txt",
         },
       ],
     }),
@@ -76,7 +76,7 @@ test("copy-downloads rebases generated artifact paths from another checkout", ()
       rows: [
         {
           path: "/previous/checkout/.exchange/generated/scanner-runs/run-1/skillspector.json",
-          download_path: "/downloads/scanner-runs/run-1/skillspector.json",
+          download_path: "downloads/scanner-runs/run-1/skillspector.json",
         },
       ],
     }),

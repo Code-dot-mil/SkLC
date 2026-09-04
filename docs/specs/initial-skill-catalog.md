@@ -182,7 +182,7 @@ Acceptance requires a clean temporary workspace that:
    digests match `release-manifest.json`.
 4. Confirms the four released package directories are present under `skills/`.
 5. Validates each `skills/<skill-name>/SKILL.md` frontmatter against
-   `contracts/skill-package/v1/metadata.schema.json` and confirms each
+   `contracts/skill-package/v1/skill.schema.json` and confirms each
    frontmatter `name` matches the directory name.
 6. Confirms the published set is exactly:
    `python-secure-code-review`, `unit-test-generation`,

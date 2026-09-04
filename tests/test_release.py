@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import tarfile
@@ -57,7 +58,7 @@ def _release_fixture(tmp_path: Path) -> tuple[Path, Path]:
         repo / "contracts" / "release-manifest" / "v1" / "release-manifest.schema.json",
         json.dumps({"required": manifest_fields, "properties": dict.fromkeys(manifest_fields, {})}) + "\n",
     )
-    _write(repo / "contracts" / "skill-package" / "v1" / "metadata.schema.json", "{}\n")
+    _write(repo / "contracts" / "skill-package" / "v1" / "skill.schema.json", "{}\n")
 
     site = repo / "site" / "dist"
     _write(site / "index.html", '<a href="downloads/example.zip">Download</a>\n')
@@ -76,6 +77,9 @@ def _archive_files(path: Path) -> tuple[str, set[str], dict, dict[str, str]]:
         for line in archive.extractfile(f"{root}/SHA256SUMS.txt").read().decode().splitlines():
             digest, relative = line.split("  ", 1)
             checksums[relative] = digest
+        for relative, digest in checksums.items():
+            content = archive.extractfile(f"{root}/{relative}").read()
+            assert hashlib.sha256(content).hexdigest() == digest
     return root, files, manifest, checksums
 
 
@@ -106,12 +110,21 @@ def test_build_release_creates_both_product_archives_and_external_metadata(tmp_p
         "deployment-kit-prebuilt-1.2.3.tar.gz",
         "skill-catalog-1.2.3.tar.gz",
     ]
-    checksum_paths = [line.split("  ", 1)[1] for line in (output / "SHA256SUMS.txt").read_text().splitlines()]
-    assert checksum_paths == [
+    checksums = {
+        path: digest
+        for line in (output / "SHA256SUMS.txt").read_text().splitlines()
+        for digest, path in [line.split("  ", 1)]
+    }
+    assert list(checksums) == [
         "deployment-kit-prebuilt-1.2.3.tar.gz",
         "skill-catalog-1.2.3.tar.gz",
         "release-manifest.json",
     ]
+    for relative, digest in checksums.items():
+        assert hashlib.sha256((output / relative).read_bytes()).hexdigest() == digest
+    assert {entry["path"]: entry["sha256"].removeprefix("sha256:") for entry in external["artifacts"]} == {
+        path: digest for path, digest in checksums.items() if path != "release-manifest.json"
+    }
 
 
 def test_deployment_archive_has_release_layout_and_matching_integrity_files(tmp_path: Path):
@@ -165,6 +178,7 @@ def test_skill_catalog_archive_contains_only_policy_selected_skills(tmp_path: Pa
 
     assert root == "skill-catalog-1.2.3"
     assert {path.split("/")[1] for path in files if path.startswith("skills/")} == set(SKILLS)
+    assert "contracts/skill-package/v1/skill.schema.json" in files
     assert "catalog-policy.yaml" not in files
     assert not any(path.startswith("site/") or path.startswith(".github/") for path in files)
     assert manifest["product"] == "skill-catalog"

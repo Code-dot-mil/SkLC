@@ -17,8 +17,14 @@ import yaml
 from .frontmatter import parse_frontmatter
 
 RELEASE_MANIFEST_SCHEMA = "skill-exchange-release-manifest/v1"
+SKILL_PACKAGE_SCHEMA = "skill-exchange-skill-package/v1"
 CATALOG_POLICY_SCHEMA = "skill-exchange-catalog-policy/v1"
-SEMVER_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+SEMVER_PATTERN = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
+)
 SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62})$")
 DOWNLOAD_REFERENCE_PATTERN = re.compile(r"(?:href|src)=[\"'](downloads/[^\"'?#]+)|[\"'](downloads/[^\"'?#]+)[\"']")
 ROOT_DOWNLOAD_REFERENCE_PATTERN = re.compile(r"(?:href|src)=[\"']/downloads/|[\"']/downloads/")
@@ -26,6 +32,11 @@ ROOT_DOWNLOAD_REFERENCE_PATTERN = re.compile(r"(?:href|src)=[\"']/downloads/|[\"
 
 class ReleaseError(ValueError):
     pass
+
+
+def validate_version(version: str) -> None:
+    if not SEMVER_PATTERN.fullmatch(version):
+        raise ReleaseError(f"version must be a SemVer value without a leading v: {version}")
 
 
 def _sha256(path: Path) -> str:
@@ -246,8 +257,7 @@ def build_release(
     source_revision: str,
     source_date_epoch: int | None = None,
 ) -> list[Path]:
-    if not SEMVER_PATTERN.fullmatch(version):
-        raise ReleaseError(f"version must be a SemVer value without a leading v: {version}")
+    validate_version(version)
     if not source_revision:
         raise ReleaseError("source revision must not be empty")
     epoch = source_date_epoch if source_date_epoch is not None else int(datetime.now(UTC).timestamp())
@@ -261,14 +271,17 @@ def build_release(
             (
                 "deployment-kit-prebuilt",
                 lambda root: _stage_deployment_kit(repo_root, site_dir, root),
-                {"deployment-kit-prebuilt": [version]},
-                {"release-manifest": ["v1"]},
+                {"release_manifest": [RELEASE_MANIFEST_SCHEMA]},
+                {},
             ),
             (
                 "skill-catalog",
                 lambda root: _stage_skill_catalog(repo_root, root),
-                {"skill-catalog": [version]},
-                {"skill-package": ["v1"], "release-manifest": ["v1"]},
+                {},
+                {
+                    "skill_package": [SKILL_PACKAGE_SCHEMA],
+                    "release_manifest": [RELEASE_MANIFEST_SCHEMA],
+                },
             ),
         )
         for product, stage, produces, consumes in products:
@@ -298,10 +311,7 @@ def build_release(
         "version": version,
         "source_revision": source_revision,
         "created_at": timestamp,
-        "produces": {
-            "deployment-kit-prebuilt": [version],
-            "skill-catalog": [version],
-        },
+        "produces": {"release_manifest": [RELEASE_MANIFEST_SCHEMA]},
         "consumes": {},
         "artifacts": external_entries,
     }
@@ -343,6 +353,9 @@ def _parser() -> argparse.ArgumentParser:
     build.add_argument("--site-dir", type=Path, default=Path("site/dist"))
     build.add_argument("--output-dir", type=Path, default=Path("release"))
 
+    validate = subparsers.add_parser("validate-version", help="validate a release version")
+    validate.add_argument("--version", required=True)
+
     notes = subparsers.add_parser("release-notes", help="extract one accepted version section")
     notes.add_argument("--version", required=True)
     notes.add_argument("--notes-file", type=Path, default=Path("RELEASE_NOTES.md"))
@@ -363,6 +376,10 @@ def main() -> None:
             source_date_epoch=source_date_epoch,
         )
         print(json.dumps({"artifacts": [str(path) for path in built]}, indent=2))
+        return
+
+    if args.command == "validate-version":
+        validate_version(args.version)
         return
 
     snippet = extract_release_notes(args.notes_file, args.version)

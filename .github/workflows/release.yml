@@ -40,13 +40,7 @@ jobs:
         shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
-          python - "$version" <<'PY'
-          import re
-          import sys
-
-          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?", sys.argv[1]):
-              raise SystemExit(f"release tag is not valid SemVer: v{sys.argv[1]}")
-          PY
+          uv run python -m skill_exchange.release validate-version --version "$version"
           echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")" >> "$GITHUB_ENV"
       - name: Run repository checks

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from skill_exchange.release import ReleaseError, build_release, extract_release_notes
+from skill_exchange.release import ReleaseError, build_release, extract_release_notes, validate_version
 
 SKILLS = (
     "python-secure-code-review",
@@ -100,6 +100,8 @@ def test_build_release_creates_both_product_archives_and_external_metadata(tmp_p
     ]
     external = json.loads((output / "release-manifest.json").read_text())
     assert external["product"] == "sklc"
+    assert external["produces"] == {"release_manifest": ["skill-exchange-release-manifest/v1"]}
+    assert external["consumes"] == {}
     assert [entry["path"] for entry in external["artifacts"]] == [
         "deployment-kit-prebuilt-1.2.3.tar.gz",
         "skill-catalog-1.2.3.tar.gz",
@@ -142,6 +144,8 @@ def test_deployment_archive_has_release_layout_and_matching_integrity_files(tmp_
     } == files
     assert "public/.gitkeep" not in files
     assert manifest["product"] == "deployment-kit-prebuilt"
+    assert manifest["produces"] == {"release_manifest": ["skill-exchange-release-manifest/v1"]}
+    assert manifest["consumes"] == {}
     assert {entry["path"]: entry["sha256"].removeprefix("sha256:") for entry in manifest["artifacts"]} == checksums
 
 
@@ -164,7 +168,23 @@ def test_skill_catalog_archive_contains_only_policy_selected_skills(tmp_path: Pa
     assert "catalog-policy.yaml" not in files
     assert not any(path.startswith("site/") or path.startswith(".github/") for path in files)
     assert manifest["product"] == "skill-catalog"
+    assert manifest["produces"] == {}
+    assert manifest["consumes"] == {
+        "skill_package": ["skill-exchange-skill-package/v1"],
+        "release_manifest": ["skill-exchange-release-manifest/v1"],
+    }
     assert {entry["path"]: entry["sha256"].removeprefix("sha256:") for entry in manifest["artifacts"]} == checksums
+
+
+@pytest.mark.parametrize("version", ["01.2.3", "1.02.3", "1.2.03", "1.2.3-01", "1.2.3-", "1.2.3+"])
+def test_validate_version_rejects_invalid_semver(version: str):
+    with pytest.raises(ReleaseError, match="SemVer"):
+        validate_version(version)
+
+
+@pytest.mark.parametrize("version", ["0.0.0", "1.2.3", "1.2.3-alpha.1", "1.2.3+build.7"])
+def test_validate_version_accepts_semver(version: str):
+    validate_version(version)
 
 
 def test_build_release_rejects_unknown_catalog_skill(tmp_path: Path):

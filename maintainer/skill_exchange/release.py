@@ -10,7 +10,7 @@ import shutil
 import tarfile
 import tempfile
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 
@@ -26,8 +26,11 @@ SEMVER_PATTERN = re.compile(
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62})$")
-DOWNLOAD_REFERENCE_PATTERN = re.compile(r"(?:href|src)=[\"'](downloads/[^\"'?#]+)|[\"'](downloads/[^\"'?#]+)[\"']")
-ROOT_DOWNLOAD_REFERENCE_PATTERN = re.compile(r"(?:href|src)=[\"']/downloads/|[\"']/downloads/")
+DOWNLOAD_REFERENCE_PATTERN = re.compile(
+    r'"(?P<double_path>downloads/[^"?#]*)(?:[?#][^"]*)?"'
+    r"|'(?P<single_path>downloads/[^'?#]*)(?:[?#][^']*)?'"
+)
+ROOT_DOWNLOAD_REFERENCE_PATTERN = re.compile(r"[\"']/downloads/")
 
 
 class ReleaseError(ValueError):
@@ -200,9 +203,11 @@ def _validate_download_references(public_root: Path) -> None:
         if ROOT_DOWNLOAD_REFERENCE_PATTERN.search(text):
             raise ReleaseError(f"site download references must be relative: {path.relative_to(public_root).as_posix()}")
         for match in DOWNLOAD_REFERENCE_PATTERN.finditer(text):
-            reference = match.group(1) or match.group(2)
-            relative = Path(reference.removeprefix("downloads/"))
-            target = (downloads_root / relative).resolve()
+            reference = match.group("double_path") or match.group("single_path")
+            relative = PurePosixPath(reference.removeprefix("downloads/"))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ReleaseError(f"site references a missing or unsafe download: {reference}")
+            target = downloads_root.joinpath(*relative.parts).resolve()
             if downloads_root not in target.parents or not target.is_file():
                 raise ReleaseError(f"site references a missing or unsafe download: {reference}")
 

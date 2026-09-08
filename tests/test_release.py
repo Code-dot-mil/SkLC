@@ -89,8 +89,13 @@ def _archive_files(path: Path) -> tuple[str, set[str], dict, dict[str, str]]:
 def _build_delivered_deployment_package(tmp_path: Path) -> Path:
     repo, site = _release_fixture(tmp_path)
     repository_root = Path(__file__).parents[1]
-    delivered_ci = repository_root / "products" / "deployment-kit" / "prebuilt" / ".gitlab-ci.yml"
-    (repo / "products" / "deployment-kit" / "prebuilt" / ".gitlab-ci.yml").write_bytes(delivered_ci.read_bytes())
+    delivered_prebuilt = repository_root / "products" / "deployment-kit" / "prebuilt"
+    fixture_prebuilt = repo / "products" / "deployment-kit" / "prebuilt"
+    (fixture_prebuilt / ".gitlab-ci.yml").write_bytes((delivered_prebuilt / ".gitlab-ci.yml").read_bytes())
+    (fixture_prebuilt / "docs" / "install.md").write_bytes((delivered_prebuilt / "docs" / "install.md").read_bytes())
+    delivered_schema = repository_root / "contracts" / "release-manifest" / "v1" / "release-manifest.schema.json"
+    fixture_schema = repo / "contracts" / "release-manifest" / "v1" / "release-manifest.schema.json"
+    fixture_schema.write_bytes(delivered_schema.read_bytes())
     output = tmp_path / "release"
     build_release(
         repo_root=repo,
@@ -116,6 +121,21 @@ def _run_delivered_gitlab_verification(monkeypatch, package_root: Path) -> None:
     monkeypatch.chdir(package_root)
     try:
         exec(compile(python_source, ".gitlab-ci.yml", "exec"), {})
+    finally:
+        os.chdir(previous)
+
+
+def _run_delivered_install_verification(monkeypatch, package_root: Path) -> None:
+    documentation = (package_root / "docs" / "install.md").read_text()
+    lines = documentation.splitlines()
+    start = lines.index("python3 - <<'PY'") + 1
+    end = lines.index("PY", start)
+    python_source = "\n".join(lines[start:end])
+
+    previous = Path.cwd()
+    monkeypatch.chdir(package_root)
+    try:
+        exec(compile(python_source, "docs/install.md", "exec"), {})
     finally:
         os.chdir(previous)
 
@@ -306,6 +326,62 @@ def test_build_release_rejects_root_absolute_download_reference(tmp_path: Path):
         )
 
 
+def test_build_release_accepts_download_queries_and_fragments(tmp_path: Path):
+    repo, site = _release_fixture(tmp_path)
+    (site / "index.html").write_text('<a href="downloads/example.zip?download=1#skill">Download</a>\n')
+    _write(site / "catalog.json", '{"download":"downloads/example.zip#skill"}\n')
+    _write(site / "catalog.js", 'const download = "downloads/example.zip?download=1";\n')
+
+    build_release(
+        repo_root=repo,
+        site_dir=site,
+        output_dir=tmp_path / "release",
+        version="1.2.3",
+        source_revision="abc123",
+        source_date_epoch=1_800_000_000,
+    )
+
+
+@pytest.mark.parametrize(
+    ("source_name", "source_text"),
+    [
+        ("index.html", '<a href="downloads/missing.zip?download=1">Download</a>\n'),
+        ("catalog.json", '{"download":"downloads/missing.zip#skill"}\n'),
+        ("catalog.js", 'const download = "downloads/missing.zip?download=1#skill";\n'),
+    ],
+)
+def test_build_release_checks_download_references_before_queries_and_fragments(
+    tmp_path: Path, source_name: str, source_text: str
+):
+    repo, site = _release_fixture(tmp_path)
+    _write(site / source_name, source_text)
+
+    with pytest.raises(ReleaseError, match="missing or unsafe download: downloads/missing.zip"):
+        build_release(
+            repo_root=repo,
+            site_dir=site,
+            output_dir=tmp_path / "release",
+            version="1.2.3",
+            source_revision="abc123",
+            source_date_epoch=1_800_000_000,
+        )
+
+
+def test_build_release_rejects_parent_download_path_component(tmp_path: Path):
+    repo, site = _release_fixture(tmp_path)
+    (site / "index.html").write_text('<a href="downloads/sub/../example.zip">Download</a>\n')
+
+    with pytest.raises(ReleaseError, match=r"missing or unsafe download: downloads/sub/\.\./example\.zip"):
+        build_release(
+            repo_root=repo,
+            site_dir=site,
+            output_dir=tmp_path / "release",
+            version="1.2.3",
+            source_revision="abc123",
+            source_date_epoch=1_800_000_000,
+        )
+
+
 def test_extract_release_notes_returns_only_requested_version(tmp_path: Path):
     notes = tmp_path / "RELEASE_NOTES.md"
     notes.write_text("# Release Notes\n\n## 1.2.3\n\n- Current change.\n\n## 1.2.2\n\n- Older change.\n")
@@ -335,3 +411,20 @@ def test_delivered_gitlab_verification_rejects_wrong_product(monkeypatch, tmp_pa
 
     with pytest.raises(SystemExit, match="not for deployment-kit-prebuilt"):
         _run_delivered_gitlab_verification(monkeypatch, package_root)
+
+
+def test_delivered_install_verification_accepts_built_package(monkeypatch, tmp_path: Path):
+    package_root = _build_delivered_deployment_package(tmp_path)
+
+    _run_delivered_install_verification(monkeypatch, package_root)
+
+
+def test_delivered_install_verification_rejects_schema_violation(monkeypatch, tmp_path: Path):
+    package_root = _build_delivered_deployment_package(tmp_path)
+    manifest_path = package_root / "release-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["source_revision"] = ""
+    manifest_path.write_text(json.dumps(manifest))
+
+    with pytest.raises(SystemExit, match=r"\$\.source_revision is too short"):
+        _run_delivered_install_verification(monkeypatch, package_root)

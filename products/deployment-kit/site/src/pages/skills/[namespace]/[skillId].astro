@@ -1,0 +1,323 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import RecommendationBadge from "../../../components/RecommendationBadge.astro";
+import ScannerFindings from "../../../components/ScannerFindings";
+import { showSourceLinks } from "../../../lib/build-options.mjs";
+import { sanitizeSkillHtml } from "../../../lib/sanitize-skill-html.mjs";
+import { createMarkdownProcessor, parseFrontmatter } from "@astrojs/markdown-remark";
+import { visit } from "unist-util-visit";
+import {
+  exchangeIndex as index,
+  scannerArtifactsTable,
+  scannerFindingsTable,
+  scannerRunsTable,
+} from "../../../lib/exchange-data.mjs";
+
+export function getStaticPaths() {
+  return index.skills.map((skill) => ({
+    params: { namespace: skill.namespace, skillId: skill.skill_id },
+    props: { skill },
+  }));
+}
+
+const { skill } = Astro.props;
+const scannerRuns = scannerRunsTable.rows
+  .filter((row) => row.namespace === skill.namespace && row.skill_id === skill.skill_id)
+  .sort((left, right) => Date.parse(right.last_scanned || "") - Date.parse(left.last_scanned || ""));
+const scannerRunIds = new Set(scannerRuns.map((run) => run.id));
+const scannerFindings = scannerFindingsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
+const scannerArtifacts = scannerArtifactsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
+const recommendationLabel = skill.recommendation_label || formatRecommendation(skill.recommendation);
+const risk = skill.risk || recommendationToRisk(skill.recommendation);
+const riskReason = skill.risk_reason || "Risk was derived from the latest scanner assessment.";
+const scannerProvenance = skill.scanner_provenance || {
+  name: "skillspector",
+  version: undefined,
+  scan_mode: skill.scan_mode,
+  provider: undefined,
+  model: undefined,
+};
+const markdownProcessor = await createMarkdownProcessor({
+  rehypePlugins: [disableMarkdownLinks],
+});
+const parsedSkillMarkdown = parseFrontmatter(skill.skill_md_content);
+const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmatter);
+const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
+const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
+
+function disableMarkdownLinks() {
+  return (tree) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName !== "a") {
+        return;
+      }
+      node.tagName = "span";
+      delete node.properties?.href;
+      delete node.properties?.target;
+      delete node.properties?.rel;
+    });
+  };
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "Unknown";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function formatRecommendation(value) {
+  if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
+    return "Avoid installing";
+  }
+  if (value === "CAUTION") {
+    return "Use caution";
+  }
+  if (value === "SAFE") {
+    return "Safe to use";
+  }
+  return "Unknown";
+}
+
+function recommendationToRisk(value) {
+  if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
+    return "High";
+  }
+  if (value === "CAUTION") {
+    return "Medium";
+  }
+  if (value === "SAFE") {
+    return "Low";
+  }
+  return "Unknown";
+}
+
+function formatFrontmatterValue(value) {
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+  return String(value ?? "");
+}
+
+function flattenFrontmatterRows(value, prefix = "") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return prefix ? [[prefix, value]] : [];
+  }
+
+  return Object.entries(value)
+    .flatMap(([key, childValue]) => {
+      const rowKey = prefix ? `${prefix}.${key}` : key;
+      if (childValue && typeof childValue === "object" && !Array.isArray(childValue)) {
+        return flattenFrontmatterRows(childValue, rowKey);
+      }
+      return [[rowKey, childValue]];
+    });
+}
+---
+
+<BaseLayout title={skill.display_id}>
+  <header class="header detail-hero">
+    <p><a class="back-link" href="./">Back to catalog</a></p>
+    <div class="hero-panel">
+      <div class="hero-copy">
+        <p class="eyebrow">Skill package</p>
+        <h1>{skill.display_id}</h1>
+        <p class="hero-description">{skill.description}</p>
+        <div class="recommendation-line">
+          <span class="recommendation-label">Recommendation</span>
+          <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} />
+          <button class="icon-button compact-circle" type="button" data-dialog-target="recommendation-dialog" aria-label="How recommendation is calculated">i</button>
+        </div>
+        <div class="hero-actions">
+          <a class="primary-action" href={skill.download_path}>Download skill package</a>
+          {showSourceLinks && skill.source_url && <a class="secondary-action" href={skill.source_url} rel="noreferrer" referrerpolicy="no-referrer">View source</a>}
+        </div>
+      </div>
+      <aside class="trust-panel" aria-label="Trust snapshot">
+        <p class="eyebrow">Trust snapshot</p>
+        <dl class="trust-list">
+          <div>
+            <dt>Use guidance</dt>
+            <dd>{recommendationLabel}</dd>
+          </div>
+          <div>
+            <dt>Scanner risk</dt>
+            <dd>{risk}</dd>
+          </div>
+          <div>
+            <dt>Scanner</dt>
+            <dd>{scannerProvenance.name || "skillspector"} {scannerProvenance.version || ""}</dd>
+          </div>
+          <div>
+            <dt>Scan mode</dt>
+            <dd>{scannerProvenance.scan_mode || skill.scan_mode}</dd>
+          </div>
+          <div>
+            <dt>Last scanned</dt>
+            <dd>{formatDate(skill.last_scanned)}</dd>
+          </div>
+          <div>
+            <dt>Owner</dt>
+            <dd>{skill.owner || "Not declared"}</dd>
+          </div>
+        </dl>
+      </aside>
+    </div>
+    <dialog id="recommendation-dialog">
+      <form method="dialog">
+        <button class="dialog-close" aria-label="Close">Close</button>
+      </form>
+      <h2>Recommendation</h2>
+      <p>
+        The recommendation is taken from the latest scanner assessment for this skill content and scanner configuration.
+        It is phrased as plain usage guidance for the exchange.
+      </p>
+      <p>
+        Low risk maps to Safe to use, medium risk maps to Use caution, and high or critical risk maps to Avoid installing.
+        LLM-assisted scans use the configured provider and model, while static-only scans skip LLM review and may carry lower-confidence flags.
+      </p>
+      <p>
+        Learn more in the{" "}
+        <a class="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerpolicy="no-referrer">
+          NVIDIA SkillSpector documentation <span aria-hidden="true">↗</span>
+        </a>.
+      </p>
+      <p><strong>Risk basis:</strong> {riskReason}</p>
+    </dialog>
+    <div class="metadata-strip">
+      <span><strong>Last updated:</strong> {formatDate(skill.last_updated)}</span>
+      <span><strong>First observed:</strong> {formatDate(skill.first_observed)}</span>
+      {skill.upstream_url && <a href={skill.upstream_url} rel="noreferrer" referrerpolicy="no-referrer">Upstream source</a>}
+    </div>
+  </header>
+
+  <section class="tabs">
+    <input class="tab-radio" type="radio" id="tab-files" name="detail-tabs" checked />
+    <input class="tab-radio" type="radio" id="tab-assessment" name="detail-tabs" />
+
+    <div class="tab-list" role="tablist" aria-label="Skill details">
+      <label class="tab-label" id="tab-files-label" for="tab-files" role="tab" aria-controls="panel-files">Skill Instructions</label>
+      <label class="tab-label" id="tab-assessment-label" for="tab-assessment" role="tab" aria-controls="panel-assessment">Assessment Evidence</label>
+    </div>
+
+    <div class="tab-panels">
+      <section class="tab-panel" id="panel-files" role="tabpanel" aria-labelledby="tab-files-label">
+        <section class="tabs inner-tabs">
+          <input class="tab-radio" type="radio" id="tab-skill-md" name="file-tabs" checked />
+          <input class="tab-radio" type="radio" id="tab-file-list" name="file-tabs" />
+
+          <div class="tab-list" role="tablist" aria-label="Skill files">
+            <label class="tab-label" id="tab-skill-md-label" for="tab-skill-md" role="tab" aria-controls="panel-skill-md">Instructions</label>
+            <label class="tab-label" id="tab-file-list-label" for="tab-file-list" role="tab" aria-controls="panel-file-list">Package files</label>
+          </div>
+
+          <div class="tab-panels">
+            <section class="tab-panel" id="panel-skill-md" role="tabpanel" aria-labelledby="tab-skill-md-label">
+              <section class="card">
+                <h2>Skill instructions</h2>
+                {skillFrontmatterRows.length > 0 && (
+                  <table class="metadata-table">
+                    <thead>
+                      <tr>
+                        <th>Frontmatter</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {skillFrontmatterRows.map(([key, value]) => (
+                        <tr>
+                          <td><code>{key}</code></td>
+                          <td>{formatFrontmatterValue(value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <div class="markdown-body" set:html={sanitizedSkillMarkdown} />
+              </section>
+            </section>
+
+            <section class="tab-panel" id="panel-file-list" role="tabpanel" aria-labelledby="tab-file-list-label">
+              <section class="card">
+                <h2>Package files</h2>
+                <ul class="file-list">
+                  {skill.skill_files.map((file) => (
+                    <li><code>{file.path}</code> <span class="muted">{file.size_bytes} bytes</span></li>
+                  ))}
+                </ul>
+              </section>
+            </section>
+          </div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="panel-assessment" role="tabpanel" aria-labelledby="tab-assessment-label">
+        <section class="card">
+          <h2>Summary</h2>
+          <p><strong>Latest recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} /></p>
+          <p><strong>Scanner risk:</strong> {risk}</p>
+          <p><strong>Scan mode:</strong> {skill.scan_mode}</p>
+          <p><strong>Last scanned:</strong> {formatDate(skill.last_scanned)}</p>
+          <p><strong>Content hash:</strong> <code>{skill.content_hash}</code></p>
+        </section>
+        <ScannerFindings scannerRuns={scannerRuns} scannerFindings={scannerFindings} scannerArtifacts={scannerArtifacts} client:load />
+      </section>
+    </div>
+  </section>
+  <script>
+    import { readQueryValue, replaceQueryState } from "../../../lib/url-state.mjs";
+
+    const tabGroups = [
+      {
+        param: "tab",
+        defaultValue: "files",
+        options: [
+          { value: "files", id: "tab-files" },
+          { value: "assessment", id: "tab-assessment" },
+        ],
+      },
+      {
+        param: "fileTab",
+        defaultValue: "instructions",
+        options: [
+          { value: "instructions", id: "tab-skill-md" },
+          { value: "files", id: "tab-file-list" },
+        ],
+      },
+    ];
+
+    tabGroups.forEach((group) => {
+      const values = group.options.map((option) => option.value);
+      const selectedValue = readQueryValue(window.location.search, group.param, group.defaultValue, values);
+      const selectedOption = group.options.find((option) => option.value === selectedValue);
+      const selectedInput = selectedOption ? document.getElementById(selectedOption.id) : null;
+      if (selectedInput instanceof HTMLInputElement) {
+        selectedInput.checked = true;
+      }
+
+      group.options.forEach((option) => {
+        const input = document.getElementById(option.id);
+        if (!(input instanceof HTMLInputElement)) {
+          return;
+        }
+        input.addEventListener("change", () => {
+          if (input.checked) {
+            replaceQueryState({ [group.param]: option.value }, { [group.param]: group.defaultValue });
+          }
+        });
+      });
+    });
+
+    document.querySelectorAll("[data-dialog-target]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const dialog = document.getElementById(button.getAttribute("data-dialog-target") || "");
+        if (dialog instanceof HTMLDialogElement) {
+          dialog.showModal();
+        }
+      });
+    });
+  </script>
+</BaseLayout>

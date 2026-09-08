@@ -22,7 +22,7 @@ The exchange bot is the only actor that may produce or commit official generated
 
 ## Human Skill Change Workflow
 
-1. A contributor opens a merge request with a new or changed skill under `skills/`.
+1. A contributor opens a merge request with a new or changed skill under `products/skill-catalog/skills/`.
 2. MR CI validates package structure and inline `SKILL.md` metadata.
 3. MR CI warns on unknown category or tag values.
 4. MR CI runs SkillSpector when feasible.
@@ -30,18 +30,18 @@ The exchange bot is the only actor that may produce or commit official generated
 6. At least one human reviewer inspects the diff, metadata, validation output, and scanner context.
 7. A maintainer merges after required human approvals.
 8. The protected scheduled publication pipeline produces or reuses official BOE for the default branch.
-9. The exchange bot commits BOE bundles under `.exchange/generated/boe/` when bot publication is configured.
+9. The exchange bot commits BOE bundles under `maintainer/exchange/generated/boe/` when bot publication is configured.
 10. GitLab Pages publishes the updated static exchange from generated CI artifacts.
 
 ## Generated Output Workflow
 
-Generated output belongs under `.exchange/generated/`. BOE bundles under `.exchange/generated/boe/` are the durable generated evidence committed to the repository. They may include BOE records, exact native scanner output, scanner summaries, redacted scanner configuration, and supporting hashes.
+Generated output belongs under `maintainer/exchange/generated/`. BOE bundles under `maintainer/exchange/generated/boe/` are the durable generated evidence committed to the repository. They may include BOE records, exact native scanner output, scanner summaries, redacted scanner configuration, and supporting hashes.
 
 BOE bundles are also the authoritative scan reuse source. When a later publication computes the same skill content hash, scanner version, scan mode, and scanner configuration, it should reuse the matching BOE bundle instead of re-running the scanner.
 
 Generated index files, scanner tables, public scanner-run mirrors, generated skill records, and runtime skill zip artifacts are derived deploy artifacts. They should be generated in CI or locally and should not be committed.
 
-Generated-output merge requests from the exchange bot may be exempt from human review only when the diff is limited to BOE bundles under `.exchange/generated/boe/`.
+Generated-output merge requests from the exchange bot may be exempt from human review only when the diff is limited to BOE bundles under `maintainer/exchange/generated/boe/`.
 
 Bot generated-output merge requests must fail validation and must not automerge when they modify human-authored skill content, exchange policy files, CI configuration, documentation, or governance files.
 
@@ -54,7 +54,7 @@ Bot generated-output merge requests must fail validation and must not automerge 
 - Maintainers may reject unhelpful category or tag values during human review.
 - New or changed skills require at least one human reviewer before merge.
 - Risk levels are displayed for every visible skill.
-- Skills with `Unknown` risk are shown or hidden according to `.exchange/display-policy.yaml`.
+- Skills with `Unknown` risk are shown or hidden according to `maintainer/exchange/display-policy.yaml`.
 - LLM-assisted and static-only scans must be distinguishable through scan mode and confidence flags.
 - Exchange policy, CI behavior, runner routing, image selection, scanner installation, and provider credentials must remain configurable for the target environment.
 

@@ -1,0 +1,21 @@
+---
+import "../styles/global.css";
+import { relativeSiteRoot } from "../lib/portable-paths.mjs";
+const { title } = Astro.props;
+const baseHref = relativeSiteRoot(Astro.url.pathname);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href={baseHref} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <main class="page">
+      <slot />
+    </main>
+  </body>
+</html>

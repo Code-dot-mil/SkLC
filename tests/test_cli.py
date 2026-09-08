@@ -34,8 +34,8 @@ def test_publish_local_accepts_generated_dir_and_reuse_boe_only(monkeypatch, tmp
     cli.main()
 
     assert calls == {
-        "skills_root": Path("skills"),
-        "exchange_dir": Path(".exchange"),
+        "skills_root": Path("products/skill-catalog/skills"),
+        "exchange_dir": Path("maintainer/exchange"),
         "generated_dir": tmp_path / "local-generated",
         "scan_modes": ("static-only",),
         "reuse_boe_only": True,

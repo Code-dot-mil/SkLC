@@ -8,14 +8,14 @@ For skill governance and skill review roles, see `GOVERNANCE.md`.
 
 Exchange-site developers maintain:
 
-- Python tooling under `scripts/skill_exchange/`.
-- The Astro site under `site/`.
+- Maintainer Python tooling under `maintainer/skill_exchange/`.
+- The deployment-kit Astro site under `products/deployment-kit/site/`.
 - GitLab CI in `.gitlab-ci.yml`.
-- Exchange policy files under `.exchange/`.
+- Maintainer exchange policy files under `maintainer/exchange/`.
 - Developer and operator documentation.
 - Tests for validation, generated data, CI behavior, site behavior, and security-sensitive rendering.
 
-Skill packages under `skills/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
+Skill packages under `products/skill-catalog/skills/` are catalog content. Treat changes there as skill contributions, not exchange-site platform changes.
 
 ## First-Time Setup
 
@@ -25,7 +25,7 @@ Install project dependencies:
 
 ```sh
 uv sync --extra test
-npm ci --prefix site
+npm ci --prefix products/deployment-kit/site
 ```
 
 Python-only and Node-only checks do not require SkillSpector. Generation and deploy-equivalent local builds do, because they compute scanner cache keys and produce scanner-backed exchange data before the site build.
@@ -46,9 +46,9 @@ just build
 just ci-local
 ```
 
-Use `uv` directly for Python-only commands and `npm --prefix site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
+Use `uv` directly for Python-only commands and `npm --prefix products/deployment-kit/site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
 
-`just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds do not rewrite tracked CI-produced BOE bundles.
+`just generate` writes to `maintainer/exchange/local-generated/`, not `maintainer/exchange/generated/`, so local builds do not rewrite tracked CI-produced BOE bundles.
 
 The default scan mode is `static-only`. Use `just generate llm-assisted` or `just build llm-assisted` only after setting the generic `SKILL_EXCHANGE_LLM_*` environment variables.
 
@@ -69,14 +69,14 @@ Keep Python code focused on exchange validation, scanner orchestration, BOE gene
 Site code must pass:
 
 ```sh
-npm --prefix site run lint
-npm --prefix site run test
-npm --prefix site run build
+npm --prefix products/deployment-kit/site run lint
+npm --prefix products/deployment-kit/site run test
+npm --prefix products/deployment-kit/site run build
 ```
 
-Node-based tests belong under `site/tests/`. Python pytest should not depend on Node, npm install state, or `site/node_modules`.
+Node-based tests belong under `products/deployment-kit/site/tests/`. Python pytest should not depend on Node, npm install state, or `products/deployment-kit/site/node_modules`.
 
-The site must be able to build from deploy-time generated artifacts. When `.exchange/generated/` data is absent, the site should render a valid empty catalog rather than failing import resolution.
+The site must be able to build from deploy-time generated artifacts. When `maintainer/exchange/generated/` data is absent, the site should render a valid empty catalog rather than failing import resolution.
 
 ## CI Changes
 
@@ -88,15 +88,15 @@ When changing CI:
 - Keep Docker image registry, repository, tag, and full-image override variables configurable.
 - Keep environment-specific credentials, endpoints, scanner install commands, and bot settings in CI variables.
 - Do not introduce organization-specific variable names.
-- Preserve the path rules: lint, test, and audit run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; deploy runs from default-branch push pipelines and schedules.
+- Preserve the path rules: lint, test, and audit run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `products/skill-catalog/skills/**/*` changes; deploy runs from default-branch push pipelines and schedules.
 - Keep dependency-vulnerability triage in GitHub Security; do not add a scheduled CI job that duplicates the Dependabot backlog.
 - Validate with `glab ci lint` when GitLab access is available.
 
 ## Generated Files
 
-Do not hand-edit generated exchange data under `.exchange/generated/`. BOE bundles under `.exchange/generated/boe/` are durable generated evidence. Derived site data such as `index.json`, `tables/`, `skills/`, `scanner-runs/`, and `zips/` should be regenerated locally or by CI and not committed.
+Do not hand-edit generated exchange data under `maintainer/exchange/generated/`. BOE bundles under `maintainer/exchange/generated/boe/` are durable generated evidence. Derived site data such as `index.json`, `tables/`, `skills/`, `scanner-runs/`, and `zips/` should be regenerated locally or by CI and not committed.
 
-Do not commit local caches or build output such as `site/dist/`, `site/.astro/`, `site/node_modules/`, `.pytest_cache/`, or `.venv/`.
+Do not commit local caches or build output such as `products/deployment-kit/site/dist/`, `products/deployment-kit/site/.astro/`, `products/deployment-kit/site/node_modules/`, `.pytest_cache/`, or `.venv/`.
 
 ## Documentation
 

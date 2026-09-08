@@ -71,7 +71,7 @@ def test_legacy_provider_specific_llm_env_names_are_not_committed():
     root = Path(__file__).resolve().parents[1]
     old_prefix = "MDEV" + "CHAT"
     checked_paths = [
-        root / "scripts" / "skill_exchange" / "skillspector.py",
+        root / "maintainer" / "skill_exchange" / "skillspector.py",
         root / "CI.md",
         root / "README.md",
         root / "CONTRIBUTING.md",

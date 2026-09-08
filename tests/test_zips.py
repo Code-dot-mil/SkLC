@@ -42,7 +42,12 @@ def test_skill_zip_rejects_symlinks(tmp_path: Path):
     (skill_dir / "SKILL.md").write_text("# Sample Skill\n")
     outside = tmp_path / "outside.txt"
     outside.write_text("do not package\n")
-    (skill_dir / "leak.txt").symlink_to(outside)
+    try:
+        (skill_dir / "leak.txt").symlink_to(outside)
+    except OSError as error:
+        if getattr(error, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege is unavailable")
+        raise
 
     with pytest.raises(ValueError, match="symlink"):
         write_skill_zip(_skill_package(skill_dir), tmp_path / "generated" / "zips")

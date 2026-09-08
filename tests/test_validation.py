@@ -8,7 +8,7 @@ from skill_exchange.validation import validate_skill
 
 
 def test_validation_accepts_valid_fixture():
-    policy = load_exchange_policy(Path(".exchange"))
+    policy = load_exchange_policy(Path("maintainer/exchange"))
     skill = discover_skills(Path("tests/fixtures/skills"))[0]
 
     result = validate_skill(skill, policy)
@@ -18,7 +18,7 @@ def test_validation_accepts_valid_fixture():
 
 
 def test_validation_warns_for_unknown_category_and_tag():
-    policy = load_exchange_policy(Path(".exchange"))
+    policy = load_exchange_policy(Path("maintainer/exchange"))
     skill = discover_skills(Path("tests/fixtures/skills"))[0]
     metadata = replace(skill.metadata, category="not-a-category", tags=("unknown-tag",))
     changed = SkillPackage(
@@ -35,7 +35,7 @@ def test_validation_warns_for_unknown_category_and_tag():
 
 
 def test_validation_flags_missing_owner():
-    policy = load_exchange_policy(Path(".exchange"))
+    policy = load_exchange_policy(Path("maintainer/exchange"))
     skill = discover_skills(Path("tests/fixtures/skills"))[0]
     metadata = replace(skill.metadata, owner=None)
     changed = SkillPackage(

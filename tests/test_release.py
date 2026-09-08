@@ -23,10 +23,12 @@ def _write(path: Path, content: str = "fixture\n") -> None:
 
 def _release_fixture(tmp_path: Path) -> tuple[Path, Path]:
     repo = tmp_path / "repo"
-    docs = repo / "products" / "deployment-kit" / "docs" / "prebuilt"
-    for name in ("README.md", "install.md", "deploy-gitlab-pages.md", "deploy-static-hosting.md"):
+    prebuilt = repo / "products" / "deployment-kit" / "prebuilt"
+    _write(prebuilt / "README.md")
+    docs = prebuilt / "docs"
+    for name in ("install.md", "deploy-gitlab-pages.md", "deploy-static-hosting.md"):
         _write(docs / name)
-    _write(repo / "products" / "deployment-kit" / "ci" / "gitlab" / "prebuilt" / ".gitlab-ci.yml")
+    _write(prebuilt / ".gitlab-ci.yml")
     _write(repo / "products" / "skill-catalog" / "README.md")
     _write(
         repo / "products" / "skill-catalog" / "catalog-policy.yaml",
@@ -41,7 +43,7 @@ def _release_fixture(tmp_path: Path) -> tuple[Path, Path]:
     )
     for skill in SKILLS:
         _write(
-            repo / "skills" / "ai4sdlc" / skill / "SKILL.md",
+            repo / "products" / "skill-catalog" / "skills" / "ai4sdlc" / skill / "SKILL.md",
             f"---\nname: {skill}\ndescription: Fixture skill.\n---\n\n# {skill}\n",
         )
     manifest_fields = [
@@ -58,9 +60,10 @@ def _release_fixture(tmp_path: Path) -> tuple[Path, Path]:
         repo / "contracts" / "release-manifest" / "v1" / "release-manifest.schema.json",
         json.dumps({"required": manifest_fields, "properties": dict.fromkeys(manifest_fields, {})}) + "\n",
     )
+    _write(repo / "contracts" / "release-manifest" / "v1" / "example.json", "{}\n")
     _write(repo / "contracts" / "skill-package" / "v1" / "skill.schema.json", "{}\n")
 
-    site = repo / "site" / "dist"
+    site = repo / "products" / "deployment-kit" / "site" / "dist"
     _write(site / "index.html", '<a href="downloads/example.zip">Download</a>\n')
     _write(site / "assets" / "site.css")
     _write(site / "downloads" / "example.zip")
@@ -81,6 +84,40 @@ def _archive_files(path: Path) -> tuple[str, set[str], dict, dict[str, str]]:
             content = archive.extractfile(f"{root}/{relative}").read()
             assert hashlib.sha256(content).hexdigest() == digest
     return root, files, manifest, checksums
+
+
+def _build_delivered_deployment_package(tmp_path: Path) -> Path:
+    repo, site = _release_fixture(tmp_path)
+    repository_root = Path(__file__).parents[1]
+    delivered_ci = repository_root / "products" / "deployment-kit" / "prebuilt" / ".gitlab-ci.yml"
+    (repo / "products" / "deployment-kit" / "prebuilt" / ".gitlab-ci.yml").write_bytes(delivered_ci.read_bytes())
+    output = tmp_path / "release"
+    build_release(
+        repo_root=repo,
+        site_dir=site,
+        output_dir=output,
+        version="1.2.3",
+        source_revision="abc123",
+        source_date_epoch=1_800_000_000,
+    )
+    extracted = tmp_path / "extracted"
+    with tarfile.open(output / "deployment-kit-prebuilt-1.2.3.tar.gz", "r:gz") as archive:
+        archive.extractall(extracted, filter="data")
+    return extracted / "deployment-kit-prebuilt-1.2.3"
+
+
+def _run_delivered_gitlab_verification(monkeypatch, package_root: Path) -> None:
+    definition = yaml.safe_load((package_root / ".gitlab-ci.yml").read_text())
+    verification = next(command for command in definition["pages"]["script"] if "python3 - <<'PY'" in command)
+    lines = verification.splitlines()
+    python_source = "\n".join(lines[1:-1])
+
+    previous = Path.cwd()
+    monkeypatch.chdir(package_root)
+    try:
+        exec(compile(python_source, ".gitlab-ci.yml", "exec"), {})
+    finally:
+        os.chdir(previous)
 
 
 def test_build_release_creates_both_product_archives_and_external_metadata(tmp_path: Path):
@@ -124,6 +161,26 @@ def test_build_release_creates_both_product_archives_and_external_metadata(tmp_p
         assert hashlib.sha256((output / relative).read_bytes()).hexdigest() == digest
     assert {entry["path"]: entry["sha256"].removeprefix("sha256:") for entry in external["artifacts"]} == {
         path: digest for path, digest in checksums.items() if path != "release-manifest.json"
+    }
+
+
+def test_build_release_is_reproducible_for_a_fixed_revision_and_timestamp(tmp_path: Path):
+    repo, site = _release_fixture(tmp_path)
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    for output in (first, second):
+        build_release(
+            repo_root=repo,
+            site_dir=site,
+            output_dir=output,
+            version="1.2.3",
+            source_revision="abc123",
+            source_date_epoch=1_800_000_000,
+        )
+
+    assert {path.name: path.read_bytes() for path in first.iterdir()} == {
+        path.name: path.read_bytes() for path in second.iterdir()
     }
 
 
@@ -257,33 +314,24 @@ def test_extract_release_notes_returns_only_requested_version(tmp_path: Path):
 
 
 def test_delivered_gitlab_verification_accepts_built_package(monkeypatch, tmp_path: Path):
-    repo, site = _release_fixture(tmp_path)
-    repository_root = Path(__file__).parents[1]
-    delivered_ci = repository_root / "products" / "deployment-kit" / "ci" / "gitlab" / "prebuilt" / ".gitlab-ci.yml"
-    (repo / "products" / "deployment-kit" / "ci" / "gitlab" / "prebuilt" / ".gitlab-ci.yml").write_bytes(
-        delivered_ci.read_bytes()
-    )
-    output = tmp_path / "release"
-    build_release(
-        repo_root=repo,
-        site_dir=site,
-        output_dir=output,
-        version="1.2.3",
-        source_revision="abc123",
-        source_date_epoch=1_800_000_000,
-    )
-    extracted = tmp_path / "extracted"
-    with tarfile.open(output / "deployment-kit-prebuilt-1.2.3.tar.gz", "r:gz") as archive:
-        archive.extractall(extracted, filter="data")
-    package_root = extracted / "deployment-kit-prebuilt-1.2.3"
-    definition = yaml.safe_load((package_root / ".gitlab-ci.yml").read_text())
-    verification = next(command for command in definition["pages"]["script"] if "python3 - <<'PY'" in command)
-    lines = verification.splitlines()
-    python_source = "\n".join(lines[1:-1])
+    package_root = _build_delivered_deployment_package(tmp_path)
+    _run_delivered_gitlab_verification(monkeypatch, package_root)
 
-    previous = Path.cwd()
-    monkeypatch.chdir(package_root)
-    try:
-        exec(compile(python_source, ".gitlab-ci.yml", "exec"), {})
-    finally:
-        os.chdir(previous)
+
+def test_delivered_gitlab_verification_rejects_changed_site_file(monkeypatch, tmp_path: Path):
+    package_root = _build_delivered_deployment_package(tmp_path)
+    (package_root / "public" / "assets" / "site.css").write_text("changed\n")
+
+    with pytest.raises(SystemExit, match="checksum mismatch: public/assets/site.css"):
+        _run_delivered_gitlab_verification(monkeypatch, package_root)
+
+
+def test_delivered_gitlab_verification_rejects_wrong_product(monkeypatch, tmp_path: Path):
+    package_root = _build_delivered_deployment_package(tmp_path)
+    manifest_path = package_root / "release-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["product"] = "skill-catalog"
+    manifest_path.write_text(json.dumps(manifest))
+
+    with pytest.raises(SystemExit, match="not for deployment-kit-prebuilt"):
+        _run_delivered_gitlab_verification(monkeypatch, package_root)

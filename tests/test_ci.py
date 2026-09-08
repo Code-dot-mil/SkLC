@@ -6,7 +6,7 @@ from skill_exchange import ci
 
 
 def _write_skill(root: Path, namespace: str, skill_id: str, description: str = "Use when testing CI.") -> Path:
-    skill_dir = root / "skills" / namespace / skill_id
+    skill_dir = root / ci.CATALOG_SKILLS_ROOT / namespace / skill_id
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
         f"""---
@@ -30,18 +30,18 @@ def test_changed_skill_paths_detects_skill_roots_only(tmp_path: Path):
 
     changed = ci.changed_skill_paths_from_names(
         [
-            "site/src/pages/index.astro",
-            "skills/team/reviewed-skill/SKILL.md",
-            "skills/team/reviewed-skill/references/note.md",
-            "skills/team/missing-skill/README.md",
+            "products/deployment-kit/site/src/pages/index.astro",
+            "products/skill-catalog/skills/team/reviewed-skill/SKILL.md",
+            "products/skill-catalog/skills/team/reviewed-skill/references/note.md",
+            "products/skill-catalog/skills/team/missing-skill/README.md",
         ],
         repo_root=tmp_path,
-        skills_root=Path("skills"),
+        skills_root=ci.CATALOG_SKILLS_ROOT,
     )
 
     assert changed == [
-        tmp_path / "skills" / "team" / "missing-skill",
-        tmp_path / "skills" / "team" / "reviewed-skill",
+        tmp_path / ci.CATALOG_SKILLS_ROOT / "team" / "missing-skill",
+        tmp_path / ci.CATALOG_SKILLS_ROOT / "team" / "reviewed-skill",
     ]
 
 
@@ -67,7 +67,7 @@ def test_review_changed_skills_writes_reviewer_artifacts(monkeypatch, tmp_path: 
     result = ci.review_changed_skills(
         changed_skill_paths=[reviewed],
         repo_root=tmp_path,
-        exchange_dir=Path.cwd() / ".exchange",
+        exchange_dir=Path.cwd() / ci.EXCHANGE_ROOT,
         artifacts_dir=artifacts,
         scan_mode="static-only",
         post_comment=False,
@@ -142,7 +142,7 @@ def test_review_comment_includes_all_scanner_findings(monkeypatch, tmp_path: Pat
     ci.review_changed_skills(
         changed_skill_paths=[reviewed],
         repo_root=tmp_path,
-        exchange_dir=Path.cwd() / ".exchange",
+        exchange_dir=Path.cwd() / ci.EXCHANGE_ROOT,
         artifacts_dir=artifacts,
         scan_mode="llm-assisted",
         post_comment=False,
@@ -173,9 +173,11 @@ def test_parse_scan_modes_accepts_comma_and_space_separated_values():
 def test_commit_generated_outputs_force_adds_only_boe_bundle(monkeypatch, tmp_path: Path):
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     (tmp_path / ".gitignore").write_text(
-        ".exchange/generated/*\n!.exchange/generated/boe/\n!.exchange/generated/boe/**\n"
+        "maintainer/exchange/generated/*\n"
+        "!maintainer/exchange/generated/boe/\n"
+        "!maintainer/exchange/generated/boe/**\n"
     )
-    generated = tmp_path / ".exchange" / "generated"
+    generated = tmp_path / ci.EXCHANGE_ROOT / "generated"
     boe = generated / "boe" / "team" / "skill" / "hash" / "scan-key"
     tables = generated / "tables"
     zips = generated / "zips"
@@ -192,17 +194,17 @@ def test_commit_generated_outputs_force_adds_only_boe_bundle(monkeypatch, tmp_pa
     result = ci.commit_generated_outputs(repo_root=tmp_path, generated_dir=generated)
 
     assert result["committed"] is True
-    assert result["path"] == ".exchange/generated/boe"
+    assert result["path"] == "maintainer/exchange/generated/boe"
     tracked = subprocess.run(
-        ["git", "ls-files", ".exchange/generated"],
+        ["git", "ls-files", "maintainer/exchange/generated"],
         cwd=tmp_path,
         check=True,
         capture_output=True,
         text=True,
     )
     assert tracked.stdout.splitlines() == [
-        ".exchange/generated/boe/team/skill/hash/scan-key/boe.json",
-        ".exchange/generated/boe/team/skill/hash/scan-key/skillspector.json",
+        "maintainer/exchange/generated/boe/team/skill/hash/scan-key/boe.json",
+        "maintainer/exchange/generated/boe/team/skill/hash/scan-key/skillspector.json",
     ]
 
 

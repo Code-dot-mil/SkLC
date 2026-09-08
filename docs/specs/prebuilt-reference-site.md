@@ -44,6 +44,7 @@ Required release contents:
 
 - `public/` contains the final static site output. It must be deployable as-is and must include `index.html`.
 - `public/downloads/` contains every downloadable skill artifact referenced by the prebuilt site. Each referenced download path must exist in the archive.
+- Internal site links are relative so the unchanged `public/` directory works at a domain root or a Pages project path.
 - `.gitlab-ci.yml` is deployment-only GitLab CI. It must not build the site, assemble a catalog, run assessment tooling, or fetch release inputs.
 - `README.md` is the entry point and links to `docs/install.md`, `docs/deploy-gitlab-pages.md`, and `docs/deploy-static-hosting.md`.
 - `docs/install.md` documents extraction, checksum verification, and how to prepare the extracted files for the selected hosting path.

@@ -40,29 +40,6 @@ The design deliberately avoids a backend service, database, MCP endpoint, user a
 The repository must have this shape:
 
 ```text
-.exchange/
-  categories.yaml
-  display-policy.yaml
-  risk-policy.yaml
-  site-config.json
-  tags.yaml
-  generated/
-    .gitkeep
-    boe/
-      <namespace>/
-        <skill-id>/
-          <content-hash>/
-            <scan-cache-key>/
-              boe.json
-              hashes.json
-              scanner-config.json
-              skillspector.json
-              summary.json
-
-.skill-lifecycle/
-  metadata/
-    <skill-id>.yaml
-
 contracts/
   README.md
   skill-package/v1/
@@ -72,7 +49,74 @@ contracts/
   catalog-policy/v1/
   release-manifest/v1/
 
-scripts/
+products/
+  assessment-kit/
+    README.md
+  skill-catalog/
+    README.md
+    catalog-policy.yaml
+    skills/
+      <namespace>/
+        <skill-id>/
+          SKILL.md
+          references/
+          scripts/
+          assets/
+  deployment-kit/
+    site/
+      .npmrc
+      astro.config.mjs
+      package.json
+      package-lock.json
+      scripts/
+        copy-downloads.mjs
+      src/
+        components/
+        layouts/
+        lib/
+        pages/
+          index.astro
+          skills/[namespace]/[skillId].astro
+        styles/
+      tests/
+      tsconfig.json
+    prebuilt/
+      .gitlab-ci.yml
+      README.md
+      docs/
+        install.md
+        deploy-gitlab-pages.md
+        deploy-static-hosting.md
+    operator/
+      README.md
+
+maintainer/
+  exchange/
+    categories.yaml
+    display-policy.yaml
+    risk-policy.yaml
+    site-config.json
+    tags.yaml
+    generated/
+      .gitkeep
+      boe/
+        <namespace>/
+          <skill-id>/
+            <content-hash>/
+              <scan-cache-key>/
+                boe.json
+                hashes.json
+                scanner-config.json
+                skillspector.json
+                summary.json
+  fixtures/
+    skills/
+      ai4sdlc/
+        benign-scanner-demo/
+          SKILL.md
+  lifecycle/
+    metadata/
+      <skill-id>.yaml
   skill_exchange/
     __init__.py
     boe.py
@@ -87,44 +131,6 @@ scripts/
     skillspector.py
     validation.py
     zipper.py
-
-site/
-  .npmrc
-  astro.config.mjs
-  package.json
-  package-lock.json
-  scripts/
-    copy-downloads.mjs
-  src/
-    components/
-      RecommendationBadge.astro
-      ScannerFindings.tsx
-      SkillCatalog.tsx
-    layouts/
-      BaseLayout.astro
-    lib/
-      exchange-data.mjs
-      sanitize-skill-html.mjs
-      url-state.d.ts
-      url-state.mjs
-    pages/
-      index.astro
-      skills/[namespace]/[skillId].astro
-    styles/
-      global.css
-  tests/
-    copy-downloads.test.mjs
-    sanitize-skill-html.test.mjs
-    url-state.test.mjs
-  tsconfig.json
-
-skills/
-  <namespace>/
-    <skill-id>/
-      SKILL.md
-      references/
-      scripts/
-      assets/
 
 tests/
   fixtures/
@@ -156,7 +162,7 @@ uv.lock
 uv.toml
 ```
 
-Durable generated evidence is limited to `.exchange/generated/boe/`. Derived generated outputs such as `.exchange/generated/index.json`, `.exchange/generated/tables/`, `.exchange/generated/skills/`, `.exchange/generated/scanner-runs/`, `.exchange/generated/zips/`, `site/public/downloads/`, and `site/dist/` are deploy-time or local build artifacts and must not be committed.
+Durable generated evidence is limited to `maintainer/exchange/generated/boe/`. Derived generated outputs such as `maintainer/exchange/generated/index.json`, `maintainer/exchange/generated/tables/`, `maintainer/exchange/generated/skills/`, `maintainer/exchange/generated/scanner-runs/`, `maintainer/exchange/generated/zips/`, `products/deployment-kit/site/public/downloads/`, and `products/deployment-kit/site/dist/` are deploy-time or local build artifacts and must not be committed.
 
 ### Cross-product contract sources
 
@@ -168,7 +174,7 @@ The checked-in `v1` contracts are a first-pass target boundary for the near-term
 
 Contract major versions change when a required field, field meaning, or serialized shape changes incompatibly. Current catalog materialization will support only its declared current BOE major version. Legacy BOE may remain tracked as historical evidence, but it is not eligible for the current catalog and its presence alone is not an error. Currently served skill content without matching BOE in the supported schema must be reassessed or excluded.
 
-`.gitignore` must ignore `.exchange/generated/*` while re-including `.exchange/generated/.gitkeep` and `.exchange/generated/boe/**`. It must also ignore `.exchange/local-generated/`, site build output, Node dependencies, Python caches, `.uv-cache/`, `.venv/`, and bytecode.
+`.gitignore` must ignore `maintainer/exchange/generated/*` while re-including `maintainer/exchange/generated/.gitkeep` and `maintainer/exchange/generated/boe/**`. It must also ignore `maintainer/exchange/local-generated/`, site build output, Node dependencies, Python caches, `.uv-cache/`, `.venv/`, and bytecode.
 
 ## Stack
 
@@ -176,9 +182,9 @@ Use Python 3.12 for exchange tooling and CI helpers. Use `uv` for dependency man
 
 Use Astro with TypeScript for the static site, with React components only for client-side interactivity. The site depends on Astro, React, React DOM, `@astrojs/react`, `@astrojs/markdown-remark`, and TypeScript. Node.js 22 is the target runtime for site build and tests.
 
-`uv.toml` sets `index-url = "https://pypi.org/simple"`. `site/.npmrc` sets `registry=https://registry.npmjs.org/` and `replace-registry-host=registry.npmjs.org`. These defaults keep lockfile resolution stable while still allowing CI images and network access to be configured outside the repository.
+`uv.toml` sets `index-url = "https://pypi.org/simple"`. `products/deployment-kit/site/.npmrc` sets `registry=https://registry.npmjs.org/` and `replace-registry-host=registry.npmjs.org`. These defaults keep lockfile resolution stable while still allowing CI images and network access to be configured outside the repository.
 
-Root `package.json` only wraps site commands with `npm --prefix site`: `site:build`, `site:lint`, `site:test`, and `site:typecheck`. Site `package.json` scripts are `prebuild`, `build`, `dev`, `lint`, `test`, and `typecheck`.
+Root `package.json` only wraps site commands with `npm --prefix products/deployment-kit/site`: `site:build`, `site:lint`, `site:test`, and `site:typecheck`. Site `package.json` scripts are `prebuild`, `build`, `dev`, `lint`, `test`, and `typecheck`.
 
 Use `just` as the cross-stack developer wrapper:
 
@@ -195,14 +201,14 @@ Use Python and Node directly for targeted checks:
 uv run --extra test ruff check scripts tests
 uv run --extra test pytest
 uv run python -m compileall scripts tests
-npm --prefix site run lint
-npm --prefix site run test
-npm --prefix site run build
+npm --prefix products/deployment-kit/site run lint
+npm --prefix products/deployment-kit/site run test
+npm --prefix products/deployment-kit/site run build
 ```
 
 ## Exchange Policy Files
 
-`.exchange/categories.yaml` defines controlled category values:
+`maintainer/exchange/categories.yaml` defines controlled category values:
 
 ```yaml
 categories:
@@ -216,7 +222,7 @@ categories:
     label: Collaboration
 ```
 
-`.exchange/tags.yaml` defines controlled tags:
+`maintainer/exchange/tags.yaml` defines controlled tags:
 
 ```yaml
 tags:
@@ -231,7 +237,7 @@ tags:
   - skillspector
 ```
 
-`.exchange/display-policy.yaml` controls index visibility and display:
+`maintainer/exchange/display-policy.yaml` controls index visibility and display:
 
 ```yaml
 show_unknown_risk: false
@@ -241,7 +247,7 @@ default_sort: name
 
 `show_unknown_risk: false` means generated skills with `Unknown` risk are omitted from default site index data. The detail record may still be written to generated output. `show_unknown_risk: true` includes `Unknown` skills in the generated index.
 
-`.exchange/risk-policy.yaml` documents the risk mapping:
+`maintainer/exchange/risk-policy.yaml` documents the risk mapping:
 
 ```yaml
 risk_levels:
@@ -262,7 +268,7 @@ confidence_flags:
     - Low confidence
 ```
 
-`.exchange/site-config.json` supplies source-link defaults:
+`maintainer/exchange/site-config.json` supplies source-link defaults:
 
 ```json
 {
@@ -277,11 +283,11 @@ confidence_flags:
 
 ## Skill Package Format
 
-Skill packages live at `skills/<namespace>/<skill-id>/`. The folder path is the authoritative identity source. Namespaces are open in the MVP and should be based on the publishing GitLab group, team, or organization. The current implementation treats namespace as one filesystem path segment. Do not store a URL as the namespace.
+Skill packages live at `products/skill-catalog/skills/<namespace>/<skill-id>/`. The folder path is the authoritative identity source. Namespaces are open in the MVP and should be based on the publishing GitLab group, team, or organization. The current implementation treats namespace as one filesystem path segment. Do not store a URL as the namespace.
 
 Each package must include `SKILL.md` with YAML frontmatter at the start of the file. Optional `references/`, `scripts/`, and `assets/` directories are included in hashes and runtime zips.
 
-Optional seed lifecycle metadata may live under `.skill-lifecycle/metadata/<skill-id>.yaml` using the same stable skill ID as the runtime package. This metadata is governance and validation context, not runtime skill instruction context, and is not included in runtime zips.
+Optional seed lifecycle metadata may live under `maintainer/lifecycle/metadata/<skill-id>.yaml` using the same stable skill ID as the runtime package. This metadata is governance and validation context, not runtime skill instruction context, and is not included in runtime zips.
 
 MVP-0.2 lifecycle metadata includes `schema_version`, `skill_id`, `tier`, `owner`, `purpose`, `intended_users`, `use_context`, `positive_triggers`, `negative_triggers`, and `known_failure_cases`. The current exchange publisher does not enforce these files yet; they are repository-level authoring inputs for the lifecycle validation path.
 
@@ -307,7 +313,7 @@ Validation behavior:
 | `name` | Required. Must equal the `<skill-id>` folder name. Mismatch is an error. |
 | `description` | Required and must not be blank. Blank is an error. |
 | `metadata.ai4sdlc.namespace` | Optional. Warn if present and different from the namespace folder. |
-| `metadata.ai4sdlc.category` | Optional. Warn if not present in `.exchange/categories.yaml`. |
+| `metadata.ai4sdlc.category` | Optional. Warn if not present in `maintainer/exchange/categories.yaml`. |
 | `metadata.ai4sdlc.tags` | Optional. Accept comma-separated string or YAML list. Warn for unknown values. |
 | `metadata.ai4sdlc.owner` | Optional. Missing owner creates metadata flag `missing_owner`. |
 | `metadata.ai4sdlc.upstream_url` | Optional. Records provenance for copied, forked, mirrored, or adapted skills. |
@@ -316,7 +322,7 @@ Unknown category and tag values are warnings, not failures, in the MVP. Reviewer
 
 ## Python Data Model
 
-`scripts/skill_exchange/models.py` defines frozen dataclasses:
+`maintainer/skill_exchange/models.py` defines frozen dataclasses:
 
 - `SkillMetadata`: `namespace`, `skill_id`, `name`, `description`, optional `category`, tuple `tags`, optional `owner`, optional `upstream_url`, raw frontmatter dict, and computed `display_id` of `<namespace>/<skill-id>`.
 - `SkillPackage`: metadata, package path, `SKILL.md` path, and `content_hash`.
@@ -338,7 +344,7 @@ Use dataclasses for the Python model rather than introducing a heavier schema fr
 
 `skills.py` discovers skills with `skills_root.glob("*/*/SKILL.md")`, sorted by path. For each skill:
 
-- `namespace` is the parent folder name under `skills/`.
+- `namespace` is the parent folder name under `products/skill-catalog/skills/`.
 - `skill_id` is the skill folder name.
 - Metadata is extracted from frontmatter.
 - Tags may be comma-separated string or YAML list.
@@ -475,7 +481,7 @@ The cache key must differ when the model or scanner config differs. Versions wit
 `boe.py` writes official evidence under:
 
 ```text
-.exchange/generated/boe/<namespace>/<skill-id>/<content-hash>/<scan-cache-key>/
+maintainer/exchange/generated/boe/<namespace>/<skill-id>/<content-hash>/<scan-cache-key>/
 ```
 
 Each bundle contains:
@@ -528,17 +534,17 @@ Behavior:
    - the reuse-only path obtains scanner version, configuration, report, and provenance from tracked BOE and never calls SkillSpector, computes a live scanner configuration, reads live LLM configuration, or writes BOE;
    - otherwise compute scanner version, scanner config, and scan cache key;
    - first reuse matching current scanner-run table entries when the native report still exists;
-   - otherwise reuse matching tracked BOE bundles from `.exchange/generated/boe/`;
+   - otherwise reuse matching tracked BOE bundles from `maintainer/exchange/generated/boe/`;
    - otherwise run SkillSpector;
    - if SkillSpector raises, synthesize a scanner failure report with metadata `scan_error`, write it to the temporary report path, and continue with `Unknown` risk;
    - write BOE;
-   - mirror run artifacts into `.exchange/generated/scanner-runs/<run-id>/`;
+   - mirror run artifacts into `maintainer/exchange/generated/scanner-runs/<run-id>/`;
    - append rows for scanner runs, scanner artifacts, and scanner findings.
-8. Write a runtime skill zip to `.exchange/generated/zips/<namespace>--<skill-id>.zip`.
-9. Write a skill detail JSON record under `.exchange/generated/skills/<namespace>--<skill-id>.json`.
+8. Write a runtime skill zip to `maintainer/exchange/generated/zips/<namespace>--<skill-id>.zip`.
+9. Write a skill detail JSON record under `maintainer/exchange/generated/skills/<namespace>--<skill-id>.json`.
 10. Select the display assessment from the latest scanner run, using scan mode tie-breaker where `llm-assisted` outranks `static-only`.
-11. Include the skill in `.exchange/generated/index.json` only when risk is not `Unknown` or `show_unknown_risk` is true.
-12. Write table files under `.exchange/generated/tables/`.
+11. Include the skill in `maintainer/exchange/generated/index.json` only when risk is not `Unknown` or `show_unknown_risk` is true.
+12. Write table files under `maintainer/exchange/generated/tables/`.
 13. Return JSON-compatible result with `skills_written`, `reused_scans`, and `invalid_skills`.
 
 Generated skill records include:
@@ -565,7 +571,7 @@ Generated skill records include:
 
 ## Generated Tables
 
-The builder writes JSON table files under `.exchange/generated/tables/`. Each table has schema version `skill-exchange-table/<name>/v0` and a `rows` array.
+The builder writes JSON table files under `maintainer/exchange/generated/tables/`. Each table has schema version `skill-exchange-table/<name>/v0` and a `rows` array.
 
 `skills.json` contains the full generated skill records, including records omitted from the public index when unknown risk is hidden.
 
@@ -603,7 +609,7 @@ The builder writes JSON table files under `.exchange/generated/tables/`. Each ta
 `zipper.py` writes one zip per skill package:
 
 ```text
-.exchange/generated/zips/<namespace>--<skill-id>.zip
+maintainer/exchange/generated/zips/<namespace>--<skill-id>.zip
 ```
 
 The archive must preserve the skill directory:
@@ -624,10 +630,10 @@ Each exchange build clears the generated `zips/` directory before packaging the 
 `cli.py` provides local publication:
 
 ```sh
-uv run python -m skill_exchange.cli publish-local --generated-dir .exchange/local-generated --scan-mode static-only
+uv run python -m skill_exchange.cli publish-local --generated-dir maintainer/exchange/local-generated --scan-mode static-only
 ```
 
-`--scan-mode` may be repeated. If omitted, local publication runs both `static-only` and `llm-assisted`. The `Justfile` should call local generation with `.exchange/local-generated/` and default to `static-only` so developers do not rewrite tracked CI BOE for convenience.
+`--scan-mode` may be repeated. If omitted, local publication runs both `static-only` and `llm-assisted`. The `Justfile` should call local generation with `maintainer/exchange/local-generated/` and default to `static-only` so developers do not rewrite tracked CI BOE for convenience.
 
 `--reuse-boe-only` reconstructs disposable index, table, scanner-run, detail, and zip output from tracked BOE for exact current skill content. It fails when any requested skill/mode lacks valid tracked evidence and when the resulting public index is empty. This mode cannot run SkillSpector or an LLM.
 
@@ -684,8 +690,8 @@ The publish command runs `build_exchange()`, writes the result JSON, and optiona
 
 When `--commit-generated` or `EXCHANGE_PUBLISH_COMMIT=true` is set, `commit_generated_outputs()` must:
 
-- commit only `.exchange/generated/boe/`;
-- use `git add -f -- .exchange/generated/boe`;
+- commit only `maintainer/exchange/generated/boe/`;
+- use `git add -f -- maintainer/exchange/generated/boe`;
 - not add derived `index.json`, `tables/`, `skills/`, `scanner-runs/`, or `zips/`;
 - return `no BOE generated` when no BOE directory exists;
 - return `no generated changes` when staged BOE is unchanged;
@@ -705,7 +711,7 @@ Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be
 
 The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
 
-Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation, builds `site/dist/`, verifies catalog detail pages and skill downloads, and uploads its contents as the downloadable `static-site` zip artifact.
+Python 3.12 jobs run `uv run --extra test ruff check maintainer tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix products/deployment-kit/site run lint` and `npm --prefix products/deployment-kit/site run test` after `npm ci --prefix products/deployment-kit/site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation, builds `products/deployment-kit/site/dist/`, verifies catalog detail pages and skill downloads, and uploads its contents as the downloadable `static-site` zip artifact.
 
 ## GitHub Release Packaging
 
@@ -723,7 +729,7 @@ also includes a top-level manifest that records both archives and a top-level
 checksum file that verifies both archives and the manifest. Release notes are not
 uploaded as an asset.
 
-`scripts/skill_exchange/release.py` assembles both products from source-controlled
+`maintainer/skill_exchange/release.py` assembles both products from source-controlled
 policy, documentation, contracts, and the built site. It rejects symbolic links,
 unknown catalog skills, invalid skill names, missing site downloads, path escape,
 and manifest/checksum disagreement. Archive metadata uses `SOURCE_DATE_EPOCH` so
@@ -731,7 +737,9 @@ the tag workflow produces repeatable archives from a fixed revision.
 
 The deployment package contains the unchanged built site under `public/`, a
 deployment-only GitLab Pages configuration, customer documentation, and the
-release-manifest contract. The catalog package contains exactly the four skills
+release-manifest contract. Its relative internal links allow a runner to publish
+the same `public/` directory at a domain root or a Pages project path. The
+catalog package contains exactly the four skills
 selected by `products/skill-catalog/catalog-policy.yaml`, the skill-package and
 release-manifest contracts, and no site, maintainer workflow, GitLab CI, or
 internal catalog policy.
@@ -770,8 +778,8 @@ Global CI defaults:
 Path rules:
 
 - `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, policy, lockfiles, or CI configuration changes.
-- `review:skills` runs only for merge requests with `skills/**/*` changes.
-- `publish:exchange` runs on schedules and default-branch push pipelines with `skills/**/*` changes.
+- `review:skills` runs only for merge requests with `products/skill-catalog/skills/**/*` changes.
+- `publish:exchange` runs on schedules and default-branch push pipelines with `products/skill-catalog/skills/**/*` changes.
 - `generate:exchange` runs on default-branch push pipelines that do not change skills.
 - `pages` runs on schedules and default-branch push pipelines and consumes artifacts from `publish:exchange` or `generate:exchange`.
 
@@ -786,21 +794,21 @@ Node jobs:
 
 - run in `$NODE_IMAGE`;
 - use `$SKILL_EXCHANGE_RUNNER_TAG` except `pages`;
-- run `npm ci --prefix site --cache "$NPM_CACHE_DIR" --prefer-offline`;
+- run `npm ci --prefix products/deployment-kit/site --cache "$NPM_CACHE_DIR" --prefer-offline`;
 - cache `.npm/`.
 
 Jobs:
 
 - `lint:python`: `ruff check`, `compileall`, and YAML parse for `.gitlab-ci.yml`.
-- `lint:site`: `npm --prefix site run lint`.
+- `lint:site`: `npm --prefix products/deployment-kit/site run lint`.
 - `test:python`: `uv run pytest`.
-- `test:site`: `npm --prefix site run test`.
+- `test:site`: `npm --prefix products/deployment-kit/site run test`.
 - `audit:python`: configurable `PYTHON_AUDIT_COMMAND`.
 - `audit:site`: `npm audit --prefix site --audit-level "$NPM_AUDIT_LEVEL"`.
 - `review:skills`: installs or locates SkillSpector, runs CI review, stores `review-artifacts/`.
-- `publish:exchange`: installs or locates SkillSpector, runs CI publish, stores `.exchange/generated/` and result JSON.
+- `publish:exchange`: installs or locates SkillSpector, runs CI publish, stores `maintainer/exchange/generated/` and result JSON.
 - `generate:exchange`: same as publish but without committing BOE.
-- `pages`: builds the site, replaces top-level `public/` with `site/dist`, and publishes `public/`.
+- `pages`: builds the site, replaces top-level `public/` with `products/deployment-kit/site/dist`, and publishes `public/`.
 
 `pages` must be named exactly `pages` and publish a top-level `public/` artifact for GitLab Pages.
 
@@ -810,7 +818,7 @@ Merges to the default branch that change skills must run `publish:exchange` befo
 
 GitHub Dependabot is the authoritative dependency-vulnerability control. Repository settings must enable Dependabot alerts and Dependabot security updates. Alert triage occurs only in GitHub Security; scheduled CI must not create a duplicate issue backlog.
 
-The Dependabot configuration must cover the root Python `pyproject.toml` and `uv.lock` through the `uv` ecosystem and the Node `site/package.json` and `site/package-lock.json` through the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, major updates remain separate, default dependency and ecosystem labels are used, and pull requests are assigned to `Fnorgh2`.
+The Dependabot configuration must cover the root Python `pyproject.toml` and `uv.lock` through the `uv` ecosystem and the Node `products/deployment-kit/site/package.json` and `products/deployment-kit/site/package-lock.json` through the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, major updates remain separate, default dependency and ecosystem labels are used, and pull requests are assigned to `Fnorgh2`.
 
 `Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
 
@@ -854,12 +862,12 @@ Schedule variables override project variables. Avoid duplicating project-level C
 
 ## Site Data Loading
 
-`site/src/lib/exchange-data.mjs` reads generated JSON from:
+`products/deployment-kit/site/src/lib/exchange-data.mjs` reads generated JSON from:
 
 - `SKILL_EXCHANGE_GENERATED_ROOT`, when set;
-- otherwise `<repository-root>/.exchange/generated`.
+- otherwise `<repository-root>/maintainer/exchange/generated`.
 
-The repository root defaults to `SKILL_EXCHANGE_REPOSITORY_ROOT` or the parent directory of the site working directory.
+The repository root defaults to `SKILL_EXCHANGE_REPOSITORY_ROOT` or three parent directories above the product site working directory.
 
 Read:
 
@@ -874,7 +882,7 @@ The empty fallback is explicit to allow a valid empty catalog build before gener
 
 The first page is the usable catalog, not a marketing landing page.
 
-`site/src/pages/index.astro`:
+`products/deployment-kit/site/src/pages/index.astro`:
 
 - uses `BaseLayout`;
 - shows header eyebrow `Agent skill catalog`;
@@ -895,7 +903,7 @@ The first page is the usable catalog, not a marketing landing page.
 
 Recommendation sort ranks `DO_NOT_INSTALL` as 3, `CAUTION` as 2, `SAFE` as 1, and `Unknown` as 0. Unranked values use the default rank 0.
 
-`site/src/pages/skills/[namespace]/[skillId].astro`:
+`products/deployment-kit/site/src/pages/skills/[namespace]/[skillId].astro`:
 
 - generates static paths from the public index;
 - shows a back link to catalog;
@@ -942,24 +950,25 @@ Keep useful Markdown rendering such as headings, paragraphs, tables, code, and l
 
 ## Site Download Copying
 
-`site/scripts/copy-downloads.mjs` runs as `prebuild`.
+`products/deployment-kit/site/scripts/copy-downloads.mjs` runs as `prebuild`.
 
 It must:
 
-- clear and recreate `site/public/downloads/`;
-- copy skill zip files from `.exchange/generated/zips/` to `site/public/downloads/`;
-- read `.exchange/generated/tables/scanner_artifacts.json`;
-- copy scanner artifacts from `.exchange/generated/scanner-runs/` to their declared download paths;
-- reject artifact sources outside `.exchange/generated/scanner-runs/`;
-- reject destinations outside `site/public/downloads/`;
+- read generated inputs from `SKILL_EXCHANGE_GENERATED_ROOT` when set, otherwise `maintainer/exchange/generated/`;
+- clear and recreate `products/deployment-kit/site/public/downloads/`;
+- copy skill zip files from `maintainer/exchange/generated/zips/` to `products/deployment-kit/site/public/downloads/`;
+- read `maintainer/exchange/generated/tables/scanner_artifacts.json`;
+- copy scanner artifacts from `maintainer/exchange/generated/scanner-runs/` to their declared download paths;
+- reject artifact sources outside `maintainer/exchange/generated/scanner-runs/`;
+- reject destinations outside `products/deployment-kit/site/public/downloads/`;
 - realpath-check existing sources to prevent symlink escape;
-- support rebasing absolute artifact paths from a previous checkout by recognizing the `.exchange/generated/scanner-runs/` suffix.
+- support rebasing absolute artifact paths from a previous checkout by recognizing the `maintainer/exchange/generated/scanner-runs/` suffix.
 - emit and consume site download URLs whose paths begin with `downloads/`; the
   base document URL resolves these links from nested static pages.
 
 ## URL State
 
-`site/src/lib/url-state.mjs` provides:
+`products/deployment-kit/site/src/lib/url-state.mjs` provides:
 
 - `readQueryValue(search, key, fallback, allowedValues)`;
 - `updateQueryString(search, updates, defaults)`;
@@ -989,24 +998,25 @@ Human workflow:
 6. At least one human reviewer inspects the diff and assessment context.
 7. Maintainer merges after required human approvals.
 8. Default-branch skill changes or scheduled publication produce or reuse official BOE.
-9. Publication commits BOE bundles under `.exchange/generated/boe/` when configured.
+9. Publication commits BOE bundles under `maintainer/exchange/generated/boe/` when configured.
 10. GitLab Pages publishes from generated artifacts.
 
 Human contributors never author official BOE. MR SkillSpector output is advisory. Official BOE comes from protected publication CI.
 
-Generated-output MRs from the exchange bot may be exempt from human review only when the diff is limited to generated BOE bundles under `.exchange/generated/boe/`. Human-authored MRs must never automerge under this rule. Any MR that changes source code, skill instructions, CI, policy, config, permissions, documentation, or governance files requires human review.
+Generated-output MRs from the exchange bot may be exempt from human review only when the diff is limited to generated BOE bundles under `maintainer/exchange/generated/boe/`. Human-authored MRs must never automerge under this rule. Any MR that changes source code, skill instructions, CI, policy, config, permissions, documentation, or governance files requires human review.
 
 ## Seed Skills
 
-The repository includes seed skills under `skills/ai4sdlc/`, including:
+The catalog product includes exactly these seed skills under `products/skill-catalog/skills/ai4sdlc/`:
 
-- `benign-scanner-demo`;
 - `code-change-description`;
 - `inline-documentation`;
 - `python-secure-code-review`;
 - `unit-test-generation`.
 
 Seed skills are exchange content and must follow the same metadata, review, scanner, and BOE rules as any contributed skill.
+
+`maintainer/fixtures/skills/ai4sdlc/benign-scanner-demo/` is a maintainer-only scanner and UI fixture. It must not be discovered by the default catalog build or included in a customer release.
 
 Scanner findings in seed skills should be addressed by improving skill wording when they are phrase-triggered false positives. Do not suppress scanner output without a recorded triage/waiver model; suppression support is out of scope for the MVP.
 
@@ -1070,8 +1080,10 @@ Python tests must cover:
 - local CLI generated-dir handling.
 - release packaging for the deployment kit and governed skill catalog;
 - internal and top-level release manifest/checksum agreement;
+- repeatable release output for a fixed revision and timestamp;
 - catalog policy rejection of unknown skills;
 - missing or unsafe prebuilt download rejection;
+- delivered prebuilt verification accepting unchanged packages and rejecting tampered files or the wrong product;
 - accepted release-note section extraction.
 
 Node tests must cover:
@@ -1079,6 +1091,7 @@ Node tests must cover:
 - recommendation option and query-state read/update behavior;
 - skill Markdown sanitizer removing executable HTML;
 - copy-downloads source containment, destination containment, and rebasing absolute generated artifact paths from another checkout.
+- page-relative site-root calculation and link resolution at root and project-path deployments.
 
 Do not add placeholder tests that only lock command strings or package script spelling. Tests must prove behavior.
 
@@ -1090,6 +1103,6 @@ Step 2 can enrich the static exchange with better search, controlled filters, ca
 
 Step 3 can add stronger lifecycle evidence such as owner signoff, intended use, trigger cases, non-trigger cases, known failure cases, and lightweight evaluation contracts. Model-assisted review remains advisory until enough output exists to define reliable blocking rules.
 
-Step 4 can introduce a backend only when static hosting cannot meet user needs. A backend should ingest `.exchange/generated/index.json`, generated tables, and BOE bundles rather than replace them. Candidate backend capabilities include API, MCP, authenticated download policy, metrics, subscriptions, richer approval dashboards, and cross-repository aggregation.
+Step 4 can introduce a backend only when static hosting cannot meet user needs. A backend should ingest `maintainer/exchange/generated/index.json`, generated tables, and BOE bundles rather than replace them. Candidate backend capabilities include API, MCP, authenticated download policy, metrics, subscriptions, richer approval dashboards, and cross-repository aggregation.
 
 The static data contract is the migration path. A backend becomes a query and workflow layer over the same bot-produced evidence.

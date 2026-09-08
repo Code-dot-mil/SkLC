@@ -40,7 +40,7 @@ def _tracked_boe_fixture(monkeypatch, tmp_path: Path, *, mode: str = "static-onl
     )
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=source_generated,
         scan_modes=(mode,),
     )
@@ -67,7 +67,7 @@ def _assert_reuse_only_rejects(generated: Path, *, mode: str = "static-only") ->
     with pytest.raises(RuntimeError) as error:
         build_exchange(
             skills_root=Path("tests/fixtures/skills"),
-            exchange_dir=Path(".exchange"),
+            exchange_dir=Path("maintainer/exchange"),
             generated_dir=generated,
             scan_modes=(mode,),
             reuse_boe_only=True,
@@ -89,7 +89,7 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
 
     result = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -142,7 +142,7 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
 
     second = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -171,7 +171,7 @@ def test_build_exchange_removes_stale_skill_zips(monkeypatch, tmp_path: Path):
 
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -196,7 +196,7 @@ def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monke
 
     first = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -219,7 +219,7 @@ def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monke
 
     second = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=boe_only,
         scan_modes=("static-only",),
     )
@@ -260,14 +260,14 @@ def test_build_exchange_reuse_boe_only_never_calls_scanner_paths(monkeypatch, tm
     monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=source_generated,
         scan_modes=("static-only", "llm-assisted"),
     )
     scanner_version[0] = "2.1.6"
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=source_generated,
         scan_modes=("static-only",),
     )
@@ -286,7 +286,7 @@ def test_build_exchange_reuse_boe_only_never_calls_scanner_paths(monkeypatch, tm
 
     result = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only", "llm-assisted"),
         reuse_boe_only=True,
@@ -325,7 +325,7 @@ def test_build_exchange_reuse_boe_only_fails_for_missing_exact_content(monkeypat
     with pytest.raises(RuntimeError) as error:
         build_exchange(
             skills_root=Path("tests/fixtures/skills"),
-            exchange_dir=Path(".exchange"),
+            exchange_dir=Path("maintainer/exchange"),
             generated_dir=generated,
             scan_modes=("static-only",),
             reuse_boe_only=True,
@@ -486,7 +486,7 @@ metadata:
 
     result = build_exchange(
         skills_root=tmp_path / "skills",
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -553,13 +553,13 @@ def test_build_exchange_reuses_cached_scan_without_running_skillspector(monkeypa
 
     first = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
     second = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
+        exchange_dir=Path("maintainer/exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )

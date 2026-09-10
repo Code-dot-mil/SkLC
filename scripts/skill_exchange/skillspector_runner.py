@@ -76,10 +76,35 @@ def configure_openai_compatible_provider() -> None:
     OpenAICompatibleProvider.get_max_output_tokens = get_max_output_tokens
 
 
+def configure_scan_budget() -> None:
+    scan_max_seconds_value = os.environ.get("SKILL_EXCHANGE_SCAN_MAX_SECONDS", "").strip()
+    if not scan_max_seconds_value:
+        return
+    try:
+        scan_max_seconds = float(scan_max_seconds_value)
+    except ValueError as error:
+        raise RuntimeError("SKILL_EXCHANGE_SCAN_MAX_SECONDS must be a number") from error
+    if scan_max_seconds <= 0:
+        raise RuntimeError("SKILL_EXCHANGE_SCAN_MAX_SECONDS must be greater than zero")
+
+    from skillspector import cli
+    from skillspector.state import WorkflowResourceBudget
+
+    original_scan_state = cli._scan_state
+
+    def scan_state(*args: Any, **kwargs: Any) -> dict[str, object]:
+        state = original_scan_state(*args, **kwargs)
+        state["workflow_resource_budget"] = WorkflowResourceBudget(max_seconds=scan_max_seconds)
+        return state
+
+    cli._scan_state = scan_state
+
+
 def main() -> None:
     configure_openai_compatible_provider()
     from skillspector.cli import app
 
+    configure_scan_budget()
     app()
 
 

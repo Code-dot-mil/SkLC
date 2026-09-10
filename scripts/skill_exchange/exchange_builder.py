@@ -17,6 +17,7 @@ from .skills import discover_skills
 from .skillspector import (
     SkillSpectorExecutionError,
     run_skillspector,
+    skillspector_execution_failure,
     skillspector_llm_config,
     skillspector_version,
 )
@@ -366,6 +367,8 @@ def scanner_cache_config(mode: str) -> dict[str, Any]:
             config["llm_requests_per_second"] = llm_config["requests_per_second"]
         if llm_config.get("max_output_tokens"):
             config["llm_max_output_tokens"] = llm_config["max_output_tokens"]
+        if llm_config.get("scan_max_seconds"):
+            config["scan_max_seconds"] = llm_config["scan_max_seconds"]
         if llm_config.get("endpoint_hash"):
             config["llm_endpoint_hash"] = llm_config["endpoint_hash"]
     return config
@@ -713,7 +716,7 @@ def is_successful_skillspector_report(report: dict[str, Any]) -> bool:
     issues = report.get("issues")
     risk_assessment = report.get("risk_assessment")
     if (
-        report.get("execution_successful") is False
+        skillspector_execution_failure(report) is not None
         or report.get("scanner_error")
         or metadata.get("scan_error")
         or not isinstance(issues, list)

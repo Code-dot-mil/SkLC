@@ -52,6 +52,38 @@ def test_run_skillspector_rejects_failed_execution_and_preserves_report(monkeypa
     assert json.loads(report_path.read_text()) == report
 
 
+def test_run_skillspector_rejects_degraded_llm_execution_even_when_root_succeeds(monkeypatch, tmp_path: Path):
+    report = {
+        "execution_successful": True,
+        "risk_assessment": {"score": 0, "severity": "LOW", "recommendation": "ALLOW"},
+        "issues": [],
+        "metadata": {
+            "llm_requested": True,
+            "llm_calls_attempted": 4,
+            "llm_calls_succeeded": 0,
+            "llm_degraded": True,
+            "llm_error": "shared runtime limit reached",
+        },
+    }
+    report_path = tmp_path / "report.json"
+
+    def fake_run(command, text, capture_output, check, env):
+        Path(command[command.index("--output") + 1]).write_text(json.dumps(report))
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(skillspector, "resolve_skillspector_binary", lambda: "skillspector")
+    monkeypatch.setattr(skillspector.subprocess, "run", fake_run)
+
+    with pytest.raises(
+        skillspector.SkillSpectorExecutionError,
+        match="degraded LLM execution: shared runtime limit reached",
+    ) as error:
+        skillspector.run_skillspector(tmp_path, report_path, no_llm=False)
+
+    assert error.value.report == report
+    assert json.loads(report_path.read_text()) == report
+
+
 def test_run_skillspector_fails_without_report(monkeypatch, tmp_path: Path):
     def fake_run(command, text, capture_output, check, env):
         return subprocess.CompletedProcess(command, 2, stdout="", stderr="boom")
@@ -139,6 +171,17 @@ def test_skillspector_adapter_rejects_invalid_output_token_cap(monkeypatch):
         skillspector_runner.configure_openai_compatible_provider()
 
 
+def test_skillspector_adapter_rejects_invalid_scan_budget(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_SCAN_MAX_SECONDS", "long")
+
+    with pytest.raises(RuntimeError, match="must be a number"):
+        skillspector_runner.configure_scan_budget()
+
+    monkeypatch.setenv("SKILL_EXCHANGE_SCAN_MAX_SECONDS", "0")
+    with pytest.raises(RuntimeError, match="must be greater than zero"):
+        skillspector_runner.configure_scan_budget()
+
+
 def test_skillspector_env_maps_generic_llm_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "secret-value")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://llm.example/v1")
@@ -162,6 +205,7 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
         "api_key_header": None,
         "requests_per_second": None,
         "max_output_tokens": None,
+        "scan_max_seconds": None,
         "endpoint_hash": "d5e402bf7bacd64a5aa920e05315e0f106363e00c2fd868856660c607ce4ae22",
     }
 
@@ -174,6 +218,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "api-key")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND", "0.1")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS", "2048")
+    monkeypatch.setenv("SKILL_EXCHANGE_SCAN_MAX_SECONDS", "600")
     for name in (
         "SKILLSPECTOR_COMPAT_API_KEY",
         "SKILLSPECTOR_COMPAT_BASE_URL",
@@ -203,6 +248,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
         "api_key_header": "api-key",
         "requests_per_second": "0.1",
         "max_output_tokens": "2048",
+        "scan_max_seconds": "600",
         "endpoint_hash": "55a0ebce3878ccee9dd6f6e9f65f6eeeec216aaf696b2c19fb144f1762c8d6cf",
     }
 
@@ -245,6 +291,7 @@ def test_skillspector_env_maps_generic_azure_openai_env(monkeypatch):
         "api_key_header": None,
         "requests_per_second": None,
         "max_output_tokens": None,
+        "scan_max_seconds": None,
         "endpoint_hash": "7bef302251509c8f87385679f5607976a809a9bd5d5433860114b812bb5bd8dd",
     }
 

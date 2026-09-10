@@ -63,4 +63,27 @@ def test_failed_execution_is_unknown_even_when_report_contains_risks():
     )
 
     assert assessment["risk"] == "Unknown"
-    assert assessment["reason"] == "scanner_failed: SkillSpector reported execution_successful=false"
+    assert assessment["reason"] == "scanner_failed: skillspector reported execution_successful=false"
+
+
+def test_degraded_llm_execution_is_unknown_even_when_root_succeeds():
+    assessment = assess_report(
+        {
+            "execution_successful": True,
+            "issues": [],
+            "risk_assessment": {"severity": "LOW"},
+            "metadata": {
+                "llm_requested": True,
+                "llm_calls_attempted": 4,
+                "llm_calls_succeeded": 0,
+                "llm_degraded": True,
+                "llm_error": "shared runtime limit reached",
+            },
+        }
+    )
+
+    assert assessment == {
+        "risk": "Unknown",
+        "reason": "scanner_failed: skillspector reported degraded LLM execution: shared runtime limit reached",
+        "confidence_flags": [],
+    }

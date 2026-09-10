@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 
 from skill_exchange import ci
+from skill_exchange.skillspector import SkillSpectorExecutionError
 
 
 def _write_skill(root: Path, namespace: str, skill_id: str, description: str = "Use when testing CI.") -> Path:
@@ -127,6 +128,48 @@ def test_review_changed_skills_writes_reviewer_artifacts(monkeypatch, tmp_path: 
     assert validation[0]["skill"] == "team/reviewed-skill"
     assert "| `team/reviewed-skill` | Low | Low confidence | static-only |" in comment
     assert "## Exchange validation" in comment
+
+
+def test_review_changed_skills_counts_failed_execution_and_preserves_report(monkeypatch, tmp_path: Path):
+    reviewed = _write_skill(tmp_path, "team", "reviewed-skill")
+    artifacts = tmp_path / "review-artifacts"
+    failed_report = {
+        "execution_successful": False,
+        "metadata": {"llm_requested": True, "skillspector_version": "2.1.5"},
+        "risk_assessment": {"score": 100, "severity": "CRITICAL", "recommendation": "BLOCK"},
+        "issues": [{"id": "E2", "severity": "HIGH"}],
+    }
+
+    def fake_run_skillspector(skill_path, output_path, *, no_llm):
+        assert skill_path == reviewed
+        assert no_llm is False
+        output_path.parent.mkdir(parents=True)
+        output_path.write_text(json.dumps(failed_report))
+        raise SkillSpectorExecutionError(
+            "skillspector reported execution_successful=false: OpenAIModelNotFoundError",
+            report=failed_report,
+        )
+
+    monkeypatch.setattr(ci, "run_skillspector", fake_run_skillspector)
+
+    result = ci.review_changed_skills(
+        changed_skill_paths=[reviewed],
+        repo_root=tmp_path,
+        exchange_dir=Path.cwd() / ".exchange",
+        artifacts_dir=artifacts,
+        scan_mode="llm-assisted",
+        post_comment=False,
+    )
+
+    report_path = artifacts / "skillspector" / "team" / "reviewed-skill" / "report.json"
+    changed_skills = json.loads((artifacts / "changed-skills.json").read_text())
+    comment = (artifacts / "comment.md").read_text()
+
+    assert result["scanner_errors"] == 1
+    assert changed_skills[0]["risk"] == "Unknown"
+    assert "execution_successful=false" in changed_skills[0]["scanner_error"]
+    assert "Scanner failed" in comment
+    assert json.loads(report_path.read_text()) == failed_report
 
 
 def test_review_comment_includes_all_scanner_findings(monkeypatch, tmp_path: Path):

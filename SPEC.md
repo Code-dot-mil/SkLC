@@ -490,7 +490,7 @@ Each bundle contains:
 - `scanner-config.json`
 - `hashes.json`
 
-`skillspector.json` is the raw native report copied from the scanner output path. `summary.json` contains `risk`, `risk_reason`, and `confidence_flags`. `scanner-config.json` contains the scan config used in cache-key computation. `hashes.json` contains SHA-256 hashes for `boe.json`, `scanner-config.json`, `skillspector.json`, and `summary.json`.
+`skillspector.json` is the raw native report copied from the scanner output path, including reports whose `execution_successful` field is false so scanner failures remain diagnosable. `summary.json` contains `risk`, `risk_reason`, and `confidence_flags`. `scanner-config.json` contains the scan config used in cache-key computation. `hashes.json` contains SHA-256 hashes for `boe.json`, `scanner-config.json`, `skillspector.json`, and `summary.json`.
 
 `boe.json` schema version is `skill-exchange-boe/v0` and includes:
 
@@ -531,10 +531,11 @@ Behavior:
    - when `reuse_boe_only` is true, preflight exact-current-content tracked BOE for every valid skill and requested mode, require a complete symlink-free bundle with matching declared SHA-256 hashes, recomputed scan key, scanner version/mode, LLM provenance, a successful scanner report with the expected issue and risk-assessment shape and no error markers, and assessment fields consistent across the report, summary, and BOE, select the newest valid bundle deterministically by scan timestamp and scan cache key, and fail with the missing skill/mode list before writing derived output;
    - the reuse-only path obtains scanner version, configuration, report, and provenance from tracked BOE and never calls SkillSpector, computes a live scanner configuration, reads live LLM configuration, or writes BOE;
    - otherwise compute scanner version, scanner config, and scan cache key;
-   - first reuse matching current scanner-run table entries when the native report still exists;
-   - otherwise reuse matching tracked BOE bundles from `.exchange/generated/boe/`;
+   - first reuse matching current scanner-run table entries only when their status is `completed` and the native report still exists, has the expected successful report shape, has no scanner error markers, and does not declare `execution_successful: false`;
+   - otherwise reuse matching tracked BOE bundles from `.exchange/generated/boe/` only after applying the same complete-file, symlink, declared-hash, scan-key, scanner provenance, report-success, and cross-artifact assessment checks used by `reuse_boe_only`; an invalid matching bundle is ignored and regenerated;
    - otherwise run SkillSpector;
-   - if SkillSpector raises, synthesize a scanner failure report with metadata `scan_error`, write it to the temporary report path, and continue with `Unknown` risk;
+   - treat a native report with `execution_successful: false` as a scanner failure even when the scanner wrote JSON; preserve that report unchanged for diagnostics, record a failed run with `Unknown` risk, and allow a later publication to retry it;
+   - if SkillSpector raises without writing a native failure report, synthesize a scanner failure report with metadata `scan_error`, write it to the temporary report path, and continue with `Unknown` risk;
    - write BOE;
    - mirror run artifacts into `.exchange/generated/scanner-runs/<run-id>/`;
    - append rows for scanner runs, scanner artifacts, and scanner findings.

@@ -50,3 +50,17 @@ def test_malformed_report_is_unknown():
 
     assert assessment["risk"] == "Unknown"
     assert assessment["reason"] == "Scanner report did not match the expected SkillSpector shape."
+
+
+def test_failed_execution_is_unknown_even_when_report_contains_risks():
+    assessment = assess_report(
+        {
+            "execution_successful": False,
+            "risk_assessment": {"score": 100, "severity": "CRITICAL", "recommendation": "BLOCK"},
+            "issues": [{"id": "E2", "severity": "HIGH"}],
+            "metadata": {"llm_requested": True},
+        }
+    )
+
+    assert assessment["risk"] == "Unknown"
+    assert assessment["reason"] == "scanner_failed: SkillSpector reported execution_successful=false"

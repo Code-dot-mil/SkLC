@@ -8,6 +8,7 @@ from skill_exchange import skillspector
 
 def test_run_skillspector_accepts_finding_exit_code_with_valid_report(monkeypatch, tmp_path: Path):
     report = {
+        "execution_successful": True,
         "risk_assessment": {"score": 100, "severity": "CRITICAL", "recommendation": "DO_NOT_INSTALL"},
         "issues": [{"id": "E2", "severity": "HIGH"}],
         "metadata": {"llm_requested": False, "skillspector_version": "2.1.5"},
@@ -22,6 +23,32 @@ def test_run_skillspector_accepts_finding_exit_code_with_valid_report(monkeypatc
     monkeypatch.setattr(skillspector.subprocess, "run", fake_run)
 
     assert skillspector.run_skillspector(tmp_path, tmp_path / "report.json") == report
+
+
+def test_run_skillspector_rejects_failed_execution_and_preserves_report(monkeypatch, tmp_path: Path):
+    report = {
+        "execution_successful": False,
+        "risk_assessment": {"score": 100, "severity": "CRITICAL", "recommendation": "DO_NOT_INSTALL"},
+        "issues": [{"id": "E2", "severity": "HIGH"}],
+        "metadata": {"llm_requested": True, "skillspector_version": "2.1.5"},
+    }
+    report_path = tmp_path / "report.json"
+
+    def fake_run(command, text, capture_output, check, env):
+        Path(command[command.index("--output") + 1]).write_text(json.dumps(report))
+        return subprocess.CompletedProcess(command, 2, stdout="", stderr="OpenAIModelNotFoundError")
+
+    monkeypatch.setattr(skillspector, "resolve_skillspector_binary", lambda: "skillspector")
+    monkeypatch.setattr(skillspector.subprocess, "run", fake_run)
+
+    with pytest.raises(
+        skillspector.SkillSpectorExecutionError,
+        match="execution_successful=false: OpenAIModelNotFoundError",
+    ) as error:
+        skillspector.run_skillspector(tmp_path, report_path, no_llm=False)
+
+    assert error.value.report == report
+    assert json.loads(report_path.read_text()) == report
 
 
 def test_run_skillspector_fails_without_report(monkeypatch, tmp_path: Path):

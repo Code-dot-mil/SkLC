@@ -113,6 +113,7 @@ jobs:
       SKILL_EXCHANGE_LLM_MODEL: "${{ vars.SKILL_EXCHANGE_LLM_MODEL }}"
       SKILL_EXCHANGE_LLM_PROVIDER: "${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}"
       NODE_EXTRA_CA_CERTS: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
+      SSL_CERT_FILE: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
       EXCHANGE_PUBLISH_COMMIT: "true"
       EXCHANGE_PUBLISH_PUSH: "true"
       EXCHANGE_PUBLISH_BRANCH: "${{ github.event.repository.default_branch }}"

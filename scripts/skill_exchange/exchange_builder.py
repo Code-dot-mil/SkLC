@@ -14,7 +14,12 @@ from .boe import write_boe
 from .policy import load_exchange_policy
 from .risk import assess_report
 from .skills import discover_skills
-from .skillspector import run_skillspector, skillspector_llm_config, skillspector_version
+from .skillspector import (
+    SkillSpectorExecutionError,
+    run_skillspector,
+    skillspector_llm_config,
+    skillspector_version,
+)
 from .validation import validate_skill
 from .zipper import write_skill_zip
 
@@ -121,7 +126,12 @@ def build_exchange(
                     reused_scans += 1
                     skill_scanner_runs.append(cached_scanner_run)
                     continue
-                cached_boe = read_cached_boe(generated_dir=generated_dir, skill=skill, scan_key=scan_key)
+                cached_boe = read_cached_boe(
+                    generated_dir=generated_dir,
+                    skill=skill,
+                    scan_key=scan_key,
+                    mode=mode,
+                )
             if cached_boe:
                 report = cached_boe["report"]
                 assessment = assess_report(report)
@@ -167,17 +177,26 @@ def build_exchange(
                 / "report.json"
             )
             scan_status = "completed"
+            scanner_error = None
             try:
                 report = run_skillspector(skill.path, report_source, no_llm=no_llm)
             except Exception as exc:
                 scan_status = "failed"
-                report = scanner_failure_report(mode=mode, scanner_version=scanner_version, error=exc)
-                report_source.parent.mkdir(parents=True, exist_ok=True)
-                report_source.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+                scanner_error = str(exc)
+                if isinstance(exc, SkillSpectorExecutionError):
+                    report = exc.report
+                else:
+                    report = scanner_failure_report(mode=mode, scanner_version=scanner_version, error=exc)
+                    report_source.parent.mkdir(parents=True, exist_ok=True)
+                    report_source.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
             last_scanned = datetime.now(UTC).isoformat()
 
             run_id = make_run_id(scan_key, last_scanned)
-            assessment = assess_report(report)
+            assessment = (
+                scanner_failure_assessment(scanner_error)
+                if scanner_error is not None
+                else assess_report(report)
+            )
             boe_path = write_boe(
                 root=generated_dir,
                 skill=skill,
@@ -283,6 +302,14 @@ def scanner_failure_report(*, mode: str, scanner_version: str, error: Exception)
             "scan_error": str(error),
         },
         "scanner_error": str(error),
+    }
+
+
+def scanner_failure_assessment(error: str) -> dict[str, Any]:
+    return {
+        "risk": "Unknown",
+        "reason": f"scanner_failed: {error}",
+        "confidence_flags": [],
     }
 
 
@@ -491,7 +518,7 @@ def latest_scanner_runs_by_cache_key(scanner_runs: list[dict[str, Any]]) -> dict
     cached: dict[str, dict[str, Any]] = {}
     for row in scanner_runs:
         cache_key = row.get("scan_cache_key")
-        if not cache_key:
+        if not cache_key or row.get("status") != "completed":
             continue
         existing = cached.get(cache_key)
         if not existing or str(row.get("last_scanned") or "") > str(existing.get("last_scanned") or ""):
@@ -500,7 +527,7 @@ def latest_scanner_runs_by_cache_key(scanner_runs: list[dict[str, Any]]) -> dict
 
 
 def read_cached_report(scanner_run: dict[str, Any] | None) -> dict[str, Any] | None:
-    if not scanner_run:
+    if not scanner_run or scanner_run.get("status") != "completed":
         return None
     path_value = scanner_run.get("native_report_path")
     if not path_value:
@@ -508,15 +535,29 @@ def read_cached_report(scanner_run: dict[str, Any] | None) -> dict[str, Any] | N
     path = Path(path_value)
     if not path.exists():
         return None
-    report = json.loads(path.read_text())
-    return report if isinstance(report, dict) else None
+    try:
+        report = json.loads(path.read_text())
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    return report if isinstance(report, dict) and is_successful_skillspector_report(report) else None
 
 
-def read_cached_boe(*, generated_dir: Path, skill, scan_key: str) -> dict[str, Any] | None:
+def read_cached_boe(*, generated_dir: Path, skill, scan_key: str, mode: str) -> dict[str, Any] | None:
     for candidate_key in equivalent_scan_keys(scan_key):
         boe_path = boe_path_for(generated_dir, skill, candidate_key)
-        if boe_path.exists():
-            return read_boe_bundle(boe_path=boe_path, scan_key=candidate_key)
+        if not boe_path.exists():
+            continue
+        try:
+            bundle = read_verified_boe_bundle(
+                generated_dir=generated_dir,
+                boe_path=boe_path,
+                skill=skill,
+                mode=mode,
+            )
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if bundle is not None and bundle["scan_key"] == candidate_key:
+            return bundle
     return None
 
 
@@ -531,7 +572,7 @@ def read_latest_tracked_boe(*, generated_dir: Path, skill, mode: str) -> dict[st
     candidates: list[tuple[datetime, str, dict[str, Any]]] = []
     for boe_path in sorted(skill_boe_root.glob("*/boe.json")):
         try:
-            bundle = read_verified_tracked_boe_bundle(
+            bundle = read_verified_boe_bundle(
                 generated_dir=generated_dir,
                 boe_path=boe_path,
                 skill=skill,
@@ -551,7 +592,7 @@ def read_latest_tracked_boe(*, generated_dir: Path, skill, mode: str) -> dict[st
     return max(candidates, key=lambda candidate: (candidate[0], candidate[1]))[2]
 
 
-def read_verified_tracked_boe_bundle(
+def read_verified_boe_bundle(
     *, generated_dir: Path, boe_path: Path, skill, mode: str
 ) -> dict[str, Any] | None:
     bundle_dir = boe_path.parent
@@ -666,7 +707,8 @@ def is_successful_skillspector_report(report: dict[str, Any]) -> bool:
     issues = report.get("issues")
     risk_assessment = report.get("risk_assessment")
     if (
-        report.get("scanner_error")
+        report.get("execution_successful") is False
+        or report.get("scanner_error")
         or metadata.get("scan_error")
         or not isinstance(issues, list)
         or not all(isinstance(issue, dict) for issue in issues)
@@ -717,32 +759,6 @@ def equivalent_scan_keys(scan_key: str) -> list[str]:
     if alternate_key not in keys:
         keys.append(alternate_key)
     return keys
-
-
-def read_boe_bundle(*, boe_path: Path, scan_key: str) -> dict[str, Any] | None:
-    boe = json.loads(boe_path.read_text())
-    if not isinstance(boe, dict):
-        return None
-    if boe.get("schema_version") != "skill-exchange-boe/v0":
-        return None
-    if boe.get("scan_cache_key") != scan_key:
-        return None
-    scan_timestamp = boe.get("scan_timestamp") or boe.get("generated_at")
-    if not scan_timestamp:
-        return None
-    report_path = boe_path.parent / "skillspector.json"
-    if not report_path.exists():
-        return None
-    report = json.loads(report_path.read_text())
-    if not isinstance(report, dict):
-        return None
-    return {
-        "boe": boe,
-        "boe_path": boe_path,
-        "report": report,
-        "report_path": report_path,
-        "scan_timestamp": str(scan_timestamp),
-    }
 
 
 def write_run_artifacts(

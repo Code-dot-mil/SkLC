@@ -10,6 +10,12 @@ from pathlib import Path
 from typing import Any
 
 
+class SkillSpectorExecutionError(RuntimeError):
+    def __init__(self, message: str, *, report: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.report = report
+
+
 def resolve_skillspector_binary() -> str:
     configured = os.environ.get("SKILLSPECTOR_BIN")
     if configured:
@@ -34,7 +40,16 @@ def run_skillspector(skill_path: Path, output_path: Path, *, no_llm: bool = True
         command.append("--no-llm")
     completed = subprocess.run(command, text=True, capture_output=True, check=False, env=skillspector_env())
     if output_path.exists():
-        return json.loads(output_path.read_text())
+        report = json.loads(output_path.read_text())
+        if not isinstance(report, dict):
+            raise RuntimeError("skillspector report must be a JSON object")
+        if report.get("execution_successful") is False:
+            detail = (completed.stderr or completed.stdout).strip()
+            message = "skillspector reported execution_successful=false"
+            if detail:
+                message = f"{message}: {detail}"
+            raise SkillSpectorExecutionError(message, report=report)
+        return report
 
     output = completed.stderr or completed.stdout or f"skillspector exited {completed.returncode}"
     raise RuntimeError(output)

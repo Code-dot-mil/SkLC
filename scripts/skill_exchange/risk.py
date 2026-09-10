@@ -7,6 +7,12 @@ def assess_report(report: dict[str, Any]) -> dict[str, Any]:
     issues = report.get("issues")
     risk_assessment = report.get("risk_assessment")
     metadata = report.get("metadata") or {}
+    if report.get("execution_successful") is False:
+        return {
+            "risk": "Unknown",
+            "reason": "scanner_failed: SkillSpector reported execution_successful=false",
+            "confidence_flags": [],
+        }
     if isinstance(metadata, dict) and metadata.get("scan_error"):
         return {
             "risk": "Unknown",

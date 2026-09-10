@@ -73,6 +73,26 @@ contracts/
   catalog-policy/v1/
   release-manifest/v1/
 
+products/
+  assessment-kit/
+    README.md
+    docs/
+      assessor-configuration.md
+      commands.md
+      generated-files.md
+      install.md
+    pyproject.toml
+    release_tools/
+      build.py
+    src/skill_assessment/
+      artifacts.py
+      cli.py
+      config.py
+      errors.py
+      packages.py
+      skillspector.py
+    tests/
+
 scripts/
   skill_exchange/
     __init__.py
@@ -192,6 +212,31 @@ These rules do not silently alter the existing combined publisher. Its
 namespaced discovery, v0 BOE, scan-cache, normalized risk, and catalog behavior
 remain as documented below until a separate migration changes implementation
 and tests.
+
+### Standalone assessment-kit implementation
+
+`products/assessment-kit/` is an independent Python distribution named
+`skill-assessment`. Its installed `skill-assessment` executable implements the
+approved `validate`, `advise`, `assess`, and `verify-boe` commands without
+calling repository, catalog, site, Git, GitHub, or GitLab tooling. Root tests
+add its `src/` tree to `pythonpath`; the released wheel does not import the
+existing `scripts/skill_exchange` v0 package.
+
+The first adapter supports SkillSpector `2.10.0` from source revision
+`e29b16d305b0e738e3d4b952ba102f5522a6f084`. It maps only the documented
+`SKLC_LLM_*` inputs for `openai_compatible`, overwrites conflicting native
+SkillSpector settings, and removes those native LLM settings from explicit
+static-only subprocesses. Assessor output is first written to a temporary path
+beneath the requested command output root. Only validated native bytes are
+promoted to digest-named advice or BOE paths.
+
+`products/assessment-kit/release_tools/build.py` assembles the standalone
+archive from an already-built version-matched wheel. Release version, full
+source revision, creation timestamp, wheel path, and output directory are all
+explicit inputs. The builder vendors the four consumed or produced v1 contract
+directories, emits byte-identical internal and external manifests, creates
+separate extracted-file and download checksum scopes, and normalizes archive
+metadata for deterministic output.
 
 Contract major versions change when a required field, field meaning, or serialized shape changes incompatibly. Current catalog materialization will support only its declared current BOE major version. Legacy BOE may remain tracked as historical evidence, but it is not eligible for the current catalog and its presence alone is not an error. Currently served skill content without matching BOE in the supported schema must be reassessed or excluded.
 
@@ -1123,6 +1168,11 @@ The few intentional fallback behaviors in this spec are explicitly documented an
 
 Python tests must cover:
 
+- standalone assessment-kit package discovery, portable identity, deterministic
+  hashing, filesystem safety, configuration precedence, SkillSpector invocation
+  and version checks, advice generation, BOE updates and verification, retryable
+  failure semantics, and deterministic release assembly with both checksum
+  layers;
 - cross-product contract examples, including BOE report-path containment and
   digest agreement, portable skill naming, and release manifests that exclude
   their containing archives;

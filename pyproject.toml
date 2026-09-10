@@ -23,8 +23,8 @@ build-backend = "setuptools.build_meta"
 where = ["scripts"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["scripts"]
+testpaths = ["tests", "products/assessment-kit/tests"]
+pythonpath = ["scripts", "products/assessment-kit/src", "products/assessment-kit"]
 
 [tool.ruff]
 target-version = "py312"

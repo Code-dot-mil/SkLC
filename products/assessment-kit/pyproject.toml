@@ -1,0 +1,29 @@
+[project]
+name = "skill-assessment"
+version = "0.1.0"
+description = "Standalone skill package validation and assessment tooling"
+requires-python = ">=3.12"
+dependencies = [
+  "PyYAML>=6.0.2",
+]
+
+[project.scripts]
+skill-assessment = "skill_assessment.cli:main"
+
+[build-system]
+requires = ["setuptools>=84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

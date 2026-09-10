@@ -1,9 +1,10 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-from skill_exchange import skillspector
+from skill_exchange import skillspector, skillspector_runner
 
 
 def test_run_skillspector_accepts_finding_exit_code_with_valid_report(monkeypatch, tmp_path: Path):
@@ -76,6 +77,42 @@ def test_skillspector_version_normalizes_leading_v_from_binary(monkeypatch):
     assert skillspector.skillspector_version() == "2.1.5"
 
 
+def test_skillspector_command_uses_header_adapter_only_for_llm_scans():
+    env = {"SKILL_EXCHANGE_LLM_API_KEY_HEADER": "Ocp-Apim-Subscription-Key"}
+    scanner_args = ["scan", "skill", "--format", "json"]
+
+    assert skillspector.skillspector_command("skillspector", scanner_args, env=env, no_llm=False) == [
+        sys.executable,
+        "-m",
+        "skill_exchange.skillspector_runner",
+        *scanner_args,
+    ]
+    assert skillspector.skillspector_command("skillspector", scanner_args, env=env, no_llm=True) == [
+        "skillspector",
+        *scanner_args,
+    ]
+
+
+def test_skillspector_header_adapter_rejects_invalid_header_name(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "Bad Header")
+
+    with pytest.raises(RuntimeError, match="valid HTTP header name"):
+        skillspector_runner.configure_api_key_header()
+
+
+def test_skillspector_header_adapter_requires_compatible_provider_and_key(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "X-Api-Key")
+    monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai")
+
+    with pytest.raises(RuntimeError, match="requires the openai_compatible provider"):
+        skillspector_runner.configure_api_key_header()
+
+    monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai_compatible")
+    monkeypatch.delenv("SKILLSPECTOR_COMPAT_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="requires SKILL_EXCHANGE_LLM_API_KEY"):
+        skillspector_runner.configure_api_key_header()
+
+
 def test_skillspector_env_maps_generic_llm_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "secret-value")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://llm.example/v1")
@@ -96,6 +133,7 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
         "model": "gpt-5",
         "deployment": None,
         "api_version": None,
+        "api_key_header": None,
         "endpoint_hash": "d5e402bf7bacd64a5aa920e05315e0f106363e00c2fd868856660c607ce4ae22",
     }
 
@@ -103,8 +141,9 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
 def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "gateway-secret")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://mdevchat.apim.mitre.org/openai/v1")
-    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5.4")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5.5")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "Ocp-Apim-Subscription-Key")
     for name in (
         "SKILLSPECTOR_COMPAT_API_KEY",
         "SKILLSPECTOR_COMPAT_BASE_URL",
@@ -123,14 +162,15 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
     assert env["SKILLSPECTOR_PROVIDER"] == "openai_compatible"
     assert env["SKILLSPECTOR_COMPAT_API_KEY"] == "gateway-secret"
     assert env["SKILLSPECTOR_COMPAT_BASE_URL"] == "https://mdevchat.apim.mitre.org/openai/v1"
-    assert env["SKILLSPECTOR_MODEL"] == "gpt-5.4"
+    assert env["SKILLSPECTOR_MODEL"] == "gpt-5.5"
     assert "OPENAI_API_KEY" not in env
     assert "AZURE_OPENAI_API_KEY" not in env
     assert config == {
         "provider": "openai_compatible",
-        "model": "gpt-5.4",
+        "model": "gpt-5.5",
         "deployment": None,
         "api_version": None,
+        "api_key_header": "Ocp-Apim-Subscription-Key",
         "endpoint_hash": "55a0ebce3878ccee9dd6f6e9f65f6eeeec216aaf696b2c19fb144f1762c8d6cf",
     }
 
@@ -170,6 +210,7 @@ def test_skillspector_env_maps_generic_azure_openai_env(monkeypatch):
         "model": "gpt-5",
         "deployment": "production-gpt-5",
         "api_version": "2025-04-01-preview",
+        "api_key_header": None,
         "endpoint_hash": "7bef302251509c8f87385679f5607976a809a9bd5d5433860114b812bb5bd8dd",
     }
 

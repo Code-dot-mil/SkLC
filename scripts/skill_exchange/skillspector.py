@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -35,10 +36,12 @@ def run_skillspector(skill_path: Path, output_path: Path, *, no_llm: bool = True
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.unlink(missing_ok=True)
     binary = resolve_skillspector_binary()
-    command = [binary, "scan", str(skill_path), "--format", "json", "--output", str(output_path)]
+    scanner_args = ["scan", str(skill_path), "--format", "json", "--output", str(output_path)]
     if no_llm:
-        command.append("--no-llm")
-    completed = subprocess.run(command, text=True, capture_output=True, check=False, env=skillspector_env())
+        scanner_args.append("--no-llm")
+    env = skillspector_env()
+    command = skillspector_command(binary, scanner_args, env=env, no_llm=no_llm)
+    completed = subprocess.run(command, text=True, capture_output=True, check=False, env=env)
     if output_path.exists():
         report = json.loads(output_path.read_text())
         if not isinstance(report, dict):
@@ -53,6 +56,13 @@ def run_skillspector(skill_path: Path, output_path: Path, *, no_llm: bool = True
 
     output = completed.stderr or completed.stdout or f"skillspector exited {completed.returncode}"
     raise RuntimeError(output)
+
+
+def skillspector_command(binary: str, scanner_args: list[str], *, env: dict[str, str], no_llm: bool) -> list[str]:
+    api_key_header = env.get("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "").strip()
+    if api_key_header and not no_llm:
+        return [sys.executable, "-m", "skill_exchange.skillspector_runner", *scanner_args]
+    return [binary, *scanner_args]
 
 
 def skillspector_version() -> str:
@@ -117,6 +127,7 @@ def set_if_missing(env: dict[str, str], name: str, value: str) -> None:
 def skillspector_llm_config() -> dict[str, str | None]:
     env = skillspector_env()
     provider = env.get("SKILLSPECTOR_PROVIDER")
+    api_key_header = env.get("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "").strip()
     endpoint = (
         env.get("AZURE_OPENAI_ENDPOINT")
         if provider == "azure_openai"
@@ -131,5 +142,6 @@ def skillspector_llm_config() -> dict[str, str | None]:
         "model": env.get("SKILLSPECTOR_MODEL"),
         "deployment": env.get("AZURE_OPENAI_DEPLOYMENT") if provider == "azure_openai" else None,
         "api_version": env.get("AZURE_OPENAI_API_VERSION") if provider == "azure_openai" else None,
+        "api_key_header": api_key_header if provider == "openai_compatible" and api_key_header else None,
         "endpoint_hash": sha256(endpoint.encode()).hexdigest() if endpoint else None,
     }

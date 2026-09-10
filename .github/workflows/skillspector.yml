@@ -38,6 +38,7 @@ jobs:
       SKILL_EXCHANGE_LLM_BASE_URL: "${{ vars.SKILL_EXCHANGE_LLM_BASE_URL }}"
       SKILL_EXCHANGE_LLM_MODEL: "${{ vars.SKILL_EXCHANGE_LLM_MODEL }}"
       SKILL_EXCHANGE_LLM_PROVIDER: "${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}"
+      SKILL_EXCHANGE_LLM_API_KEY_HEADER: "${{ vars.SKILL_EXCHANGE_LLM_API_KEY_HEADER }}"
       NODE_EXTRA_CA_CERTS: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
       SSL_CERT_FILE: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
       GITHUB_TOKEN: "${{ github.token }}"
@@ -70,6 +71,7 @@ jobs:
             SKILL_EXCHANGE_LLM_BASE_URL
             SKILL_EXCHANGE_LLM_MODEL
             SKILL_EXCHANGE_LLM_PROVIDER
+            SKILL_EXCHANGE_LLM_API_KEY_HEADER
           )
           for name in "${required[@]}"; do
             if [ -z "${!name}" ]; then
@@ -112,6 +114,7 @@ jobs:
       SKILL_EXCHANGE_LLM_BASE_URL: "${{ vars.SKILL_EXCHANGE_LLM_BASE_URL }}"
       SKILL_EXCHANGE_LLM_MODEL: "${{ vars.SKILL_EXCHANGE_LLM_MODEL }}"
       SKILL_EXCHANGE_LLM_PROVIDER: "${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}"
+      SKILL_EXCHANGE_LLM_API_KEY_HEADER: "${{ vars.SKILL_EXCHANGE_LLM_API_KEY_HEADER }}"
       NODE_EXTRA_CA_CERTS: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
       SSL_CERT_FILE: "${{ vars.RUNNER_CA_BUNDLE_PATH }}"
       EXCHANGE_PUBLISH_COMMIT: "true"
@@ -153,6 +156,7 @@ jobs:
             SKILL_EXCHANGE_LLM_BASE_URL
             SKILL_EXCHANGE_LLM_MODEL
             SKILL_EXCHANGE_LLM_PROVIDER
+            SKILL_EXCHANGE_LLM_API_KEY_HEADER
           )
           for name in "${required[@]}"; do
             if [ -z "${!name}" ]; then

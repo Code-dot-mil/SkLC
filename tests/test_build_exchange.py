@@ -196,6 +196,7 @@ def test_scanner_cache_config_includes_azure_deployment_api_version_and_hashed_e
             "model": "gpt-5",
             "deployment": "production-gpt-5",
             "api_version": "2025-04-01-preview",
+            "api_key_header": None,
             "endpoint_hash": "endpoint-sha256",
         },
     )
@@ -207,6 +208,30 @@ def test_scanner_cache_config_includes_azure_deployment_api_version_and_hashed_e
         "llm_model": "gpt-5",
         "llm_deployment": "production-gpt-5",
         "llm_api_version": "2025-04-01-preview",
+        "llm_endpoint_hash": "endpoint-sha256",
+    }
+
+
+def test_scanner_cache_config_includes_openai_compatible_api_key_header(monkeypatch):
+    monkeypatch.setattr(
+        exchange_builder,
+        "skillspector_llm_config",
+        lambda: {
+            "provider": "openai_compatible",
+            "model": "gpt-5.5",
+            "deployment": None,
+            "api_version": None,
+            "api_key_header": "Ocp-Apim-Subscription-Key",
+            "endpoint_hash": "endpoint-sha256",
+        },
+    )
+
+    assert exchange_builder.scanner_cache_config("llm-assisted") == {
+        "native_output_format": "skillspector-json-v2",
+        "scan_mode": "llm-assisted",
+        "llm_provider": "openai_compatible",
+        "llm_model": "gpt-5.5",
+        "llm_api_key_header": "Ocp-Apim-Subscription-Key",
         "llm_endpoint_hash": "endpoint-sha256",
     }
 

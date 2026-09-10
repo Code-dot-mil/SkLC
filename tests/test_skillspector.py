@@ -102,7 +102,7 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
 
 def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "gateway-secret")
-    monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://mdevchat.apim.mitre.org/openai")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://mdevchat.apim.mitre.org/openai/v1")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5.4")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai_compatible")
     for name in (
@@ -122,7 +122,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
 
     assert env["SKILLSPECTOR_PROVIDER"] == "openai_compatible"
     assert env["SKILLSPECTOR_COMPAT_API_KEY"] == "gateway-secret"
-    assert env["SKILLSPECTOR_COMPAT_BASE_URL"] == "https://mdevchat.apim.mitre.org/openai"
+    assert env["SKILLSPECTOR_COMPAT_BASE_URL"] == "https://mdevchat.apim.mitre.org/openai/v1"
     assert env["SKILLSPECTOR_MODEL"] == "gpt-5.4"
     assert "OPENAI_API_KEY" not in env
     assert "AZURE_OPENAI_API_KEY" not in env
@@ -131,7 +131,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
         "model": "gpt-5.4",
         "deployment": None,
         "api_version": None,
-        "endpoint_hash": "41c979d6c6ddc757acecac2dd38421466a3ae7370cf3cd01a6d50f6784d57daf",
+        "endpoint_hash": "55a0ebce3878ccee9dd6f6e9f65f6eeeec216aaf696b2c19fb144f1762c8d6cf",
     }
 
 

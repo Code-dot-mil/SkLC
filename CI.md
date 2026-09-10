@@ -37,7 +37,7 @@ Configure these GitHub repository settings before enabling the workflow:
 |---|---|---|
 | Actions secret | `SKILL_EXCHANGE_LLM_API_KEY` | OpenAI-compatible gateway API key |
 | Actions variable | `SKILL_EXCHANGE_LLM_PROVIDER` | `openai_compatible` |
-| Actions variable | `SKILL_EXCHANGE_LLM_BASE_URL` | `https://mdevchat.apim.mitre.org/openai` |
+| Actions variable | `SKILL_EXCHANGE_LLM_BASE_URL` | `https://mdevchat.apim.mitre.org/openai/v1` |
 | Actions variable | `SKILL_EXCHANGE_LLM_MODEL` | `gpt-5.4` |
 | Actions variable | `RUNNER_CA_BUNDLE_PATH` | Absolute path, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain |
 

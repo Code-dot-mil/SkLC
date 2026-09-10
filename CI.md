@@ -41,9 +41,10 @@ Configure these GitHub repository settings before enabling the workflow:
 | Actions variable | `SKILL_EXCHANGE_LLM_MODEL` | `gpt-5.5` |
 | Actions variable | `SKILL_EXCHANGE_LLM_API_KEY_HEADER` | Gateway-defined HTTP header that carries the API key, such as `api-key` |
 | Actions variable | `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` | Maximum shared LLM request start rate; use `0.1` to serialize calls at ten-second intervals |
+| Actions variable | `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS` | Maximum output tokens requested per LLM call; use `2048` for the structured scanner responses |
 | Actions variable | `RUNNER_CA_BUNDLE_PATH` | Absolute path, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain |
 
-For gateways that authenticate an OpenAI-compatible API with a nonstandard API-key header, the repository adapter passes the configured `SKILL_EXCHANGE_LLM_API_KEY` value in `SKILL_EXCHANGE_LLM_API_KEY_HEADER`. The adapter also applies the explicit `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` rate across the pinned scanner's parallel analyzers. The header name and rate are included in the scanner cache configuration; the credential is never written to BOE.
+For gateways that authenticate an OpenAI-compatible API with a nonstandard API-key header, the repository adapter passes the configured `SKILL_EXCHANGE_LLM_API_KEY` value in `SKILL_EXCHANGE_LLM_API_KEY_HEADER`. The adapter also applies the explicit `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` rate across the pinned scanner's parallel analyzers and caps each request at `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS`. The header name, rate, and output cap are included in the scanner cache configuration; the credential is never written to BOE.
 
 The self-hosted workflow passes `RUNNER_CA_BUNDLE_PATH` to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`. This allows Node-based actions and the Python CI helper that posts review comments to trust the enterprise TLS CA chain without disabling certificate verification. The workflow fails before Python setup if the variable is unset or the bundle is unreadable. The bundle must be present in the runner execution environment, including the runner container when one is used.
 
@@ -161,7 +162,7 @@ All environment-specific values are CI variables:
 - `SKILLSPECTOR_BIN` points to a SkillSpector binary when it is not on `PATH`.
 - `SKILL_EXCHANGE_REVIEW_SCAN_MODE` controls MR review scanning: `static-only` or `llm-assisted`.
 - `SKILL_EXCHANGE_PUBLISH_SCAN_MODES` controls official publication scanning, using comma or space separated modes. Use `static-only,llm-assisted` when official publication should include both static and LLM-backed BOE.
-- `SKILL_EXCHANGE_LLM_API_KEY`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_API_KEY_HEADER`, `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`, `SKILL_EXCHANGE_LLM_DEPLOYMENT`, and `SKILL_EXCHANGE_LLM_API_VERSION` configure LLM-assisted scans without using provider-specific exchange variable names.
+- `SKILL_EXCHANGE_LLM_API_KEY`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_API_KEY_HEADER`, `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`, `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS`, `SKILL_EXCHANGE_LLM_DEPLOYMENT`, and `SKILL_EXCHANGE_LLM_API_VERSION` configure LLM-assisted scans without using provider-specific exchange variable names.
 - `SKILL_EXCHANGE_POST_REVIEW_COMMENT`, `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE`, and `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER` control optional merge request comments.
 - `EXCHANGE_PUBLISH_COMMIT`, `EXCHANGE_PUBLISH_PUSH`, `EXCHANGE_PUBLISH_BRANCH`, `EXCHANGE_PUBLISH_PUSH_URL`, `EXCHANGE_PUBLISH_TOKEN`, and `EXCHANGE_PUBLISH_USERNAME` control BOE-bundle commits. When GitLab job-token repository push is enabled and no publish token is configured, publication uses `CI_JOB_TOKEN` with the `gitlab-ci-token` username.
 - `EXCHANGE_BOT_GIT_NAME`, `EXCHANGE_BOT_GIT_EMAIL`, and `EXCHANGE_PUBLISH_COMMIT_MESSAGE` control generated commit metadata.

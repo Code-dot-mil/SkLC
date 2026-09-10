@@ -61,7 +61,8 @@ def run_skillspector(skill_path: Path, output_path: Path, *, no_llm: bool = True
 def skillspector_command(binary: str, scanner_args: list[str], *, env: dict[str, str], no_llm: bool) -> list[str]:
     api_key_header = env.get("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "").strip()
     requests_per_second = env.get("SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND", "").strip()
-    if (api_key_header or requests_per_second) and not no_llm:
+    max_output_tokens = env.get("SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS", "").strip()
+    if (api_key_header or requests_per_second or max_output_tokens) and not no_llm:
         return [sys.executable, "-m", "skill_exchange.skillspector_runner", *scanner_args]
     return [binary, *scanner_args]
 
@@ -130,6 +131,7 @@ def skillspector_llm_config() -> dict[str, str | None]:
     provider = env.get("SKILLSPECTOR_PROVIDER")
     api_key_header = env.get("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "").strip()
     requests_per_second = env.get("SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND", "").strip()
+    max_output_tokens = env.get("SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS", "").strip()
     endpoint = (
         env.get("AZURE_OPENAI_ENDPOINT")
         if provider == "azure_openai"
@@ -146,5 +148,6 @@ def skillspector_llm_config() -> dict[str, str | None]:
         "api_version": env.get("AZURE_OPENAI_API_VERSION") if provider == "azure_openai" else None,
         "api_key_header": api_key_header if provider == "openai_compatible" and api_key_header else None,
         "requests_per_second": requests_per_second or None,
+        "max_output_tokens": max_output_tokens or None,
         "endpoint_hash": sha256(endpoint.encode()).hexdigest() if endpoint else None,
     }

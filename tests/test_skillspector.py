@@ -126,6 +126,19 @@ def test_skillspector_adapter_rejects_invalid_request_rate(monkeypatch):
         skillspector_runner.configure_openai_compatible_provider()
 
 
+def test_skillspector_adapter_rejects_invalid_output_token_cap(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS", "many")
+    monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("SKILLSPECTOR_COMPAT_API_KEY", "secret")
+
+    with pytest.raises(RuntimeError, match="must be an integer"):
+        skillspector_runner.configure_openai_compatible_provider()
+
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS", "-1")
+    with pytest.raises(RuntimeError, match="must be greater than zero"):
+        skillspector_runner.configure_openai_compatible_provider()
+
+
 def test_skillspector_env_maps_generic_llm_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY", "secret-value")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://llm.example/v1")
@@ -148,6 +161,7 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
         "api_version": None,
         "api_key_header": None,
         "requests_per_second": None,
+        "max_output_tokens": None,
         "endpoint_hash": "d5e402bf7bacd64a5aa920e05315e0f106363e00c2fd868856660c607ce4ae22",
     }
 
@@ -159,6 +173,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai_compatible")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "api-key")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND", "0.1")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS", "2048")
     for name in (
         "SKILLSPECTOR_COMPAT_API_KEY",
         "SKILLSPECTOR_COMPAT_BASE_URL",
@@ -187,6 +202,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
         "api_version": None,
         "api_key_header": "api-key",
         "requests_per_second": "0.1",
+        "max_output_tokens": "2048",
         "endpoint_hash": "55a0ebce3878ccee9dd6f6e9f65f6eeeec216aaf696b2c19fb144f1762c8d6cf",
     }
 
@@ -228,6 +244,7 @@ def test_skillspector_env_maps_generic_azure_openai_env(monkeypatch):
         "api_version": "2025-04-01-preview",
         "api_key_header": None,
         "requests_per_second": None,
+        "max_output_tokens": None,
         "endpoint_hash": "7bef302251509c8f87385679f5607976a809a9bd5d5433860114b812bb5bd8dd",
     }
 

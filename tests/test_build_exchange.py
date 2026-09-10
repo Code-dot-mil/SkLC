@@ -198,6 +198,7 @@ def test_scanner_cache_config_includes_azure_deployment_api_version_and_hashed_e
             "api_version": "2025-04-01-preview",
             "api_key_header": None,
             "requests_per_second": None,
+            "max_output_tokens": None,
             "endpoint_hash": "endpoint-sha256",
         },
     )
@@ -224,6 +225,7 @@ def test_scanner_cache_config_includes_openai_compatible_api_key_header(monkeypa
             "api_version": None,
             "api_key_header": "api-key",
             "requests_per_second": "0.1",
+            "max_output_tokens": "2048",
             "endpoint_hash": "endpoint-sha256",
         },
     )
@@ -235,6 +237,7 @@ def test_scanner_cache_config_includes_openai_compatible_api_key_header(monkeypa
         "llm_model": "gpt-5.5",
         "llm_api_key_header": "api-key",
         "llm_requests_per_second": "0.1",
+        "llm_max_output_tokens": "2048",
         "llm_endpoint_hash": "endpoint-sha256",
     }
 

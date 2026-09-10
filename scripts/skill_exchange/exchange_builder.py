@@ -362,6 +362,8 @@ def scanner_cache_config(mode: str) -> dict[str, Any]:
             config["llm_api_version"] = llm_config["api_version"]
         if llm_config.get("api_key_header"):
             config["llm_api_key_header"] = llm_config["api_key_header"]
+        if llm_config.get("requests_per_second"):
+            config["llm_requests_per_second"] = llm_config["requests_per_second"]
         if llm_config.get("endpoint_hash"):
             config["llm_endpoint_hash"] = llm_config["endpoint_hash"]
     return config

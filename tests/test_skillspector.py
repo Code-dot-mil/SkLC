@@ -93,24 +93,37 @@ def test_skillspector_command_uses_header_adapter_only_for_llm_scans():
     ]
 
 
-def test_skillspector_header_adapter_rejects_invalid_header_name(monkeypatch):
+def test_skillspector_adapter_rejects_invalid_header_name(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "Bad Header")
 
     with pytest.raises(RuntimeError, match="valid HTTP header name"):
-        skillspector_runner.configure_api_key_header()
+        skillspector_runner.configure_openai_compatible_provider()
 
 
-def test_skillspector_header_adapter_requires_compatible_provider_and_key(monkeypatch):
+def test_skillspector_adapter_requires_compatible_provider_and_key(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "X-Api-Key")
     monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai")
 
-    with pytest.raises(RuntimeError, match="requires the openai_compatible provider"):
-        skillspector_runner.configure_api_key_header()
+    with pytest.raises(RuntimeError, match="require the openai_compatible provider"):
+        skillspector_runner.configure_openai_compatible_provider()
 
     monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai_compatible")
     monkeypatch.delenv("SKILLSPECTOR_COMPAT_API_KEY", raising=False)
-    with pytest.raises(RuntimeError, match="requires SKILL_EXCHANGE_LLM_API_KEY"):
-        skillspector_runner.configure_api_key_header()
+    with pytest.raises(RuntimeError, match="require SKILL_EXCHANGE_LLM_API_KEY"):
+        skillspector_runner.configure_openai_compatible_provider()
+
+
+def test_skillspector_adapter_rejects_invalid_request_rate(monkeypatch):
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND", "zero")
+    monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("SKILLSPECTOR_COMPAT_API_KEY", "secret")
+
+    with pytest.raises(RuntimeError, match="must be a number"):
+        skillspector_runner.configure_openai_compatible_provider()
+
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND", "0")
+    with pytest.raises(RuntimeError, match="must be greater than zero"):
+        skillspector_runner.configure_openai_compatible_provider()
 
 
 def test_skillspector_env_maps_generic_llm_env(monkeypatch):
@@ -134,6 +147,7 @@ def test_skillspector_env_maps_generic_llm_env(monkeypatch):
         "deployment": None,
         "api_version": None,
         "api_key_header": None,
+        "requests_per_second": None,
         "endpoint_hash": "d5e402bf7bacd64a5aa920e05315e0f106363e00c2fd868856660c607ce4ae22",
     }
 
@@ -144,6 +158,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5.5")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai_compatible")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "api-key")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND", "0.1")
     for name in (
         "SKILLSPECTOR_COMPAT_API_KEY",
         "SKILLSPECTOR_COMPAT_BASE_URL",
@@ -171,6 +186,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
         "deployment": None,
         "api_version": None,
         "api_key_header": "api-key",
+        "requests_per_second": "0.1",
         "endpoint_hash": "55a0ebce3878ccee9dd6f6e9f65f6eeeec216aaf696b2c19fb144f1762c8d6cf",
     }
 
@@ -211,6 +227,7 @@ def test_skillspector_env_maps_generic_azure_openai_env(monkeypatch):
         "deployment": "production-gpt-5",
         "api_version": "2025-04-01-preview",
         "api_key_header": None,
+        "requests_per_second": None,
         "endpoint_hash": "7bef302251509c8f87385679f5607976a809a9bd5d5433860114b812bb5bd8dd",
     }
 

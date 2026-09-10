@@ -411,10 +411,11 @@ Generic LLM environment mapping:
 | `SKILL_EXCHANGE_LLM_DEPLOYMENT` | not mapped | not mapped | `AZURE_OPENAI_DEPLOYMENT` |
 | `SKILL_EXCHANGE_LLM_API_VERSION` | not mapped | not mapped | `AZURE_OPENAI_API_VERSION` |
 | `SKILL_EXCHANGE_LLM_API_KEY_HEADER` | not mapped | repository adapter `default_headers` | not mapped |
+| `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` | not mapped | repository adapter shared rate limiter | not mapped |
 
 Select the mapping from the effective `SKILLSPECTOR_PROVIDER`. Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing native scanner/provider environment variables win over exchange variables. Populate only the effective provider's native credential variables. Do not add organization-specific or provider-specific exchange variable names.
 
-`skillspector_llm_config()` returns provider, model, optional Azure deployment and API version, an optional API-key header name for the OpenAI-compatible provider, and a SHA-256 endpoint digest. When an API-key header is configured, the repository invokes the pinned SkillSpector CLI through a narrow adapter that supplies the existing API key to LangChain as a default header. Scanner configuration and cache hashing include all non-empty values, including the non-secret header name, so evidence is not reused across materially different endpoint configurations. The endpoint itself and credentials must never be written to scanner configuration or BOE.
+`skillspector_llm_config()` returns provider, model, optional Azure deployment and API version, an optional API-key header name for the OpenAI-compatible provider, an optional shared request-start rate, and a SHA-256 endpoint digest. When an API-key header or request rate is configured, the repository invokes the pinned SkillSpector CLI through a narrow adapter that supplies the existing API key to LangChain as a default header and shares one in-memory rate limiter across analyzer clients. Scanner configuration and cache hashing include all non-empty values, including the non-secret header name and rate, so evidence is not reused across materially different endpoint configurations. Invalid or non-positive request rates fail closed. The endpoint itself and credentials must never be written to scanner configuration or BOE.
 
 ## Risk And Recommendation Mapping
 
@@ -801,13 +802,13 @@ The repository also owns `.github/workflows/skillspector.yml`:
 - Put the generated review Markdown in the job summary, post it as a comment on same-repository pull requests using the job-scoped `GITHUB_TOKEN` with `pull-requests: write`, and retain all review artifacts without committing them. Fork pull requests retain the artifact but do not receive comments because their workflow tokens are read-only.
 - Trigger protected publication for default-branch `skills/**` pushes, a nightly schedule, and manual dispatch.
 - Install upstream SkillSpector 2.10.0 from the locked `scan` optional dependency, pinned to NVIDIA's immutable `v2.10.0` Git commit because that release is not available from PyPI; do not install the legacy private GitLab fork or require a model container.
-- Require API key, base URL, model, provider, and API-key header name before any LLM-assisted job and require the provider value to be `openai_compatible`.
+- Require API key, base URL, model, provider, API-key header name, and shared request rate before any LLM-assisted job and require the provider value to be `openai_compatible`.
 - Run official publication with `static-only,llm-assisted`, commit only `.exchange/generated/boe/`, and upload full generated output plus the publication result.
 - Give only the publication job `contents: write`; all other jobs remain read-only.
 - Push official BOE with job-scoped `GITHUB_TOKEN`, the repository path from GitHub context, and the default branch from GitHub event context.
 - Reuse tracked BOE scan keys, including hashed endpoint identity.
 
-GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_API_KEY_HEADER`, and `RUNNER_CA_BUNDLE_PATH`. The provider variable must equal `openai_compatible`. The API-key header variable names the gateway-defined HTTP header and is not a credential; its configured name participates in scanner cache hashing. `RUNNER_CA_BUNDLE_PATH` must resolve, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain. The SkillSpector jobs pass it to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`, and fail closed when it is missing or unreadable. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
+GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_API_KEY_HEADER`, `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`, and `RUNNER_CA_BUNDLE_PATH`. The provider variable must equal `openai_compatible`. The API-key header variable names the gateway-defined HTTP header and is not a credential. The request-rate variable controls the shared rate limiter across analyzer clients. Both values participate in scanner cache hashing. `RUNNER_CA_BUNDLE_PATH` must resolve, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain. The SkillSpector jobs pass it to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`, and fail closed when it is missing or unreadable. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
 
 ## GitHub Release Automation
 
@@ -942,6 +943,7 @@ Important variables:
 - `SKILL_EXCHANGE_LLM_MODEL`;
 - `SKILL_EXCHANGE_LLM_PROVIDER`;
 - `SKILL_EXCHANGE_LLM_API_KEY_HEADER`;
+- `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`;
 - `SKILL_EXCHANGE_LLM_DEPLOYMENT`;
 - `SKILL_EXCHANGE_LLM_API_VERSION`;
 - `EXCHANGE_PUBLISH_COMMIT`;

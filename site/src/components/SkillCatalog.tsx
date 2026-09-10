@@ -167,7 +167,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
                 />
                 <span className="category-chip">{skill.category || "uncategorized"}</span>
               </div>
-              <h3><a href={`/skills/${skill.display_id}/`}>{skill.display_id}</a></h3>
+              <h3><a href={`skills/${skill.display_id}/`}>{skill.display_id}</a></h3>
               <p>{skill.description}</p>
               {skill.tags.length > 0 && (
                 <div className="tag-row">
@@ -194,7 +194,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
                   <dd>{skill.scanner_provenance?.name || "SkillSpector"}</dd>
                 </div>
               </dl>
-              <a className="card-action" href={`/skills/${skill.display_id}/`}>View skill instructions</a>
+              <a className="card-action" href={`skills/${skill.display_id}/`}>View skill instructions</a>
             </article>
           ))}
         </div>

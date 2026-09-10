@@ -588,7 +588,7 @@ The builder writes JSON table files under `.exchange/generated/tables/`. Each ta
 - native score, native severity, native recommendation;
 - display risk, display risk reason, confidence flags.
 
-`scanner_artifacts.json` rows include one `native_report`, one `summary`, and one `boe` artifact per scanner run, each with a `/downloads/scanner-runs/<run-id>/...` download path.
+`scanner_artifacts.json` rows include one `native_report`, one `summary`, and one `boe` artifact per scanner run, each with a relative `downloads/scanner-runs/<run-id>/...` download path.
 
 `scanner_findings.json` rows preserve native SkillSpector issue details:
 
@@ -618,6 +618,69 @@ The archive must preserve the skill directory:
 Only files from the skill package are included. Exchange governance files, BOE, generated data, and repository tooling are not included. Zip creation uses `package_files()`, so symlinks and oversized packages are rejected consistently with hashing.
 
 Each exchange build clears the generated `zips/` directory before packaging the current valid skill set, so archives from prior builds are not retained after a skill is removed or becomes invalid.
+
+## Prebuilt Release Packaging
+
+`scripts/skill_exchange/release.py` assembles the prebuilt site without invoking
+Node, generating exchange data, assessing skills, or creating a standalone catalog.
+Its `build` command takes `--version`, `--source-revision`, `--repo-root`,
+`--site-dir` (default `site/dist` relative to the repository), and `--output-dir`.
+The version must be SemVer without a leading `v`. `SOURCE_DATE_EPOCH`, when set,
+controls the manifest timestamp and archive timestamps for repeatable builds.
+
+The archive is named `deployment-kit-prebuilt-<version>.tar.gz` and has one
+`deployment-kit-prebuilt-<version>/` root. Already-built site files go in `public/`;
+`index.html`, `assets/`, and `downloads/` must exist. The site's root `.gitkeep`
+is excluded. The builder copies the deployment CI from
+`products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml`, the README and three
+installation/deployment guides from `products/deployment-kit/docs/prebuilt/`, and
+the release-manifest schema from `contracts/release-manifest/v1/`. Missing required
+inputs fail the build; the builder does not generate substitute documentation.
+
+The package's manifest and checksums cover the same installation files, excluding
+only their own two root metadata files. Nested assets with either metadata filename
+are included. External `release-manifest.json` records only the prebuilt archive;
+external `SHA256SUMS.txt` covers that archive and the external manifest. No catalog
+archive or release-notes asset is produced by this builder.
+
+The builder also vendors `products/deployment-kit/scripts/verify_prebuilt.py`
+as `scripts/verify_prebuilt.py` and includes it in the manifest and checksums.
+Installation and the deployment-only GitLab `pages` job invoke that same offline
+Python 3.12+ script. The GitLab job must explicitly select `$PYTHON_IMAGE`,
+defaulting to the official `python:3.12-slim` image, instead of relying on the
+runner's default image to contain Python. Reuse `PYTHON_IMAGE_REGISTRY`,
+`PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and the full `PYTHON_IMAGE`
+override so consumers can select an approved image through CI/CD variables
+without editing checksummed package files. Runner selection remains independent
+through `PAGES_RUNNER_TAG`; the Linux runner must support and be allowed to pull
+job images. The selected image must supply a POSIX shell and Python 3.12+.
+The verifier validates the vendored manifest schema (including date/time
+and offset ranges), compares the manifest and checksum file sets, verifies file
+digests and required files/directories, rejects links and escaping paths, and
+scans static HTML attributes, JSON string values, and JavaScript string literals
+for missing downloads. HTML entities and JSON/JavaScript escapes must be decoded;
+download queries/fragments are ignored and URL-encoded traversal is rejected.
+JavaScript scanning must keep regular-expression literals (including escaped
+slashes and character classes) separate from quoted download strings and division
+operators, so a pattern cannot hide a later missing download. Apply the same rule
+to inline scripts and standalone JavaScript files; regex contents are not URLs.
+Unknown schema features fail closed. All installation files must be recorded;
+only root metadata and top-level `.git` checkout metadata are excluded. Verification
+does not modify `public/`, and the job publishes that existing directory only
+after success. The package can be copied into a differently named GitLab checkout;
+`--expected-version` is available for matching the initially downloaded archive.
+
+### Input safety
+
+Prebuilt release staging helpers live in `scripts/skill_exchange/release.py`.
+Before copying a source tree, they must reject symbolic links and Windows directory
+junctions at the source root, in its parent path, and anywhere inside the tree.
+Single-file inputs must reject linked files and linked parent directories as well.
+Source paths must be checked before resolving links or traversing directories.
+Tree validation must finish before creating or copying destination contents, so a
+rejected source leaves no partially copied tree. Ordinary files, nested directories,
+and empty directories must be preserved in the trusted package staging directory.
+The source tree must remain unchanged during validation and copying.
 
 ## Local CLI
 
@@ -705,7 +768,55 @@ Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be
 
 The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
 
-Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation, builds `site/dist/`, verifies catalog detail pages and skill downloads, and uploads its contents as the downloadable `static-site` zip artifact.
+Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation and builds `site/dist/`.
+
+The artifact job must package the built site with `skill_exchange.release build`
+under Python 3.12, extract the archive, and run its included
+`scripts/verify_prebuilt.py` with the expected version before upload. Preserve
+checks for a nonempty home page, catalog detail pages, skill ZIP downloads, and
+the absence of the site's root `.gitkeep`. Use a fresh staging directory under
+`RUNNER_TEMP`. Only after all checks succeed may the complete extracted package
+root be uploaded as `static-site`, including hidden deployment files. The ZIP
+must contain `public/`, docs, the deployment CI, vendored schema, verifier,
+manifest, and checksums at their customer installation paths, not bare site
+output or a nested tar archive.
+
+CI versions are `0.0.0-ci.<run-id>.<run-attempt>` and do not select a product
+release version. The manifest source revision is `github.sha`, which identifies
+the checked-out PR merge commit or push commit. This validation job creates no
+tag or GitHub Release. Regression tests must execute the workflow's packaging
+commands against already-built fixture content, verify the configured upload
+layout after ZIP extraction, and prove invalid download references stop the job.
+
+## GitHub Release Automation
+
+`.github/workflows/release.yml` implements the manual-tag path from
+`docs/specs/release-process.md` for `deployment-kit-prebuilt` only. It runs on
+`v*.*.*` tag pushes, validates the version as SemVer without its leading `v`, and
+requires the checkout to match the tag's commit. It neither chooses a release
+version nor creates a tag. Maintainers must complete the release checklist first.
+
+`RELEASE_NOTES.md` stores accepted sections headed `## <version>`. The
+`skill_exchange.release release-notes` command must extract exactly that section,
+including its heading and subsections, without adjacent releases. Ignore fenced
+code examples when finding headings. Missing, duplicate, empty, or linked notes
+inputs fail. `validate-version` exposes the builder's existing version validation.
+The workflow reads committed, unmodified notes from the tagged checkout before
+build steps and uses the extracted snippet as the GitHub Release description.
+
+Python 3.12 and Node.js 22 run repository checks, reuse-only exchange generation,
+and the site build. No scanner or LLM may run. The release uses the same builder
+and included verifier as CI, with extraction, expected-version checking, required
+site-content checks, and external checksum verification before publication. Build
+metadata records the tag's commit, with `SOURCE_DATE_EPOCH` from that commit.
+
+Use a fresh directory under `RUNNER_TEMP`. Publish exactly
+`deployment-kit-prebuilt-<version>.tar.gz`, `release-manifest.json`, and
+`SHA256SUMS.txt` via `gh release create --verify-tag --notes-file ...`. No catalog
+archive or release-notes asset is uploaded. Existing releases must not be
+overwritten. SemVer prereleases are marked as GitHub prereleases. Keep the release
+token scoped to the publishing step, disable persisted checkout credentials, and
+use a 30-minute GitHub-hosted job with non-cancelling per-tag concurrency.
 
 ## GitLab CI
 
@@ -840,6 +951,23 @@ Read:
 - `tables/scanner_artifacts.json`, defaulting to `{ rows: [] }`.
 
 The empty fallback is explicit to allow a valid empty catalog build before generated data exists.
+
+## Portable Site Paths
+
+The same static output must work at a host root or beneath a project path without
+rebuilding it for that destination. Astro emits bundled CSS and JavaScript into
+`assets/` with the relative asset prefix `.`. Keep directory-format page output.
+
+`BaseLayout` sets a relative HTML base using `relativeSiteRoot(Astro.url.pathname)`:
+`./` for the catalog and `../../../` for a skill detail page. Catalog links,
+back links, skill ZIP downloads, and scanner-evidence downloads resolve against
+that site root. Generated download URLs begin with `downloads/`, never `/downloads/`.
+External source and documentation URLs remain unchanged.
+
+Node tests must build the actual site templates with fixture data and check that
+navigation, download, stylesheet, and client-module URLs serve successfully from
+the same output at both root and nested hosting paths. Python tests verify the
+relative download URLs produced in the index, detail records, and tables.
 
 ## Site UX
 

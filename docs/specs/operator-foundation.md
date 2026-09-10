@@ -22,8 +22,10 @@ An operator installs compatible released components in GitLab, runs the referenc
 ## Release artifact
 
 GitHub Releases publish one archive named
-`deployment-kit-operator-<version>.tar.gz`. After extraction, the archive root is
-named `deployment-kit-operator-<version>/` and contains:
+`deployment-kit-operator-<version>.tar.gz`, an external
+`deployment-kit-operator-<version>.release-manifest.json`, and an external
+`deployment-kit-operator-<version>.SHA256SUMS.txt`. After extraction, the
+archive root is named `deployment-kit-operator-<version>/` and contains:
 
 ```text
 deployment-kit-operator-<version>/
@@ -95,6 +97,9 @@ Required release contents:
   records every file in the archive except itself and `SHA256SUMS.txt`.
 - `SHA256SUMS.txt` contains SHA-256 entries for the same archive-relative paths
   recorded in `release-manifest.json`.
+- The external manifest is byte-for-byte identical to the internal manifest.
+  The external checksum file records the archive and external manifest; the
+  release manifest never records the containing archive.
 
 The initial catalog is test input, not a structural dependency.
 
@@ -496,8 +501,9 @@ this milestone.
 
 Acceptance requires a clean GitLab project that:
 
-1. Receives `deployment-kit-operator-<version>.tar.gz` from GitHub Releases and
-   commits the extracted operator files unchanged.
+1. Receives the operator archive and its product-qualified manifest and
+   checksum sidecars from GitHub Releases, verifies the downloads and extracted
+   files, and commits the extracted operator files unchanged.
 2. Configures the required GitLab variables for the compatible catalog,
    assessment kit, runners, credentials, and assessor access.
 3. Runs `operator_prepare_inputs` and verifies catalog and assessment-kit

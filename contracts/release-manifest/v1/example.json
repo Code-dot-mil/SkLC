@@ -19,8 +19,12 @@
   },
   "artifacts": [
     {
-      "path": "assessment-kit-1.0.0.tar.gz",
+      "path": "README.md",
       "sha256": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    {
+      "path": "dist/skill_assessment-1.0.0-py3-none-any.whl",
+      "sha256": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     }
   ]
 }

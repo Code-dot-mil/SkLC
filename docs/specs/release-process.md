@@ -49,9 +49,24 @@ The basic release flow is manual tag creation plus a GitHub Actions workflow:
 5. Codex drafts a concise release-notes section titled with the accepted version.
 6. A maintainer reviews the release notes, commits them, and pushes them before creating the tag.
 7. A maintainer creates the release tag on the commit that contains the accepted release notes.
-8. GitHub Actions builds every releasable product artifact, creates `release-manifest.json`, creates `SHA256SUMS.txt`, creates the GitHub Release with that version's release-notes snippet as the release description, and uploads all release assets.
+8. GitHub Actions builds every releasable product artifact, creates its
+   product-qualified external release manifest and checksum sidecars, creates
+   the GitHub Release with that version's release-notes snippet as the release
+   description, and uploads all release assets.
 
-`SHA256SUMS.txt` uses the standard checksum-file format:
+For each `<product>-<version>.tar.gz`, the release includes:
+
+- `<product>-<version>.release-manifest.json`, byte-for-byte identical to the
+  archive's internal `release-manifest.json` and listing extracted product
+  files rather than the containing archive.
+- `<product>-<version>.SHA256SUMS.txt`, recording the archive and its external
+  manifest.
+
+Product-qualified sidecar names prevent collisions when one cumulative GitHub
+Release contains multiple standalone products. Internal and external checksum
+files have different scopes: the internal file verifies extracted product
+files, while the external file verifies release downloads. Both use the
+standard checksum-file format:
 
 ```text
 <64 lowercase hex sha256>  <filename>
@@ -77,7 +92,9 @@ Before tagging, the maintainer works through this checklist in order:
 14. Confirm no secrets, local paths, generated cache state, maintainer-only workflow details, or unpublished artifacts are included.
 15. Create the release tag only after all checklist items above pass.
 16. Confirm the GitHub Release description uses the accepted release-notes snippet for that version.
-17. Confirm the uploaded release assets are the releasable product artifacts, `release-manifest.json`, and `SHA256SUMS.txt`. Release notes are not uploaded as a separate release asset.
+17. Confirm the uploaded release assets are every releasable product archive
+    and its product-qualified `.release-manifest.json` and `.SHA256SUMS.txt`
+    sidecars. Release notes are not uploaded as a separate release asset.
 
 ## Codex release skill
 

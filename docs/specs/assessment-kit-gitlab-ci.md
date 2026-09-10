@@ -91,17 +91,19 @@ Local-path installs must verify `SKLC_ASSESSMENT_KIT_SHA256` when it
 is set. The profile must not fall back to a globally installed
 `skill-assessment` executable.
 
-Required secret variables depend on the selected assessor. The documentation
-must use generic names and map them to the released CLI's supported assessor
-settings. For SkillSpector, the documentation must link to the NVIDIA
-SkillSpector source at `https://github.com/NVIDIA/SkillSpector`.
+Required LLM variables depend on the selected assessor profile. The
+documentation must use generic names and map them through the released CLI's
+supported assessor settings. For the first SkillSpector release, all four are
+required for `llm-assisted` and `SKLC_LLM_PROVIDER` must be
+`openai_compatible`. The documentation must link to the NVIDIA SkillSpector
+source at `https://github.com/NVIDIA/SkillSpector`.
 
 | Variable | Description |
 |---|---|
 | `SKLC_LLM_API_KEY` | Masked credential for assessor model access when the assessor requires one. |
 | `SKLC_LLM_BASE_URL` | Base URL for assessor model access when the assessor requires a non-default endpoint. |
 | `SKLC_LLM_MODEL` | Model or deployment name when the assessor requires an explicit model setting. |
-| `SKLC_LLM_PROVIDER` | Provider identifier when the assessor requires one or when the default provider is not intended. |
+| `SKLC_LLM_PROVIDER` | Provider profile; the first release supports `openai_compatible`. |
 
 Supported optional variables:
 
@@ -179,10 +181,11 @@ For the first release, the profile passes `SKLC_ASSESSOR` as the `--assessor`
 command argument, and the supported value is `skillspector`. Preflight rejects
 any `SKLC_SKILLSPECTOR_SCAN_MODE` value other than `llm-assisted` or
 `static-only`. When `llm-assisted` is selected or defaulted, the required
-`SKLC_LLM_*` variables for the configured provider must be present before the
-CLI runs. When `static-only` is explicitly selected, those variables may be
-absent. The profile must not fall back to `static-only` when `llm-assisted` is
-selected or defaulted but its required environment variables are unavailable.
+`SKLC_LLM_*` variables must be present and `SKLC_LLM_PROVIDER` must be
+`openai_compatible` before the CLI runs. When `static-only` is explicitly
+selected, those variables may be absent. The profile must not fall back to
+`static-only` when `llm-assisted` is selected or defaulted but its required
+environment variables are unavailable.
 
 Jobs pass secret values only through the process environment.
 

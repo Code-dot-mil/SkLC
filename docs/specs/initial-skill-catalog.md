@@ -18,8 +18,10 @@ A customer obtains a governed catalog containing four developer-centered skills 
 
 ## Release artifact
 
-Publish one archive named `skill-catalog-<version>.tar.gz`. The
-unpacked archive root is `skill-catalog-<version>/` and contains:
+Publish one archive named `skill-catalog-<version>.tar.gz`, an external
+`skill-catalog-<version>.release-manifest.json`, and an external
+`skill-catalog-<version>.SHA256SUMS.txt`. The unpacked archive root is
+`skill-catalog-<version>/` and contains:
 
 ```text
 skill-catalog-<version>/
@@ -127,13 +129,18 @@ boe/
 Each `boe/<skill-name>/boe.json` contains:
 
 - `schema_version`: the literal `skill-exchange-boe/v1`.
+- `skill.name`: the standard skill name, matching `<skill-name>` and the
+  released package directory.
+- `skill.content_sha256`: the skill-package v1 content digest of the exact
+  released package.
 - `assessments`: one or more entries with relative `path` and `sha256` fields.
 
 Each assessment path is relative to the directory containing that skill's
 `boe.json`, must not be absolute, and must not contain `..` path traversal. Each
 referenced native assessor report must exist in the archive and its bytes must
-match the recorded `sha256:<64 lowercase hex>` digest. BOE presence, absence,
-or content never changes catalog publication; the internal catalog policy is the
+match the recorded `sha256:<64 lowercase hex>` digest. The BOE skill name and
+content digest must match the released package. BOE presence, absence, or
+content never changes catalog publication; the internal catalog policy is the
 publication decision for this milestone.
 
 ## README requirements
@@ -164,6 +171,12 @@ archive except `release-manifest.json` and `SHA256SUMS.txt`. `SHA256SUMS.txt` re
 the same archive-relative file digests in a standard checksum-file format
 usable by `sha256sum -c`.
 
+The external manifest is byte-for-byte identical to the internal
+`release-manifest.json`. The external checksum file records the archive and
+external manifest, while the internal checksum file records the extracted files
+listed by `artifacts[]`. The release manifest never records the digest of its
+containing archive.
+
 ## Contracts
 
 The release consumes:
@@ -176,30 +189,35 @@ The release consumes:
 
 Acceptance requires a clean temporary workspace that:
 
-1. Downloads `skill-catalog-<version>.tar.gz` from the GitHub Release.
-2. Extracts the archive.
-3. Runs `sha256sum -c SHA256SUMS.txt` from the archive root and confirms the file
+1. Downloads the catalog archive and its product-qualified manifest and
+   checksum sidecars from the GitHub Release.
+2. Verifies the archive and external manifest with the external checksum file.
+3. Extracts the archive and confirms the internal and external manifests are
+   byte-for-byte identical.
+4. Runs `sha256sum -c SHA256SUMS.txt` from the archive root and confirms the file
    digests match `release-manifest.json`.
-4. Confirms the four released package directories are present under `skills/`.
-5. Validates each `skills/<skill-name>/SKILL.md` frontmatter against
-   `contracts/skill-package/v1/skill.schema.json` and confirms each
+5. Confirms the four released package directories are present under `skills/`.
+6. Validates each `skills/<skill-name>/SKILL.md` frontmatter against
+   `contracts/skill-package/v1/metadata.schema.json` and confirms each
    frontmatter `name` matches the directory name.
-6. Confirms the published set is exactly:
+7. Confirms the published set is exactly:
    `python-secure-code-review`, `unit-test-generation`,
    `inline-documentation`, and `code-change-description`.
-7. Confirms the archive does not contain `catalog-policy.yaml` or
+8. Confirms the archive does not contain `catalog-policy.yaml` or
    `contracts/catalog-policy/`.
-8. Copies the extracted `skills/*` directories to
+9. Copies the extracted `skills/*` directories to
    `<workspace>/.agents/skills/*`.
-9. Starts a supported agent session from `<workspace>` with temporary agent home
+10. Starts a supported agent session from `<workspace>` with temporary agent home
    and configuration directories so global agent and Codex skill sources are
    isolated or disabled.
-10. Confirms the session discovers the four skills from
+11. Confirms the session discovers the four skills from
     `<workspace>/.agents/skills/*` and not from any global `.agents` or
     `.codex` skill source.
-11. If `boe/` is present, validates each `boe/<skill-name>/boe.json` against
+12. If `boe/` is present, validates each `boe/<skill-name>/boe.json` against
     `contracts/boe/v1/boe.schema.json`, confirms `<skill-name>` is one of the
-    four published skill names, and recomputes each referenced report digest.
+    four published skill names, confirms the manifest's skill name and content
+    digest match the released package, and recomputes each referenced report
+    digest.
 
 This proof may use shell or a local agent harness in the temporary workspace.
 The evidence must include the discovered skill source paths. The proof must not

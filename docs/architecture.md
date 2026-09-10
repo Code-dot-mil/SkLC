@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the current static skill-exchange MVP. It distinguishes assessment and durable evidence from the site-specific artifacts that are materialized for GitLab Pages. Draft `v1` cross-product schemas under `contracts/` describe the intended product boundaries but are not yet consumed by the current implementation, which continues to use the `v0` formats described here.
+This document describes the current static skill-exchange MVP. It distinguishes assessment and durable evidence from the site-specific artifacts that are materialized for GitLab Pages. Approved `v1` cross-product schemas under `contracts/` describe the intended standalone-product boundaries but are not yet consumed by the current implementation, which continues to use the `v0` formats described here. In particular, BOE v1 is a small manifest bound to a portable skill name and content digest, while the richer bundle below documents the existing combined publisher's BOE v0 behavior.
 
 ## 1. Component Overview
 

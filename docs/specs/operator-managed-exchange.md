@@ -23,16 +23,17 @@ An operator adds locally owned skills, BOE, and catalog policy, then applies sup
 
 GitHub Releases publish one archive named
 `deployment-kit-operator-<version>.tar.gz`, plus external
-`release-manifest.json` and `SHA256SUMS.txt` assets. After extraction, the archive
-root is named `deployment-kit-operator-<version>/` and contains the installed
-tree shown below plus internal copies of `release-manifest.json` and
+`deployment-kit-operator-<version>.release-manifest.json` and
+`deployment-kit-operator-<version>.SHA256SUMS.txt` assets. After extraction,
+the archive root is named `deployment-kit-operator-<version>/` and contains the
+installed tree shown below plus internal copies of `release-manifest.json` and
 `SHA256SUMS.txt`.
 
 The external release manifest is authoritative before extraction. The internal
 manifest must be byte-for-byte identical to the external manifest after
-extraction. The external `SHA256SUMS.txt` records the archive, external manifest,
-and every downloadable release asset. The internal `SHA256SUMS.txt` records the
-installed tree files inside the archive.
+extraction. The external checksum file records the archive and external
+manifest. The internal `SHA256SUMS.txt` records the installed tree files listed
+by the manifest. The manifest never records the containing archive.
 
 This is the first operator-managed baseline release. It builds on the operator
 foundation release but starts a new managed-update proof using
@@ -165,8 +166,9 @@ or an arbitrary custom site.
 4. Verify the external candidate release manifest digest and archive digest
    against external `SHA256SUMS.txt`.
 5. Verify the external candidate release manifest against
-   `skill-exchange-release-manifest/v1` and confirm its `artifacts[]` records
-   the same archive digest verified by `SHA256SUMS.txt`.
+   `skill-exchange-release-manifest/v1` and confirm its `artifacts[]` contains
+   extracted product paths rather than the candidate archive,
+   `release-manifest.json`, or `SHA256SUMS.txt`.
 6. Extract the candidate release into `.operator/staging/<version>/` and verify
    that all extracted paths are relative, stay within staging, and contain no
    symbolic links that escape staging.

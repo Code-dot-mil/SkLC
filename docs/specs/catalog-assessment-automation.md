@@ -89,17 +89,18 @@ Protected assessor jobs pass model credentials through environment variables
 only. For SkillSpector, `SKLC_LLM_API_KEY`,
 `SKLC_LLM_BASE_URL`, `SKLC_LLM_MODEL`, and
 `SKLC_LLM_PROVIDER` are passed to the checked-out assessment CLI when
-`llm-assisted` scanning is selected. These values must not be written to
-workflow artifacts, job summaries, or committed files.
+`llm-assisted` scanning is selected. For the first release, all four are
+required and `SKLC_LLM_PROVIDER` must be `openai_compatible`. These values must
+not be written to workflow artifacts, job summaries, or committed files.
 
 `SKLC_SKILLSPECTOR_SCAN_MODE` is the assessment-kit environment variable for
 scan mode and defaults to `llm-assisted`. Supported values are `llm-assisted`
 and explicit `static-only`. When `llm-assisted` is selected or defaulted, the
 protected assessor job fails closed before invoking the assessment CLI unless
-the required `SKLC_LLM_*` variables for the configured provider are available in
-the job environment. The workflow must not fall back to `static-only` when
-`llm-assisted` is selected or defaulted but its required environment variables
-are unavailable.
+the required `SKLC_LLM_*` variables are available in the job environment and
+the provider value is supported. The workflow must not fall back to
+`static-only` when `llm-assisted` is selected or defaulted but its required
+environment variables are unavailable.
 
 ## BOE persistence credentials
 

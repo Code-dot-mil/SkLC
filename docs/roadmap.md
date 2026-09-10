@@ -68,7 +68,7 @@ maintainer/
 
 ## 3. Release strategy
 
-Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with manifests, `SHA256SUMS.txt`, and installation documentation. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process follows `docs/specs/release-process.md` (Status: Approved) and is assisted by the local Codex skill `.agents/skills/sklc-release-process`.
+Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with product-qualified external manifest and checksum sidecars, internal manifests and checksums for extracted files, and installation documentation. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process follows `docs/specs/release-process.md` (Status: Approved) and is assisted by the local Codex skill `.agents/skills/sklc-release-process`.
 
 Some products include reference GitLab CI after their core behavior exists. That CI is customer-facing packaging: it shows how to run the released product in GitLab. It is not a separate product, and it does not reuse maintainer GitHub workflows.
 
@@ -213,7 +213,11 @@ Included:
   - `validate` checks that skill packages are valid.
   - `advise` produces native assessor reports and author-facing advice. It does not create a BOE or decide publication.
   - `assess` retains supported native assessor reports and updates each skill's BOE manifest with the path and SHA-256 digest of each report.
-  - `verify-boe` checks that a BOE is readable and that each listed report exists and matches its recorded SHA-256 digest.
+  - Each BOE binds its reports to the selected skill name and skill-package
+    content digest.
+  - `verify-boe` checks that a BOE is readable, matches the selected skill
+    package, and that each listed report exists and matches its recorded SHA-256
+    digest.
 - `advise` and `assess` accept repeated `--skill <path>` arguments or `--root <path>`, which selects every skill package below that root.
 - Supported assessor versions and unchanged native assessor output.
 

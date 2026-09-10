@@ -21,24 +21,25 @@ A customer installs the released assessment kit and assesses arbitrary skill pac
 GitHub Releases publish:
 
 - `assessment-kit-<version>.tar.gz`.
-- External `release-manifest.json` using `skill-exchange-release-manifest/v1`.
-- External `SHA256SUMS.txt` with SHA-256 entries for the archive, manifest, and downloadable release assets.
+- External `assessment-kit-<version>.release-manifest.json` using
+  `skill-exchange-release-manifest/v1`.
+- External `assessment-kit-<version>.SHA256SUMS.txt` with SHA-256 entries for
+  the archive and external manifest.
 
 The archive also contains internal copies of `release-manifest.json` and
-`SHA256SUMS.txt`. The external release manifest is authoritative before extraction.
-After extraction, the internal manifest must be byte-for-byte identical to the
-external manifest. The internal `SHA256SUMS.txt` is `sha256sum` compatible and
-records every archive file except itself and `release-manifest.json`.
+`SHA256SUMS.txt`. The external release manifest is authoritative metadata before
+extraction. After extraction, the internal manifest must be byte-for-byte
+identical to the external manifest.
 
-The release manifest's `artifacts[]` records downloadable release assets, not
-extracted archive files. For the foundation release it must include:
-
-- `assessment-kit-<version>.tar.gz`
-
-The external `SHA256SUMS.txt` records `assessment-kit-<version>.tar.gz` and
-`release-manifest.json`. The internal `SHA256SUMS.txt` records extracted
-archive-relative files so a GitLab job can run `sha256sum -c SHA256SUMS.txt` from
-the archive root after extraction.
+The release manifest's `artifacts[]` records every extracted archive file except
+`release-manifest.json` and `SHA256SUMS.txt`; it never records the containing
+archive. This avoids a self-referential archive digest and gives the internal
+and external manifest copies one meaning. The internal `SHA256SUMS.txt` is
+`sha256sum` compatible and records the same extracted files and digests as
+`artifacts[]`. The external `assessment-kit-<version>.SHA256SUMS.txt` records
+`assessment-kit-<version>.tar.gz` and
+`assessment-kit-<version>.release-manifest.json`, so a customer verifies the
+archive before extraction and the installed files after extraction.
 
 The archive expands to:
 
@@ -65,14 +66,17 @@ assessment-kit-<version>/
 `Dependencies` or `Prerequisites` section. For the first release it states that
 SkillSpector is the only supported assessor, must be available on `PATH` or
 through a documented `SKILLSPECTOR_BIN` setting, and must produce its normal
-JSON report for the selected scan mode. `docs/assessor-configuration.md` must
-document the assessment-kit `--config` format, supported keys, defaults,
-environment-variable precedence, and copy/paste-safe examples for the default
-`llm-assisted` path and explicit `static-only` path. Installation documentation
-must show a local workflow that verifies `SHA256SUMS.txt`, installs the wheel,
-satisfies the documented SkillSpector prerequisite, configures the assessment
-kit, and confirms `skill-assessment --help` works. Offline and air-gapped
-dependency delivery are outside this milestone.
+JSON report for the selected scan mode. The release documentation records the
+exact supported SkillSpector version or source revision; a different version is
+unsupported until compatibility tests approve it.
+`docs/assessor-configuration.md` must document the assessment-kit `--config`
+format, supported keys, defaults, environment-variable precedence, and
+copy/paste-safe examples for the default `llm-assisted` path and explicit
+`static-only` path. Installation documentation must show a local workflow that
+verifies `SHA256SUMS.txt`, installs the wheel, satisfies the documented
+SkillSpector prerequisite, configures the assessment kit, and confirms
+`skill-assessment --help` works. Offline and air-gapped dependency delivery are
+outside this milestone.
 
 `docs/commands.md` must explain how to choose `--skill` versus `--root`. It must
 state that `--root` points to a directory containing one or more unpacked skill
@@ -128,31 +132,59 @@ Customer-facing documentation must link to the NVIDIA SkillSpector source at
 `https://github.com/NVIDIA/SkillSpector` from the SkillSpector prerequisite and
 assessor-configuration sections.
 
-The kit invokes SkillSpector with the selected skill package path, JSON output
-format, and an explicit native output file path under the command output
-directory. The adapter must fail before invocation if the `skillspector`
-executable is unavailable, the configured scan mode is unsupported, or required
-LLM configuration is missing for `llm-assisted`.
+The kit invokes SkillSpector with the selected skill package path as its
+positional input, JSON output format, and an explicit native output file path
+under the command output directory. The adapter must fail before invocation if
+the `skillspector` executable is unavailable, its version is unsupported, the
+configured scan mode is unsupported, or required LLM configuration is missing
+for `llm-assisted`.
 
 The adapter invocation contract is:
 
 ```text
 <skillspector-executable> scan \
-  --skill <skill-package-path> \
+  <skill-package-path> \
   --format json \
-  --output <native-output-path> \
-  --mode <scan_mode>
+  --output <native-output-path>
 ```
 
-For `llm-assisted`, the adapter passes through the documented
-`SKLC_LLM_API_KEY`, `SKLC_LLM_BASE_URL`,
-`SKLC_LLM_MODEL`, and `SKLC_LLM_PROVIDER` environment
-variables. `static-only` may be used only when explicitly configured; LLM
+For an explicit `static-only` assessment, the adapter appends `--no-llm`.
+There is no SkillSpector `--mode` argument. For `llm-assisted`, the adapter does
+not append `--no-llm`.
+
+For `llm-assisted`, the first release supports the `openai_compatible` provider
+profile used by the maintainer proof. It requires all four public variables and
+maps them to SkillSpector's native process environment:
+
+| Assessment-kit variable | SkillSpector process variable |
+|---|---|
+| `SKLC_LLM_PROVIDER=openai_compatible` | `SKILLSPECTOR_PROVIDER=openai_compatible` |
+| `SKLC_LLM_API_KEY` | `SKILLSPECTOR_COMPAT_API_KEY` |
+| `SKLC_LLM_BASE_URL` | `SKILLSPECTOR_COMPAT_BASE_URL` |
+| `SKLC_LLM_MODEL` | `SKILLSPECTOR_MODEL` |
+
+The adapter-provided mapping overrides conflicting inherited SkillSpector
+variables for these settings so ambient process state cannot silently change
+the selected provider, endpoint, model, or credential. Supporting another
+provider profile requires a documented mapping and compatibility tests in a
+later release. `static-only` may be used only when explicitly configured; LLM
 variables are optional for explicit `static-only` runs and must not be required.
-The adapter writes the
-assessor's stdout and stderr to command diagnostics, not to the native report
-file. The native report file is accepted only if the executable exits `0`, the
-file exists, and the file parses as JSON.
+The adapter writes the assessor's stdout and stderr to command diagnostics, not
+to the native report file. SkillSpector exit `0` means a completed scan below
+its finding threshold and exit `1` may mean a completed scan with findings.
+Either exit is accepted only when the native report file exists, parses as a
+JSON object, identifies the supported SkillSpector version, and reports
+`execution_successful: true`. Exit `2`, a missing report, malformed JSON, or any
+other `execution_successful` value is an assessor execution failure even if
+partial output exists.
+
+For `llm-assisted`, a report is also rejected when its metadata says LLM was not
+requested, the LLM was unavailable, or LLM execution was degraded. In
+particular, `metadata.llm_requested` must be `true`,
+`metadata.llm_available` must be `true`, and
+`metadata.llm_degraded` must not be `true`. This prevents SkillSpector from
+silently supplying partial static-only coverage when LLM execution was
+configured.
 
 The default scan mode is `llm-assisted`. Missing LLM configuration fails closed;
 the kit must not fall back to `static-only` when `llm-assisted` is configured or
@@ -162,12 +194,14 @@ overridable through `--config`; missing required values after documented
 defaults and overrides are applied fail closed.
 
 Retry behavior is limited to assessor execution failures that exit without a
-valid native report. For `llm-assisted`, LLM rate limiting, including HTTP
-`429`, is a retryable assessor execution failure. The first release attempts
-each skill and assessor pair once. It reports retryable failures with exit code
-`10` so CI can decide whether to retry the job. The CLI must not retry
-internally unless a later release documents the retry count and backoff. The CLI
-must not fall back to `static-only` after a retryable `llm-assisted` failure.
+valid native report and rejected degraded `llm-assisted` reports. For
+`llm-assisted`, LLM rate limiting, including HTTP `429`, and report metadata
+showing degraded LLM execution are retryable assessor execution failures. The
+first release attempts each skill and assessor pair once. It reports retryable
+failures with exit code `10` so CI can decide whether to retry the job. The CLI
+must not retry internally unless a later release documents the retry count and
+backoff. The CLI must not fall back to `static-only` after a retryable
+`llm-assisted` failure.
 
 Assessor identity is determined from the retained JSON report. For
 SkillSpector, `verify-boe` reads enough JSON to confirm the report identifies
@@ -194,7 +228,17 @@ verification.
 
 `validate`, `advise`, and `assess` accept repeated `--skill <path>` arguments or `--root <path>`.
 
-Selection produces a set of unpacked skill package directories. An empty `--root` selection succeeds without assessor output or BOE updates. A non-empty selection fails before scanning if any selected package is invalid or if two selected packages resolve to the same standard skill name.
+Selection produces a set of unpacked skill package directories. `--root`
+recursively discovers the outermost directories containing `SKILL.md` and does
+not descend into an identified package, so a package-owned nested `SKILL.md`
+does not become a second package. Discovery does not follow symbolic links.
+The root itself may be selected when it contains `SKILL.md`.
+
+An empty `--root` selection succeeds without writing advice artifacts,
+assessor output, or BOE updates. A non-empty selection fails before scanning if
+any discovered package is invalid, if two selected packages resolve to the same
+standard skill name, or if a selected output directory is inside a selected
+skill package.
 
 ## Configuration and environment
 
@@ -321,10 +365,11 @@ report path and digest.
 
 `<raw-report-sha256>` is the lowercase SHA-256 hex digest of the exact native report bytes, without a prefix. Report file names use that digest plus the native report file extension documented for the assessor. BOE entries record paths relative to the directory containing `boe.json`, with no leading slash and no `..` segment.
 
-When `assess` output is retained as an assessment artifact root, the caller or
-CI profile writes `assessment-manifest.json` beside `boe/` and
-`verify-boe.log`. `assessment-manifest.json` must conform to the
-assessment-artifacts v1 `assessment-manifest.schema.json`.
+The core `assess` command does not write `assessment-manifest.json` or
+`verify-boe.log`. When its output is retained as an assessment artifact root,
+the caller or CI profile writes those files beside `boe/` after verification.
+`assessment-manifest.json` must conform to the assessment-artifacts v1
+`assessment-manifest.schema.json`.
 
 ## BOE update and digest rules
 
@@ -337,21 +382,52 @@ assessment-artifacts v1 `assessment-manifest.schema.json`.
 }
 ```
 
+The BOE manifest also binds those reports to the exact selected package:
+
+```json
+{
+  "schema_version": "skill-exchange-boe/v1",
+  "skill": {
+    "name": "<skill-name>",
+    "content_sha256": "sha256:<skill-content-sha256>"
+  },
+  "assessments": [
+    {
+      "path": "assessments/<assessor-id>/<raw-report-sha256>.json",
+      "sha256": "sha256:<raw-report-sha256>"
+    }
+  ]
+}
+```
+
 `verify-boe` derives the assessor ID from each BOE report path. The path must
 match `assessments/<assessor-id>/<raw-report-sha256>.json`; the assessor ID is
 the first path segment after `assessments/`. For the first release, the only
 accepted assessor ID is `skillspector`. The filename stem must match the report
 digest and the file extension must be `.json`.
 
-If `boe.json` does not exist for a skill, `assess` creates it with `schema_version` set to `skill-exchange-boe/v1` and an `assessments` array containing the new entry or entries. If it already exists, `assess` validates it before adding entries. Existing entries are preserved. An entry already present with the same path and digest is idempotent. A digest-named report file that already exists with different bytes is an error. A failed, timed-out, unsupported, or malformed assessor report creates no BOE entry.
+If `boe.json` does not exist for a skill, `assess` creates it with
+`schema_version` set to `skill-exchange-boe/v1`, the selected skill name and
+content digest, and an `assessments` array containing the new entry or entries.
+If it already exists, `assess` validates it before adding entries and rejects it
+when its skill name or content digest does not match the selected package.
+Existing matching-content entries are preserved. An entry already present with
+the same path and digest is idempotent. A digest-named report file that already
+exists with different bytes is an error. A failed, timed-out, unsupported, or
+malformed assessor report creates no BOE entry.
 
-BOE update output must be deterministic: entries are unique by `(path, sha256)` and written in a stable order. The BOE manifest records only relative report paths and SHA-256 hashes. It does not duplicate assessment content, assessor configuration, run identifiers, source-system references, publication decisions, or cross-assessor risk summaries.
+BOE update output must be deterministic: entries are unique by `(path, sha256)`
+and written in a stable order. Apart from the selected skill identity and
+content digest, the BOE manifest records only relative report paths and SHA-256
+hashes. It does not duplicate assessment content, assessor configuration, run
+identifiers, source-system references, publication decisions, or
+cross-assessor risk summaries.
 
 ## Exit and failure semantics
 
 - `0`: all requested work completed. An empty `--root` selection is successful and writes no assessor output or BOE updates.
-- `2`: invalid invocation, invalid package, invalid selection, duplicate selected skill names, invalid configuration, unsupported assessor ID, unreadable BOE, BOE schema failure, missing referenced report, digest mismatch, missing assessor identity, malformed native report, or filesystem write failure.
-- `10`: one or more retryable assessor failures, including timeout, temporary assessor execution failure, or `llm-assisted` LLM rate limiting such as HTTP `429`.
+- `2`: invalid invocation, invalid package, invalid selection, duplicate selected skill names, invalid configuration, unsupported assessor ID or version, unreadable BOE, BOE schema failure, BOE skill identity or content mismatch, missing referenced report, digest mismatch, missing assessor identity, malformed native report, non-retryable assessor execution failure, or filesystem write failure.
+- `10`: one or more retryable assessor failures, including timeout, temporary assessor execution failure, `llm-assisted` LLM rate limiting such as HTTP `429`, or rejected degraded LLM coverage.
 
 Commands report human-readable diagnostics to stderr and do not print secrets. Invalid invocation, invalid selection, invalid package, or invalid configuration fails before assessor execution and before writing generated files. During `advise` or `assess`, a failure for one skill or assessor must not create a native report or BOE entry for that failed pair. Successfully completed independent pairs may remain on disk, but the command exits non-zero when any requested pair fails.
 
@@ -369,8 +445,11 @@ The release consumes and produces:
 
 Acceptance requires a clean temporary workspace that:
 
-1. Receives the assessment-kit artifact from GitHub Releases.
-2. Verifies the checksums.
+1. Receives the assessment-kit archive and its product-qualified manifest and
+   checksum sidecars from GitHub Releases.
+2. Verifies the archive and external manifest before extraction, confirms the
+   internal and external manifests are identical, and verifies the extracted
+   files with the internal checksum file.
 3. Installs the wheel in an isolated Python environment.
 4. Configures SkillSpector and assessment-kit settings without relying on
    repository-specific defaults.
@@ -378,7 +457,9 @@ Acceptance requires a clean temporary workspace that:
 6. Runs `skill-assessment advise` and confirms the advice output follows the
    assessment-artifacts v1 contract.
 7. Runs `skill-assessment assess` and confirms the retained native reports and
-   BOE output follow the assessment-artifacts v1 and BOE-manifest v1 contracts.
+   BOE output follow the BOE-manifest v1 contract. The assessment-artifacts v1
+   assessment manifest and verification log are caller-owned outputs exercised
+   by the later GitLab CI profile proof.
 8. Verifies the produced BOE with `skill-assessment verify-boe`.
 
 This proof must not require a GitLab project, GitLab CI, catalog assembly, site

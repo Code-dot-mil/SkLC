@@ -66,6 +66,8 @@ The GitLab CI profile writes `verify-boe.log` beside `boe/` after running
 
 Each `boe/<skill-name>/boe.json` follows `skill-exchange-boe/v1`. Report paths
 inside `boe.json` are relative to the directory containing that `boe.json`.
+The manifest's skill name and content digest bind the retained reports to the
+exact package assessed.
 
 `assessment-manifest.json` conforms to `assessment-manifest.schema.json`. It
 records the BOE root, `verify-boe.log` digest, every retained BOE manifest path

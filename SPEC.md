@@ -68,6 +68,7 @@ contracts/
   skill-package/v1/
   assessment-result/v1/
   boe/v1/
+  assessment-artifacts/v1/
   catalog/v1/
   catalog-policy/v1/
   release-manifest/v1/
@@ -164,6 +165,33 @@ Durable generated evidence is limited to `.exchange/generated/boe/`. Derived gen
 A contract belongs under `contracts/` only when at least two products must agree on its serialized representation. Each contract names a governing product, and product releases vendor the exact schemas they produce or consume so installed products do not depend on the repository's `contracts/` directory at runtime.
 
 The checked-in `v1` contracts are a first-pass target boundary for the near-term product separation. The current publisher still emits and consumes the implemented `skill-exchange-boe/v0` and generated-data formats documented below; adding the contract sources does not claim that current runtime output already conforms to `v1`. Migration requires explicit implementation and tests.
+
+The approved assessment-kit foundation fixes these target-v1 rules before that
+migration:
+
+- A portable skill package is identified by its package directory name, with no
+  required namespace layout. Its frontmatter `name` must match that directory,
+  and its content digest follows the deterministic path-and-file hashing
+  algorithm in `contracts/skill-package/v1/README.md`.
+- A BOE v1 manifest contains the standard skill name and exact skill-package
+  content digest plus relative paths and SHA-256 digests for retained native
+  assessor reports. It does not use the current publisher's v0 summary,
+  scanner-config, hashes-manifest, scan-cache, risk, or CI-provenance shape.
+- A release manifest describes extracted product files and never the containing
+  archive. Product-qualified external checksum sidecars verify downloads;
+  internal checksum files verify the extracted files listed by the manifest.
+- The assessment-kit SkillSpector adapter uses the positional scan input and
+  explicit `--no-llm` only for `static-only`. It accepts exit `0` or finding
+  exit `1` only with a valid successful native report, rejects exit `2`, and
+  rejects unavailable or degraded LLM coverage for `llm-assisted`.
+- The foundation CLI writes the advice manifest and BOE content it owns. The
+  later CI profile owns the assessment-run manifest and `verify-boe.log` that
+  wrap retained formal-assessment output.
+
+These rules do not silently alter the existing combined publisher. Its
+namespaced discovery, v0 BOE, scan-cache, normalized risk, and catalog behavior
+remain as documented below until a separate migration changes implementation
+and tests.
 
 Contract major versions change when a required field, field meaning, or serialized shape changes incompatibly. Current catalog materialization will support only its declared current BOE major version. Legacy BOE may remain tracked as historical evidence, but it is not eligible for the current catalog and its presence alone is not an error. Currently served skill content without matching BOE in the supported schema must be reassessed or excluded.
 
@@ -1095,6 +1123,9 @@ The few intentional fallback behaviors in this spec are explicitly documented an
 
 Python tests must cover:
 
+- cross-product contract examples, including BOE report-path containment and
+  digest agreement, portable skill naming, and release manifests that exclude
+  their containing archives;
 - frontmatter parsing and rejection;
 - namespaced skill discovery;
 - metadata validation errors, warnings, and missing owner flag;

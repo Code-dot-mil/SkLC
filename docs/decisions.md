@@ -20,3 +20,8 @@ The team shall deliver 4 standalone products:
 ## 4. SkillSpector
 
 NVIDIA SkillSpector will be the baseline skill assessor in `llm-assisted` scan mode. `static-only` has a high false positive rate, must be explicitly requested, and must not be used as a fallback when `llm-assisted` is configured but unavailable.
+
+The first assessment-kit release supports the `openai_compatible` SkillSpector
+provider profile through generic `SKLC_LLM_*` inputs and records one exact
+tested SkillSpector version or source revision. Additional provider profiles or
+assessor versions require explicit documentation and compatibility tests.

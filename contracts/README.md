@@ -25,7 +25,9 @@ The governing product owns a contract's meaning and change process. A neutral so
 - Removing a field, changing its meaning, or adding a required field requires a new major version.
 - Readers reject unsupported major versions rather than silently interpreting them.
 - Product release manifests declare the contract versions they produce and consume.
-- Product release manifests also identify the source revision and checksums for released artifacts. They do not include their own checksum in the artifact list.
+- Product release manifests also identify the source revision and checksums for
+  extracted product files. They do not include themselves, the internal
+  checksum file, or the containing archive in the artifact list.
 - Contract examples explain the intended shape but are not substitutes for the schemas and contract prose.
 
 ## Current-catalog BOE policy

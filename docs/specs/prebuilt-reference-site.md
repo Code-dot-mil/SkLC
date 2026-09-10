@@ -18,7 +18,10 @@ A customer downloads one GitHub Release artifact, verifies it, installs it uncha
 
 ## Release artifact
 
-The GitHub Release attaches one install archive named `deployment-kit-prebuilt-<version>.tar.gz`.
+The GitHub Release attaches one install archive named
+`deployment-kit-prebuilt-<version>.tar.gz`, an external
+`deployment-kit-prebuilt-<version>.release-manifest.json`, and an external
+`deployment-kit-prebuilt-<version>.SHA256SUMS.txt`.
 After extraction, the archive root is named `deployment-kit-prebuilt-<version>/` and contains exactly the deployable customer package:
 
 ```text
@@ -96,6 +99,12 @@ verifier itself. Only the two root metadata files and the customer's top-level
 must fail. Installation additionally passes `--expected-version` to compare the
 manifest with the selected archive version. The default verification must work
 in a GitLab checkout with an arbitrary directory name.
+
+The external manifest is byte-for-byte identical to the internal
+`release-manifest.json`. The external checksum file records the archive and
+external manifest, while the internal checksum file records the extracted files
+listed by `artifacts[]`. The release manifest never records the digest of its
+containing archive.
 
 ## Guided documentation requirements
 
@@ -197,14 +206,20 @@ The job succeeds only when all verification checks pass and GitLab accepts `publ
 
 The documented customer verification path is:
 
-1. Download `deployment-kit-prebuilt-<version>.tar.gz` from GitHub Releases.
-2. Extract the archive.
-3. Confirm the extracted root directory name matches the archive version.
-4. Validate `release-manifest.json` against `contracts/release-manifest/v1/release-manifest.schema.json`.
-5. Verify every digest in `SHA256SUMS.txt`.
-6. Compare `release-manifest.json` artifact entries to `SHA256SUMS.txt`.
-7. Commit the extracted files unchanged to a clean GitLab project.
-8. Run the GitLab pipeline and confirm the `pages` job publishes the unchanged `public/` artifact.
+1. Download the archive and its product-qualified manifest and checksum
+   sidecars from GitHub Releases.
+2. Verify the archive and external manifest with the external checksum file.
+3. Extract the archive and confirm its root directory name matches the archive
+   version.
+4. Confirm the internal and external manifests are byte-for-byte identical.
+5. Validate `release-manifest.json` against
+   `contracts/release-manifest/v1/release-manifest.schema.json`.
+6. Verify every digest in the internal `SHA256SUMS.txt`.
+7. Compare `release-manifest.json` artifact entries to the internal
+   `SHA256SUMS.txt`.
+8. Commit the extracted files unchanged to a clean GitLab project.
+9. Run the GitLab pipeline and confirm the `pages` job publishes the unchanged
+   `public/` artifact.
 
 No customer-side build, assessment execution, catalog assembly, or operator customization is part of installation verification. The milestone acceptance proof remains GitLab Pages; the documentation also covers static hosting alternatives.
 

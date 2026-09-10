@@ -1,32 +1,13 @@
 {
   "schema_version": "skill-exchange-boe/v1",
   "skill": {
-    "namespace": "example",
-    "skill_id": "example-review",
-    "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "source_revision": "0123456789abcdef0123456789abcdef01234567"
+    "name": "example-review",
+    "content_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   },
-  "assessment": {
-    "assessor": {
-      "name": "skillspector",
-      "version": "2.1.5"
-    },
-    "mode": "llm-assisted",
-    "scan_cache_key": "example--example-review--skillspector-2.1.5--llm-assisted",
-    "completed_at": "2026-08-07T18:30:00Z",
-    "risk": "High",
-    "reason": "The assessor reported a high-severity finding.",
-    "confidence_flags": []
-  },
-  "artifacts": {
-    "native_report": "native/skillspector.json",
-    "summary": "summary.json",
-    "assessor_config": "scanner-config.json",
-    "hashes": "hashes.json"
-  },
-  "provenance": {
-    "assessment_kit_version": "1.0.0",
-    "pipeline_id": "1234",
-    "job_id": "5678"
-  }
+  "assessments": [
+    {
+      "path": "assessments/skillspector/ca168f699aa8e009cc3cdded64514389606baf8acfefef6148aef35ff3da4be7.json",
+      "sha256": "sha256:ca168f699aa8e009cc3cdded64514389606baf8acfefef6148aef35ff3da4be7"
+    }
+  ]
 }

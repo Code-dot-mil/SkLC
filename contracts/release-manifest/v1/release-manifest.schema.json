@@ -24,6 +24,7 @@
     "artifacts": {
       "type": "array",
       "minItems": 1,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "required": ["path", "sha256"],
@@ -50,7 +51,10 @@
         "uniqueItems": true
       }
     },
-    "relativePath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!release-manifest\\.json$)(?!SHA256SUMS\\.txt$)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
     "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
   }
 }

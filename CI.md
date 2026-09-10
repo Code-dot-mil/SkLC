@@ -57,13 +57,20 @@ an in-progress release.
 
 The deployment-only template at
 `products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml` consumes a complete
-prebuilt release package, not a flat site build. Its Linux runner must already
-provide Python 3.12 or newer and match the configured `PAGES_RUNNER_TAG`.
+prebuilt release package, not a flat site build. Its Linux runner must support
+job images and match the configured `PAGES_RUNNER_TAG`. The `pages` job selects
+`$PYTHON_IMAGE`, defaulting to the official `python:3.12-slim` image, rather than
+relying on Python being installed in the runner's default image. The runner must
+be allowed to pull that image. Override `PYTHON_IMAGE_REGISTRY`,
+`PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, or the complete `PYTHON_IMAGE`
+through project/group CI/CD variables when an internal registry is required.
+An override must provide a POSIX shell and `python3` running Python 3.12 or newer.
 The `pages` job runs `python3 -I -S scripts/verify_prebuilt.py .`, the same offline
 verification command documented in the package installation guide. It checks
 manifest/schema consistency, file checksums, required contents, safe paths, and
 referenced downloads before publishing the unchanged `public/` directory.
-It does not install dependencies, fetch inputs, build a site, or run assessments.
+The verification script does not install dependencies, fetch inputs, build a site,
+or run assessments. Python is not needed to serve the published static files.
 The `static-site` CI download uses this same complete package layout and verifier;
 it is a CI test build, not a published product release.
 

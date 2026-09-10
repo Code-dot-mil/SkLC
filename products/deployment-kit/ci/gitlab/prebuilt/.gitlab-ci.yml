@@ -1,12 +1,19 @@
 stages:
   - deploy
 
+variables:
+  PYTHON_IMAGE_REGISTRY: "docker.io"
+  PYTHON_IMAGE_REPOSITORY: "library/python"
+  PYTHON_IMAGE_TAG: "3.12-slim"
+  PYTHON_IMAGE: "$PYTHON_IMAGE_REGISTRY/$PYTHON_IMAGE_REPOSITORY:$PYTHON_IMAGE_TAG"
+
 workflow:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - when: never
 
 pages:
+  image: "$PYTHON_IMAGE"
   stage: deploy
   tags:
     - "$PAGES_RUNNER_TAG"

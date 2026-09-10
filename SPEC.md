@@ -646,7 +646,15 @@ archive or release-notes asset is produced by this builder.
 The builder also vendors `products/deployment-kit/scripts/verify_prebuilt.py`
 as `scripts/verify_prebuilt.py` and includes it in the manifest and checksums.
 Installation and the deployment-only GitLab `pages` job invoke that same offline
-Python 3.12+ script. It validates the vendored manifest schema (including date/time
+Python 3.12+ script. The GitLab job must explicitly select `$PYTHON_IMAGE`,
+defaulting to the official `python:3.12-slim` image, instead of relying on the
+runner's default image to contain Python. Reuse `PYTHON_IMAGE_REGISTRY`,
+`PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and the full `PYTHON_IMAGE`
+override so consumers can select an approved image through CI/CD variables
+without editing checksummed package files. Runner selection remains independent
+through `PAGES_RUNNER_TAG`; the Linux runner must support and be allowed to pull
+job images. The selected image must supply a POSIX shell and Python 3.12+.
+The verifier validates the vendored manifest schema (including date/time
 and offset ranges), compares the manifest and checksum file sets, verifies file
 digests and required files/directories, rejects links and escaping paths, and
 scans static HTML attributes, JSON string values, and JavaScript string literals

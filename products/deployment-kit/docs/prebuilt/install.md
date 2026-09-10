@@ -66,7 +66,8 @@ the failure to its maintainer.
 For GitLab Pages, follow [Deploy with GitLab Pages](deploy-gitlab-pages.md) and copy
 the complete extracted package, including hidden files, into the project. Keep
 the file contents unchanged; its local directory name need not match the archive.
-The selected Linux runner must already provide Python 3.12 or newer.
+The selected Linux runner must support and be allowed to pull the job's Python
+container image; Python is supplied by that image, not by the runner host.
 
 For another host, follow [Deploy to another static host](deploy-static-hosting.md)
 and serve the complete `public/` directory unchanged.

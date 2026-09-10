@@ -36,7 +36,7 @@ Stop if verification fails. Once it passes, follow the included README or choose
 
 - [GitLab Pages](products/deployment-kit/docs/prebuilt/deploy-gitlab-pages.md): copy
   the complete package, including hidden files. Configure `PAGES_RUNNER_TAG` for
-  an available Linux runner that already provides Python 3.12 or newer.
+  an available Linux runner that supports and can pull the job's Python image.
 - [Another static host](products/deployment-kit/docs/prebuilt/deploy-static-hosting.md):
   serve the complete `public/` directory unchanged, at a domain root or URL prefix.
 

@@ -11,13 +11,17 @@ the `public/` directory through the included `.gitlab-ci.yml`; see the
 instance-specific availability and URLs.
 
 GitLab runners execute CI jobs. In the project, open **Settings > CI/CD >
-Runners** and select an available Linux runner. Runner tags control which jobs a
-runner can accept. See the GitLab documentation for
+Runners** and select an available Linux runner with a Docker or Kubernetes
+executor that supports job images. Runner tags control which jobs a runner can
+accept; the job's image selects its container environment. See the GitLab documentation for
 [runners](https://docs.gitlab.com/ci/runners/),
 [runner scope](https://docs.gitlab.com/ci/runners/runners_scope/), and
 [runner setup](https://docs.gitlab.com/user/get_started/get_started_runner/).
-The selected runner must provide a POSIX shell and Python 3.12 or newer so the shipped job
-can verify the package without downloading tools.
+The shipped job selects the official `python:3.12-slim` image, which provides a
+POSIX shell and Python for verification without installing additional packages.
+Python is needed only for the pre-deployment check, not to serve the website.
+The runner must be allowed to pull the selected image; Python does not need to
+be installed on the runner host.
 
 If you are unsure which runner tags are available, ask your GitLab
 administrator.
@@ -25,6 +29,13 @@ administrator.
 In **Settings > CI/CD > Variables**, create `PAGES_RUNNER_TAG` with the tag of the
 selected runner. GitLab documents project and group variables in
 [CI/CD variables](https://docs.gitlab.com/ci/variables/).
+
+If your environment requires an internal registry, override `PYTHON_IMAGE` with
+the complete approved image reference, or override `PYTHON_IMAGE_REGISTRY`,
+`PYTHON_IMAGE_REPOSITORY`, and `PYTHON_IMAGE_TAG`. The image must include a POSIX
+shell and `python3` running Python 3.12 or newer. Set these as project or group
+CI/CD variables instead of editing the checksummed package files. See GitLab's
+[job image configuration](https://docs.gitlab.com/ci/yaml/#image).
 
 The following Git configuration is a template. Replace `<git-user-name>` with
 the name to record on commits and `<git-user-email>` with the corresponding

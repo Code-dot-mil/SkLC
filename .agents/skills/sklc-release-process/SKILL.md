@@ -138,7 +138,8 @@ recovery plan.
 10. **Prove candidate deployment.** Ask before using a clean GitLab project,
     changing its configuration, or committing/pushing the extracted package.
     Agree on the project and available runner; keep `PAGES_RUNNER_TAG`
-    configurable and require the runner's existing Python 3.12+ installation.
+    configurable and confirm that the runner supports and can pull the selected
+    `PYTHON_IMAGE`, which must provide a POSIX shell and Python 3.12+.
     Follow the package's `docs/install.md` and `docs/deploy-gitlab-pages.md`.
     Require the shipped `pages` job to verify and publish unchanged `public/`,
     without a customer build, assessment, catalog assembly, or input download.

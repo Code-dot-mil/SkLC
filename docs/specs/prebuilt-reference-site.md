@@ -79,6 +79,14 @@ The install documentation must give a copy/paste verification flow that validate
 
 Both installation and the shipped GitLab job run
 `python3 -I -S scripts/verify_prebuilt.py .` from the package/project root.
+The GitLab job explicitly selects a Python container image, defaulting to the
+official `python:3.12-slim` image. Reuse the `PYTHON_IMAGE_REGISTRY`,
+`PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and full `PYTHON_IMAGE` override
+variables so an approved image can be selected without changing package files.
+The selected image must provide a POSIX shell and `python3` running Python 3.12
+or newer. The Linux runner must support and be allowed to pull job images;
+`PAGES_RUNNER_TAG` selects the runner independently. Python is used only for
+verification, not for building or serving the prebuilt site.
 The verifier must reject unsupported schema features instead of silently skipping
 them. It checks timestamp syntax, calendar dates, and timezone offset ranges;
 space-separated dates and invalid offsets such as `+01:60` must fail.

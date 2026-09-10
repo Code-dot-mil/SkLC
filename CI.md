@@ -39,7 +39,7 @@ Configure these GitHub repository settings before enabling the workflow:
 | Actions variable | `SKILL_EXCHANGE_LLM_PROVIDER` | `openai_compatible` |
 | Actions variable | `SKILL_EXCHANGE_LLM_BASE_URL` | `https://mdevchat.apim.mitre.org/openai/v1` |
 | Actions variable | `SKILL_EXCHANGE_LLM_MODEL` | `gpt-5.5` |
-| Actions variable | `SKILL_EXCHANGE_LLM_API_KEY_HEADER` | Gateway-defined HTTP header that carries the API key, such as `Ocp-Apim-Subscription-Key` |
+| Actions variable | `SKILL_EXCHANGE_LLM_API_KEY_HEADER` | Gateway-defined HTTP header that carries the API key, such as `api-key` |
 | Actions variable | `RUNNER_CA_BUNDLE_PATH` | Absolute path, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain |
 
 For gateways that authenticate an OpenAI-compatible API with a nonstandard API-key header, the repository adapter passes the configured `SKILL_EXCHANGE_LLM_API_KEY` value in `SKILL_EXCHANGE_LLM_API_KEY_HEADER`. The header name is explicit and included in the scanner cache configuration; the credential is never written to BOE.

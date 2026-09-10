@@ -78,7 +78,7 @@ def test_skillspector_version_normalizes_leading_v_from_binary(monkeypatch):
 
 
 def test_skillspector_command_uses_header_adapter_only_for_llm_scans():
-    env = {"SKILL_EXCHANGE_LLM_API_KEY_HEADER": "Ocp-Apim-Subscription-Key"}
+    env = {"SKILL_EXCHANGE_LLM_API_KEY_HEADER": "api-key"}
     scanner_args = ["scan", "skill", "--format", "json"]
 
     assert skillspector.skillspector_command("skillspector", scanner_args, env=env, no_llm=False) == [
@@ -143,7 +143,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_BASE_URL", "https://mdevchat.apim.mitre.org/openai/v1")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_MODEL", "gpt-5.5")
     monkeypatch.setenv("SKILL_EXCHANGE_LLM_PROVIDER", "openai_compatible")
-    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "Ocp-Apim-Subscription-Key")
+    monkeypatch.setenv("SKILL_EXCHANGE_LLM_API_KEY_HEADER", "api-key")
     for name in (
         "SKILLSPECTOR_COMPAT_API_KEY",
         "SKILLSPECTOR_COMPAT_BASE_URL",
@@ -170,7 +170,7 @@ def test_skillspector_env_maps_generic_openai_compatible_env(monkeypatch):
         "model": "gpt-5.5",
         "deployment": None,
         "api_version": None,
-        "api_key_header": "Ocp-Apim-Subscription-Key",
+        "api_key_header": "api-key",
         "endpoint_hash": "55a0ebce3878ccee9dd6f6e9f65f6eeeec216aaf696b2c19fb144f1762c8d6cf",
     }
 

@@ -221,7 +221,7 @@ def test_scanner_cache_config_includes_openai_compatible_api_key_header(monkeypa
             "model": "gpt-5.5",
             "deployment": None,
             "api_version": None,
-            "api_key_header": "Ocp-Apim-Subscription-Key",
+            "api_key_header": "api-key",
             "endpoint_hash": "endpoint-sha256",
         },
     )
@@ -231,7 +231,7 @@ def test_scanner_cache_config_includes_openai_compatible_api_key_header(monkeypa
         "scan_mode": "llm-assisted",
         "llm_provider": "openai_compatible",
         "llm_model": "gpt-5.5",
-        "llm_api_key_header": "Ocp-Apim-Subscription-Key",
+        "llm_api_key_header": "api-key",
         "llm_endpoint_hash": "endpoint-sha256",
     }
 

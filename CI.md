@@ -40,7 +40,7 @@ Configure these GitHub repository settings before enabling the workflow:
 | Actions variable | `SKILL_EXCHANGE_LLM_BASE_URL` | `https://mdevchat.apim.mitre.org/openai/v1` |
 | Actions variable | `SKILL_EXCHANGE_LLM_MODEL` | `gpt-5.5` |
 | Actions variable | `SKILL_EXCHANGE_LLM_API_KEY_HEADER` | Gateway-defined HTTP header that carries the API key, such as `api-key` |
-| Actions variable | `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` | Maximum shared LLM request start rate; use `0.00833333` to serialize calls at two-minute intervals |
+| Actions variable | `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` | Maximum shared LLM request start rate; use `0.1` to serialize calls at ten-second intervals |
 | Actions variable | `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS` | Maximum output tokens requested per LLM call; use `2048` for the structured scanner responses |
 | Actions variable | `SKILL_EXCHANGE_SCAN_MAX_SECONDS` | Per-skill scanner workflow budget; use `600` when gateway pacing can exceed SkillSpector's native budget |
 | Actions variable | `RUNNER_CA_BUNDLE_PATH` | Absolute path, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain |

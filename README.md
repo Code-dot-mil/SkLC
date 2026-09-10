@@ -1,14 +1,52 @@
-# SkLC Product Source
+# Skill Exchange Site
 
-This repository builds independently consumable SkLC products. GitHub is the maintainer source of truth and release origin. Customers consume release artifacts in GitLab; they do not need this source tree or its maintainer workflows.
+Skill Exchange Site is a static catalog for publishing agent skills with review evidence, risk signals, and downloadable runtime bundles. The goal is to make skill sharing boring and inspectable: every listed skill should have clear metadata, policy validation, scanner output, and a generated bill of evidence before it is promoted through the exchange.
 
-The first delivery path is `deployment-kit-prebuilt-<version>.tar.gz`: one verified archive containing a ready-to-serve `public/` directory, deployment-only GitLab CI, and guided documentation. The archive is committed unchanged to a clean GitLab project, where its `pages` job verifies the files and publishes them without building the site.
+This repository is intentionally self-contained. The site, exchange builder, CI helpers, policy files, and GitLab CI definition all live here so the project can move between networks without importing environment-specific CI components.
+
+## Use the prebuilt site
+
+The prebuilt deployment kit contains an already-built site. Customers need an
+archive extractor and Python 3.12 or newer for offline verification, but no Node.js,
+`uv`, site build, or assessment tools.
+
+Choose the download:
+
+- **Published release:** When a prebuilt version is available in
+  [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), download
+  `deployment-kit-prebuilt-<version>.tar.gz`, not the automatically generated
+  source-code archives. Follow the
+  [installation guide](products/deployment-kit/docs/prebuilt/install.md) to extract
+  it and verify the selected version.
+- **CI test build:** From a successful
+  [CI run](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml) that includes
+  prebuilt packaging, download the `static-site` artifact ZIP. This is not a
+  published product release. Extract the ZIP to get the complete package (no tar
+  archive to unpack), then run the verification command below.
+  See [CI package details](CI.md#github-validation).
+
+From the extracted package root (the folder containing `public/`, `README.md`,
+and `.gitlab-ci.yml`, not this source repository), run the shared verifier:
+
+```sh
+python3 -I -S scripts/verify_prebuilt.py .
+```
+
+Stop if verification fails. Once it passes, follow the included README or choose:
+
+- [GitLab Pages](products/deployment-kit/docs/prebuilt/deploy-gitlab-pages.md): copy
+  the complete package, including hidden files. Configure `PAGES_RUNNER_TAG` for
+  an available Linux runner that already provides Python 3.12 or newer.
+- [Another static host](products/deployment-kit/docs/prebuilt/deploy-static-hosting.md):
+  serve the complete `public/` directory unchanged, at a domain root or URL prefix.
+
+The developer setup below is for working on the source, not deploying this package.
 
 ## Vision
 
 The exchange should give users a simple way to discover approved skills while giving maintainers a repeatable way to evaluate and publish them. The first implementation is a static MVP:
 
-- Contributors add catalog skills under `products/skill-catalog/skills/<namespace>/<skill-id>/`.
+- Contributors add skills under `skills/<namespace>/<skill-id>/`.
 - CI reviews skill changes only when skill packages change.
 - Scheduled publication and default-branch skill changes build official exchange evidence and generated catalog data.
 - GitLab Pages deploys the static site from generated data on default-branch pushes and scheduled publication pipelines.
@@ -18,23 +56,19 @@ The long-term direction is to keep this exchange portable: a target environment 
 
 ## How It Works
 
-The current prebuilt release is assembled from three independently owned source areas:
+The exchange has three main layers:
 
-1. Catalog packages live under `products/skill-catalog/skills/`. Each package contains a `SKILL.md` file with frontmatter and skill content.
-2. Maintainer tooling under `maintainer/skill_exchange/` validates source inputs, applies maintainer policy, writes BOE and derived site data under `maintainer/exchange/generated/`, and assembles release artifacts.
-3. Deployment-kit site source under `products/deployment-kit/site/` consumes generated data. Prebuilt deployment files under `products/deployment-kit/prebuilt/` are added only when the release package is assembled.
+1. Skill packages live under `skills/`. Each package contains a `SKILL.md` file with frontmatter and skill content.
+2. Python tooling under `scripts/skill_exchange/` validates skills, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), applies exchange policy, writes bill-of-evidence bundles, creates runtime zip files, and produces derived site data under `.exchange/generated/`.
+3. The Astro site under `site/` reads derived `.exchange/generated/` data and builds a static catalog that can be published by GitLab Pages.
 
-Tracked generated evidence lives under `maintainer/exchange/generated/boe/`. Other generated outputs under `maintainer/exchange/generated/` are deploy-time site inputs and should not be committed.
+Tracked generated evidence lives under `.exchange/generated/boe/`. Other generated outputs under `.exchange/generated/` are deploy-time site inputs and should not be committed.
 
 BOE bundles are also the durable scanner cache. If a later publication computes the same skill identity, content hash, SkillSpector version, scan mode, and scanner configuration, the builder reuses the matching BOE bundle and regenerates derived site data without running the scanner again.
 
 ## Repository Map
 
-- `products/skill-catalog/` owns the catalog release policy, README, and source skill packages.
-- `products/deployment-kit/site/` owns the Astro reference-site source and pinned Node tooling.
-- `products/deployment-kit/prebuilt/` owns the deployment-only GitLab CI and customer documentation placed in the prebuilt release.
-- `maintainer/exchange/` stores maintainer policy, display configuration, tags, categories, BOE, and generated catalog output.
-- `maintainer/skill_exchange/` contains Python maintainer tooling and release assembly.
+- `.exchange/` stores exchange policy, display configuration, tags, categories, and generated catalog output.
 - `.gitlab-ci.yml` defines the standalone GitLab CI pipeline.
 - `CI.md` documents CI variables, schedules, review behavior, and deploy behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
@@ -42,6 +76,9 @@ BOE bundles are also the durable scanner cache. If a later publication computes 
 - `docs/architecture.md` documents the current component, evidence, catalog-build, and CI flows.
 - `docs/roadmap.md` defines the Q3 2026 target product, GitHub release, and downstream delivery plan.
 - `GOVERNANCE.md` describes exchange roles, review flow, generated-output boundaries, and bot publication rules.
+- `scripts/skill_exchange/` contains Python exchange tooling and CI entry points.
+- `site/` contains the Astro static site.
+- `skills/` contains skill packages included in the exchange.
 - `tests/` contains Python tests for exchange tooling and CI behavior.
 
 ## Developer Setup
@@ -57,7 +94,7 @@ Install dependencies:
 
 ```sh
 uv sync --extra test
-npm ci --prefix products/deployment-kit/site
+npm ci --prefix site
 ```
 
 SkillSpector is not required for Python lint, Python tests, site lint, or site tests. It is required for `just generate`, `just build`, and CI publication jobs. Matching BOE evidence avoids scan execution, but the publication environment still needs a configured SkillSpector binary so the cache key can be computed consistently.
@@ -91,7 +128,7 @@ just build llm-assisted
 
 LLM-assisted scans require the generic `SKILL_EXCHANGE_LLM_*` environment variables described in [CI.md](CI.md).
 
-Local `just` generation writes to `maintainer/exchange/local-generated/` so developers do not accidentally rewrite tracked CI-produced BOE. Use `uv` directly for Python-only checks and `npm --prefix products/deployment-kit/site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
+Local `just` generation writes to `.exchange/local-generated/` so developers do not accidentally rewrite tracked CI-produced BOE. Use `uv` directly for Python-only checks and `npm --prefix site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
 
 Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details.
 
@@ -100,7 +137,7 @@ Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow de
 The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`, and `deploy`.
 
 - `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, lockfiles, policy, or CI configuration changes.
-- `review:skills` runs only for merge requests that change `products/skill-catalog/skills/**/*`.
+- `review:skills` runs only for merge requests that change `skills/**/*`.
 - `publish:exchange` runs from scheduled pipelines and default-branch skill-change pipelines, and can commit BOE bundles when bot variables are configured.
 - `generate:exchange` runs on default-branch push pipelines that do not change skills, and produces deploy-time generated site artifacts.
 - `pages` runs on default-branch push pipelines and scheduled publication pipelines, consuming generated artifacts and publishing a top-level `public/` artifact for GitLab Pages.
@@ -124,4 +161,4 @@ Secrets should be configured as masked CI variables in the target environment an
 
 ## Current Boundaries
 
-The prebuilt package is static and ready to serve. It does not contain site source, build tools, assessment tooling, a live application server, an interactive approval workflow, or operator-managed update behavior. Those belong to separate products or later milestones in [the roadmap](docs/roadmap.md).
+This is a static exchange MVP. It does not implement a live application server, interactive approval workflow, protected-branch administration, GitLab API simulation, or user account model. Those responsibilities belong to the hosting GitLab environment and future exchange services.

@@ -1,0 +1,17 @@
+stages:
+  - deploy
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - when: never
+
+pages:
+  stage: deploy
+  tags:
+    - "$PAGES_RUNNER_TAG"
+  script:
+    - python3 -I -S scripts/verify_prebuilt.py .
+  artifacts:
+    paths:
+      - public/

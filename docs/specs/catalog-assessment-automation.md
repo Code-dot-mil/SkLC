@@ -65,8 +65,8 @@ Implement these maintainer workflows and job names:
 
 | Workflow | Trigger | Jobs | Source-control writes |
 |---|---|---|---|
-| `catalog-assessment-advice` | `pull_request` with types `opened`, `reopened`, `synchronize`, and `ready_for_review`; path scope `products/skill-catalog/skills/**`; skipped for draft pull requests | `detect-changed-skills`, `setup-assessment-kit`, `advise-changed-skills` | None |
-| `catalog-assessment-post-merge` | `push` to `main`; path scope `products/skill-catalog/skills/**`; skip when the changed files are only under `boe/**` | `detect-changed-skills`, `setup-assessment-kit`, `assess-catalog-skills`, `verify-boe`, `persist-catalog-boe` | BOE bundles only |
+| `catalog-assessment-advice` | `pull_request` with types `opened`, `reopened`, `synchronize`, and `ready_for_review`; path scope `skills/**`; skipped for draft pull requests | `detect-changed-skills`, `setup-assessment-kit`, `advise-changed-skills` | None |
+| `catalog-assessment-post-merge` | `push` to `main`; path scope `skills/**`; skip when the changed files are only under `boe/**` | `detect-changed-skills`, `setup-assessment-kit`, `assess-catalog-skills`, `verify-boe`, `persist-catalog-boe` | BOE bundles only |
 | `catalog-assessment-manual` | `workflow_dispatch` with `mode` of `advise` or `assess` and optional newline-separated `skill_paths` | `select-skills`, `setup-assessment-kit`, `run-selected-assessment`, `verify-boe` when `mode` is `assess` | None by default |
 
 `detect-changed-skills`, `setup-assessment-kit`, `select-skills`, and `verify-boe` run on GitHub-hosted Linux runners. Jobs that invoke an assessor with protected credentials, including `advise-changed-skills`, `assess-catalog-skills`, and assessor-backed `run-selected-assessment`, run on an approved maintainer runner selected by repository variable `SKLC_CATALOG_ASSESSOR_RUNNER_LABELS_JSON`. The workflow fails closed when that variable is unset for a job that requires assessor access. Static validation must not be routed to the maintainer assessor runner.
@@ -128,12 +128,12 @@ missing.
 
 ## Changed-skill detection
 
-- A changed skill is any directory below `products/skill-catalog/skills/` that contains `SKILL.md` and has any tracked file added, modified, renamed, copied, or deleted below that directory.
+- A changed skill is any directory below `skills/` that contains `SKILL.md` and has any tracked file added, modified, renamed, copied, or deleted below that directory.
 - Pull-request detection compares the pull request base SHA to the pull request head SHA.
-- Post-merge detection compares `github.event.before` to `github.sha`. If the previous SHA is unavailable, the workflow selects every catalog skill under `products/skill-catalog/skills/`.
-- Manual detection uses `skill_paths` when provided; otherwise it selects every catalog skill under `products/skill-catalog/skills/`.
+- Post-merge detection compares `github.event.before` to `github.sha`. If the previous SHA is unavailable, the workflow selects every catalog skill under `skills/`.
+- Manual detection uses `skill_paths` when provided; otherwise it selects every catalog skill under `skills/`.
 - Detection emits a JSON matrix of existing changed skill package paths. Deleted skills are reported in the job summary but are not passed to `advise` or `assess`.
-- Changes under `boe/**`, catalog policy, site files, CI files, documentation, or contracts do not select skills for this milestone unless a skill package under `products/skill-catalog/skills/` also changed.
+- Changes under `boe/**`, catalog policy, site files, CI files, documentation, or contracts do not select skills for this milestone unless a skill package under `skills/` also changed.
 
 ## Advice behavior
 
@@ -146,11 +146,11 @@ uv run skill-assessment validate --skill <changed-skill-path> [--skill <changed-
 uv run skill-assessment advise \
   --skill <changed-skill-path> [--skill <changed-skill-path> ...] \
   --assessor skillspector \
-  --output maintainer/exchange/generated/advice/<pull-request-number>
+  --output .exchange/generated/advice/<pull-request-number>
 ```
 
 The advice artifact path is
-`maintainer/exchange/generated/advice/<pull-request-number>/`. It is retained as a
+`.exchange/generated/advice/<pull-request-number>/`. It is retained as a
 workflow artifact only and must not be committed.
 
 ## Post-merge assessment behavior

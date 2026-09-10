@@ -32,6 +32,8 @@ deployment-kit-prebuilt-<version>/
   contracts/
     release-manifest/v1/
       release-manifest.schema.json
+  scripts/
+    verify_prebuilt.py
   public/
     index.html
     assets/
@@ -44,7 +46,6 @@ Required release contents:
 
 - `public/` contains the final static site output. It must be deployable as-is and must include `index.html`.
 - `public/downloads/` contains every downloadable skill artifact referenced by the prebuilt site. Each referenced download path must exist in the archive.
-- Internal site links are relative so the unchanged `public/` directory works at a domain root or a Pages project path.
 - `.gitlab-ci.yml` is deployment-only GitLab CI. It must not build the site, assemble a catalog, run assessment tooling, or fetch release inputs.
 - `README.md` is the entry point and links to `docs/install.md`, `docs/deploy-gitlab-pages.md`, and `docs/deploy-static-hosting.md`.
 - `docs/install.md` documents extraction, checksum verification, and how to prepare the extracted files for the selected hosting path.
@@ -52,6 +53,7 @@ Required release contents:
 - `docs/deploy-static-hosting.md` documents how to host the released `public/` directory on a static web server or static hosting service.
 - `release-manifest.json` conforms to `contracts/release-manifest/v1/release-manifest.schema.json`.
 - `contracts/release-manifest/v1/release-manifest.schema.json` is vendored so customer verification does not require network access.
+- `scripts/verify_prebuilt.py` is the single offline verifier used by installation and GitLab CI. It requires Python 3.12 or newer and no third-party packages.
 - `SHA256SUMS.txt` contains checksums for the same archive-relative paths recorded in `release-manifest.json`.
 
 The `assets/` and `downloads/` directories may contain nested files. This spec requires their deployable location and verification behavior only; it does not specify site internals, page layout, visual content, or skill presentation details beyond static output that can be served by GitLab Pages or another static host.
@@ -74,6 +76,18 @@ The `assets/` and `downloads/` directories may contain nested files. This spec r
 - Verification fails if any recorded file is missing, any digest differs, any extra file is referenced by the site but absent from `public/downloads/`, or any path escapes the archive root.
 
 The install documentation must give a copy/paste verification flow that validates both files: schema validation for `release-manifest.json`, digest verification from `SHA256SUMS.txt`, and a manifest-to-checksum comparison.
+
+Both installation and the shipped GitLab job run
+`python3 -I -S scripts/verify_prebuilt.py .` from the package/project root.
+The verifier must reject unsupported schema features instead of silently skipping
+them. It checks timestamp syntax, calendar dates, and timezone offset ranges;
+space-separated dates and invalid offsets such as `+01:60` must fail.
+Its manifest file set must match the installation files on disk, including the
+verifier itself. Only the two root metadata files and the customer's top-level
+`.git` entry are excluded from that comparison. Package links and unsafe paths
+must fail. Installation additionally passes `--expected-version` to compare the
+manifest with the selected archive version. The default verification must work
+in a GitLab checkout with an arbitrary directory name.
 
 ## Guided documentation requirements
 

@@ -4,25 +4,75 @@ The repository owns GitHub validation in `.github/workflows/ci.yml` and GitLab C
 
 ## GitHub Validation
 
-The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute the Python and site lint and test commands defined by the local `Justfile`; any failed command blocks the final artifact job. A Python producer checks out full history, derives site data and skill downloads only from successful exact-current-content tracked BOE, and cannot invoke SkillSpector or an LLM. Repository and immutable commit context from the pull-request head or push override the placeholder site configuration so generated source links target the revision being built, including for fork pull requests. The Node.js consumer downloads that data, builds `products/deployment-kit/site/dist/`, verifies that the catalog, detail pages, and skill downloads are present, and uploads the downloadable `static-site` zip artifact.
+The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute the Python and site lint and test commands defined by the local `Justfile`; any failed command blocks the final artifact job. A Python producer checks out full history, derives site data and skill downloads only from successful exact-current-content tracked BOE, and cannot invoke SkillSpector or an LLM. Repository and immutable commit context from the pull-request head or push override the placeholder site configuration so generated source links target the revision being built, including for fork pull requests. The Node.js consumer downloads that data and builds `site/dist/`.
+
+The final artifact job then sets up Python 3.12 and runs the prebuilt release
+builder against that site output. It extracts the resulting archive and runs the
+included `scripts/verify_prebuilt.py`, with an expected-version check, before
+checking that catalog detail pages and skill ZIPs are present. Only that verified
+package root is uploaded as the downloadable `static-site` ZIP, including hidden
+files such as `.gitlab-ci.yml`. Extracting the ZIP gives `public/`, documentation,
+the deployment job, vendored schema, verifier, manifest, and checksums together;
+it does not give bare website files or another archive to unpack.
+
+CI uses the test-only version `0.0.0-ci.<run-id>.<run-attempt>` and records
+`github.sha` as the source revision: the checked-out PR merge commit or push
+commit. This job creates no tag or GitHub Release and selects no product release
+version. Packaging and extraction use a fresh directory under `RUNNER_TEMP`.
+Any build, extraction, verification, or required-content failure prevents upload.
 
 Reuse-only generation intentionally fails when a valid skill lacks successful exact-current-content tracked BOE. Until a protected GitHub publication workflow supplies that evidence, new or changed skills cannot produce the static-site artifact in this workflow.
 
-## GitHub Releases
+## Prebuilt Releases
 
-Pushing a maintainer-approved `v<semver>` tag runs `.github/workflows/release.yml`.
-The workflow reruns repository checks, builds the static site from tracked BOE,
-and publishes the currently releasable product archives with their manifest and
-checksum files. The prebuilt archive contains the final `public/` directory and
-deployment-only GitLab CI; the customer runner verifies and publishes those files
-without rebuilding the site.
+`.github/workflows/release.yml` runs when a maintainer pushes a `v<version>` tag.
+Tag creation is the release approval action: complete the human-reviewed checklist
+in `docs/specs/release-process.md`, including clean GitLab Pages acceptance proof,
+before tagging. This workflow does not create tags or approve release readiness.
+Only `deployment-kit-prebuilt` is packaged in this first release implementation;
+standalone catalog packaging belongs to its follow-up PR.
+
+The tagged commit must contain exactly one nonempty `## <version>` section in
+`RELEASE_NOTES.md`. The workflow rejects invalid versions, missing/duplicate/empty
+notes, untracked or modified notes, and a checkout that does not match the tag.
+Fenced Markdown examples do not count as release headings. The accepted section
+becomes the release body, not a separate downloadable asset.
+
+After Python and site checks, the workflow regenerates the site data using only
+exact-content tracked BOE, builds the site, and uses the same prebuilt builder and
+shipped verifier as ordinary CI. Missing evidence fails without running a scanner.
+It extracts and verifies the package and checks the external checksum file before
+publishing. Temporary output stays under `RUNNER_TEMP`; source revision and
+repeatable archive timestamps come from the tagged commit.
+
+The GitHub Release contains exactly the prebuilt `.tar.gz`, the external
+`release-manifest.json`, and `SHA256SUMS.txt`. `gh release create --verify-tag`
+requires the tag to exist and does not overwrite an existing release. SemVer
+prereleases are marked as GitHub prereleases. Checkout does not persist Git
+credentials, and `GH_TOKEN` is exposed only to the publishing step. The job uses
+GitHub-hosted Ubuntu, a 30-minute timeout, and per-tag concurrency without cancelling
+an in-progress release.
+
+## Prebuilt Consumer Verification
+
+The deployment-only template at
+`products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml` consumes a complete
+prebuilt release package, not a flat site build. Its Linux runner must already
+provide Python 3.12 or newer and match the configured `PAGES_RUNNER_TAG`.
+The `pages` job runs `python3 -I -S scripts/verify_prebuilt.py .`, the same offline
+verification command documented in the package installation guide. It checks
+manifest/schema consistency, file checksums, required contents, safe paths, and
+referenced downloads before publishing the unchanged `public/` directory.
+It does not install dependencies, fetch inputs, build a site, or run assessments.
+The `static-site` CI download uses this same complete package layout and verifier;
+it is a CI test build, not a published product release.
 
 ## GitLab Pipeline Shape
 
 - `lint`, `test`, and `audit` run for merge requests and default-branch pushes when site code, exchange tooling, tests, or CI configuration changes.
-- `review:skills` runs only for merge requests that change `products/skill-catalog/skills/**/*`. It validates changed skill packages, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), writes reviewer artifacts, and can post a merge request comment when comment variables are configured.
-- `publish:exchange` runs for scheduled pipelines and default-branch push pipelines that change `products/skill-catalog/skills/**/*`. It generates the full `maintainer/exchange/generated/` tree for deploy artifacts and commits BOE bundles back when bot push variables are configured.
-- `generate:exchange` runs on default-branch push pipelines that do not change `products/skill-catalog/skills/**/*`. It generates deploy-time `maintainer/exchange/generated/` artifacts without committing them.
+- `review:skills` runs only for merge requests that change `skills/**/*`. It validates changed skill packages, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), writes reviewer artifacts, and can post a merge request comment when comment variables are configured.
+- `publish:exchange` runs for scheduled pipelines and default-branch push pipelines that change `skills/**/*`. It generates the full `.exchange/generated/` tree for deploy artifacts and commits BOE bundles back when bot push variables are configured.
+- `generate:exchange` runs on default-branch push pipelines that do not change `skills/**/*`. It generates deploy-time `.exchange/generated/` artifacts without committing them.
 - `pages` runs on default-branch push pipelines and scheduled pipelines. It deploys from generated exchange artifacts produced by `generate:exchange` or `publish:exchange` in the same pipeline.
 - Python publication jobs reuse tracked BOE bundles when the computed scan cache key already exists. Runner caches are used for dependencies only, not as the source of scanner history.
 - Non-Pages jobs use the runner tag in `SKILL_EXCHANGE_RUNNER_TAG`.
@@ -35,7 +85,7 @@ The checked-in runner tag defaults are environment examples. Override them in th
 
 GitHub Dependabot is the authoritative dependency-vulnerability control. Dependabot alerts and security updates must remain enabled in repository settings, and GitHub Security is the only alert backlog; do not create a scheduled CI job that duplicates it.
 
-`.github/dependabot.yml` covers the root `pyproject.toml` and `uv.lock` with the `uv` ecosystem and `products/deployment-kit/site/package.json` and `products/deployment-kit/site/package-lock.json` with the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, while major updates remain separate. Dependabot uses its default dependency and ecosystem labels and assigns update pull requests to `Fnorgh2`.
+`.github/dependabot.yml` covers the root `pyproject.toml` and `uv.lock` with the `uv` ecosystem and `site/package.json` and `site/package-lock.json` with the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, while major updates remain separate. Dependabot uses its default dependency and ecosystem labels and assigns update pull requests to `Fnorgh2`.
 
 `Fnorgh2` owns alert triage and must receive GitHub notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received; the remaining backlog is reviewed weekly. Alerts that cannot be remediated promptly are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
 

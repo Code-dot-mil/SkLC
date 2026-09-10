@@ -18,7 +18,7 @@ updates:
           - "patch"
 
   - package-ecosystem: "npm"
-    directory: "/products/deployment-kit/site"
+    directory: "/site"
     schedule:
       interval: "weekly"
       day: "monday"

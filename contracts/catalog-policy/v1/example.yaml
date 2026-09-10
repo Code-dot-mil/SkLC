@@ -1,5 +1,11 @@
 schema_version: skill-exchange-catalog-policy/v1
-mode: include-list
-skills:
-  - python-secure-code-review
-  - unit-test-generation
+
+allowed_risks:
+  - Low
+  - Medium
+
+allow_unknown: false
+
+excluded_skills:
+  - namespace: example
+    skill_id: intentionally-excluded-skill

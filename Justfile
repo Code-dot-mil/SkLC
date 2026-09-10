@@ -3,29 +3,28 @@ export UV_CACHE_DIR := ".uv-cache"
 default:
     just --list
 
-site_root := "products/deployment-kit/site"
-local_generated := "maintainer/exchange/local-generated"
+local_generated := ".exchange/local-generated"
 
 generate scan_mode="static-only":
     uv run python -m skill_exchange.cli publish-local --generated-dir {{local_generated}} --scan-mode {{scan_mode}}
 
 python-lint:
-    uv run --extra test ruff check maintainer tests
+    uv run --extra test ruff check scripts tests
 
 python-lint-fix:
-    uv run --extra test ruff check --fix maintainer tests
+    uv run --extra test ruff check --fix scripts tests
 
 python-test:
     uv run --extra test pytest
 
 site-lint:
-    npm --prefix {{site_root}} run lint
+    npm --prefix site run lint
 
 site-test:
-    npm --prefix {{site_root}} run test
+    npm --prefix site run test
 
 site-build:
-    SKILL_EXCHANGE_GENERATED_ROOT="$PWD/{{local_generated}}" npm --prefix {{site_root}} run build
+    SKILL_EXCHANGE_GENERATED_ROOT="$PWD/{{local_generated}}" npm --prefix site run build
 
 lint: python-lint site-lint
 

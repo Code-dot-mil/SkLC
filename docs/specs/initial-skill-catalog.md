@@ -64,10 +64,10 @@ The catalog publishes exactly these four skills:
 
 | Display purpose | Source package path | Released package path | Skill name |
 | --- | --- | --- | --- |
-| Secure Code Review | `products/skill-catalog/skills/ai4sdlc/python-secure-code-review/` | `skills/python-secure-code-review/` | `python-secure-code-review` |
-| Unit Test Generation | `products/skill-catalog/skills/ai4sdlc/unit-test-generation/` | `skills/unit-test-generation/` | `unit-test-generation` |
-| Inline Documentation | `products/skill-catalog/skills/ai4sdlc/inline-documentation/` | `skills/inline-documentation/` | `inline-documentation` |
-| Commit Message and PR Description | `products/skill-catalog/skills/ai4sdlc/code-change-description/` | `skills/code-change-description/` | `code-change-description` |
+| Secure Code Review | `skills/ai4sdlc/python-secure-code-review/` | `skills/python-secure-code-review/` | `python-secure-code-review` |
+| Unit Test Generation | `skills/ai4sdlc/unit-test-generation/` | `skills/unit-test-generation/` | `unit-test-generation` |
+| Inline Documentation | `skills/ai4sdlc/inline-documentation/` | `skills/inline-documentation/` | `inline-documentation` |
+| Commit Message and PR Description | `skills/ai4sdlc/code-change-description/` | `skills/code-change-description/` | `code-change-description` |
 
 Each released package follows the skill-package v1 contract. `SKILL.md` must
 start with YAML frontmatter containing at least `name` and `description`; the

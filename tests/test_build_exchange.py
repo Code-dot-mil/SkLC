@@ -40,7 +40,7 @@ def _tracked_boe_fixture(monkeypatch, tmp_path: Path, *, mode: str = "static-onl
     )
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=source_generated,
         scan_modes=(mode,),
     )
@@ -67,7 +67,7 @@ def _assert_reuse_only_rejects(generated: Path, *, mode: str = "static-only") ->
     with pytest.raises(RuntimeError) as error:
         build_exchange(
             skills_root=Path("tests/fixtures/skills"),
-            exchange_dir=Path("maintainer/exchange"),
+            exchange_dir=Path(".exchange"),
             generated_dir=generated,
             scan_modes=(mode,),
             reuse_boe_only=True,
@@ -89,7 +89,7 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
 
     result = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -110,7 +110,6 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert datetime.fromisoformat(index["skills"][0]["last_scanned"])
     assert len(index["skills"][0]["latest_source_commit_sha"]) in {0, 40}
     assert index["skills"][0]["scan_mode"] == "static-only"
-    assert index["skills"][0]["download_path"] == "downloads/ai4sdlc--sample-skill.zip"
     assert index["skills"][0]["scanner_provenance"] == {
         "name": "skillspector",
         "version": "2.1.5",
@@ -126,6 +125,11 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert support_hashes["skillspector.json"]
     assert support_hashes["summary.json"]
     assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
+    assert index["skills"][0]["download_path"] == "downloads/ai4sdlc--sample-skill.zip"
+    detail = json.loads((generated / "skills" / "ai4sdlc--sample-skill.json").read_text())
+    skills_table = json.loads((generated / "tables" / "skills.json").read_text())
+    assert detail["download_path"] == index["skills"][0]["download_path"]
+    assert skills_table["rows"][0]["download_path"] == detail["download_path"]
     scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
     scanner_artifacts = json.loads((generated / "tables" / "scanner_artifacts.json").read_text())
     scanner_findings = json.loads((generated / "tables" / "scanner_findings.json").read_text())
@@ -136,13 +140,17 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert scanner_runs["rows"][0]["content_hash"] == index["skills"][0]["content_hash"]
     assert scanner_runs["rows"][0]["last_scanned"] == index["skills"][0]["last_scanned"]
     native_artifact = next(row for row in scanner_artifacts["rows"] if row["artifact_kind"] == "native_report")
-    assert native_artifact["download_path"].startswith("downloads/")
     assert native_artifact["download_path"].endswith("/skillspector.json")
+    assert {row["download_path"] for row in scanner_artifacts["rows"]} == {
+        f"downloads/scanner-runs/{scanner_runs['rows'][0]['id']}/{filename}"
+        for filename in ("skillspector.json", "summary.json", "boe.json")
+    }
+    assert all(Path(row["path"]).is_file() for row in scanner_artifacts["rows"])
     assert scanner_findings["rows"] == []
 
     second = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -171,7 +179,7 @@ def test_build_exchange_removes_stale_skill_zips(monkeypatch, tmp_path: Path):
 
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -196,7 +204,7 @@ def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monke
 
     first = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -219,7 +227,7 @@ def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monke
 
     second = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=boe_only,
         scan_modes=("static-only",),
     )
@@ -260,14 +268,14 @@ def test_build_exchange_reuse_boe_only_never_calls_scanner_paths(monkeypatch, tm
     monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=source_generated,
         scan_modes=("static-only", "llm-assisted"),
     )
     scanner_version[0] = "2.1.6"
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=source_generated,
         scan_modes=("static-only",),
     )
@@ -286,7 +294,7 @@ def test_build_exchange_reuse_boe_only_never_calls_scanner_paths(monkeypatch, tm
 
     result = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only", "llm-assisted"),
         reuse_boe_only=True,
@@ -325,7 +333,7 @@ def test_build_exchange_reuse_boe_only_fails_for_missing_exact_content(monkeypat
     with pytest.raises(RuntimeError) as error:
         build_exchange(
             skills_root=Path("tests/fixtures/skills"),
-            exchange_dir=Path("maintainer/exchange"),
+            exchange_dir=Path(".exchange"),
             generated_dir=generated,
             scan_modes=("static-only",),
             reuse_boe_only=True,
@@ -486,7 +494,7 @@ metadata:
 
     result = build_exchange(
         skills_root=tmp_path / "skills",
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
@@ -553,13 +561,13 @@ def test_build_exchange_reuses_cached_scan_without_running_skillspector(monkeypa
 
     first = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )
     second = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path("maintainer/exchange"),
+        exchange_dir=Path(".exchange"),
         generated_dir=generated,
         scan_modes=("static-only",),
     )

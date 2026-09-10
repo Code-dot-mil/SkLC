@@ -125,6 +125,11 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert support_hashes["skillspector.json"]
     assert support_hashes["summary.json"]
     assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
+    assert index["skills"][0]["download_path"] == "downloads/ai4sdlc--sample-skill.zip"
+    detail = json.loads((generated / "skills" / "ai4sdlc--sample-skill.json").read_text())
+    skills_table = json.loads((generated / "tables" / "skills.json").read_text())
+    assert detail["download_path"] == index["skills"][0]["download_path"]
+    assert skills_table["rows"][0]["download_path"] == detail["download_path"]
     scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())
     scanner_artifacts = json.loads((generated / "tables" / "scanner_artifacts.json").read_text())
     scanner_findings = json.loads((generated / "tables" / "scanner_findings.json").read_text())
@@ -136,6 +141,11 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert scanner_runs["rows"][0]["last_scanned"] == index["skills"][0]["last_scanned"]
     native_artifact = next(row for row in scanner_artifacts["rows"] if row["artifact_kind"] == "native_report")
     assert native_artifact["download_path"].endswith("/skillspector.json")
+    assert {row["download_path"] for row in scanner_artifacts["rows"]} == {
+        f"downloads/scanner-runs/{scanner_runs['rows'][0]['id']}/{filename}"
+        for filename in ("skillspector.json", "summary.json", "boe.json")
+    }
+    assert all(Path(row["path"]).is_file() for row in scanner_artifacts["rows"])
     assert scanner_findings["rows"] == []
 
     second = build_exchange(

@@ -275,7 +275,7 @@ def build_exchange(
             "boe_path": selected_run.get("canonical_boe_path") or selected_run["boe_path"],
             "detail_path": detail_path.as_posix(),
             "zip_path": zip_path.as_posix(),
-            "download_path": f"/downloads/{zip_path.name}",
+            "download_path": f"downloads/{zip_path.name}",
             "warnings": list(validation.warnings),
             "metadata_flags": list(validation.metadata_flags),
         }
@@ -442,7 +442,7 @@ def scanner_artifact_rows_for(scanner_run: dict[str, Any]) -> list[dict[str, Any
             "scanner_run_id": run_id,
             "artifact_kind": "native_report",
             "path": scanner_run["native_report_path"],
-            "download_path": f"/downloads/scanner-runs/{run_id}/skillspector.json",
+            "download_path": f"downloads/scanner-runs/{run_id}/skillspector.json",
             "media_type": "application/vnd.skillspector.report+json",
         },
         {
@@ -450,7 +450,7 @@ def scanner_artifact_rows_for(scanner_run: dict[str, Any]) -> list[dict[str, Any
             "scanner_run_id": run_id,
             "artifact_kind": "summary",
             "path": scanner_run["summary_path"],
-            "download_path": f"/downloads/scanner-runs/{run_id}/summary.json",
+            "download_path": f"downloads/scanner-runs/{run_id}/summary.json",
             "media_type": "application/json",
         },
         {
@@ -458,7 +458,7 @@ def scanner_artifact_rows_for(scanner_run: dict[str, Any]) -> list[dict[str, Any
             "scanner_run_id": run_id,
             "artifact_kind": "boe",
             "path": scanner_run["boe_path"],
-            "download_path": f"/downloads/scanner-runs/{run_id}/boe.json",
+            "download_path": f"downloads/scanner-runs/{run_id}/boe.json",
             "media_type": "application/json",
         },
     ]

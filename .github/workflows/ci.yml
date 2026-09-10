@@ -152,23 +152,37 @@ jobs:
         run: npm ci --prefix site
       - name: Build static site
         run: npm --prefix site run build
-      - name: Add prebuilt deployment files
+      - name: Set up Python for packaging
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build and verify prebuilt package
+        id: prebuilt
+        shell: bash
+        env:
+          PYTHONPATH: scripts
+          PREBUILT_VERSION: "0.0.0-ci.${{ github.run_id }}.${{ github.run_attempt }}"
+          SOURCE_REVISION: "${{ github.sha }}"
         run: |
-          rm -f site/dist/.gitkeep
-          cp products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml site/dist/.gitlab-ci.yml
-          cp products/deployment-kit/docs/prebuilt/README.md site/dist/README.md
-      - name: Verify standalone site
-        run: |
-          test -s site/dist/index.html
-          test -n "$(find site/dist/skills -type f -name 'index.html' -print -quit)"
-          test -n "$(find site/dist/downloads -type f -name '*.zip' -print -quit)"
-          test -s site/dist/.gitlab-ci.yml
-          test -s site/dist/README.md
-          test ! -e site/dist/.gitkeep
+          package_name="deployment-kit-prebuilt-$PREBUILT_VERSION"
+          package_dir="$(mktemp -d "$RUNNER_TEMP/sklc-prebuilt.XXXXXX")"
+          python -m skill_exchange.release build \
+            --repo-root . --site-dir site/dist \
+            --version "$PREBUILT_VERSION" --source-revision "$SOURCE_REVISION" \
+            --output-dir "$package_dir/release"
+          mkdir "$package_dir/extracted"
+          tar -xzf "$package_dir/release/$package_name.tar.gz" -C "$package_dir/extracted"
+          cd "$package_dir/extracted/$package_name"
+          python3 -I -S scripts/verify_prebuilt.py . --expected-version "$PREBUILT_VERSION"
+          test -s public/index.html
+          test -n "$(find public/skills -type f -name 'index.html' -print -quit)"
+          test -n "$(find public/downloads -type f -name '*.zip' -print -quit)"
+          test ! -e public/.gitkeep
+          printf 'package-root=%s\n' "$package_dir/extracted/$package_name" >> "$GITHUB_OUTPUT"
       - name: Upload static site
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: static-site
-          path: site/dist/
+          path: ${{ steps.prebuilt.outputs.package-root }}/
           if-no-files-found: error
           include-hidden-files: true

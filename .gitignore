@@ -3,6 +3,7 @@
 !.exchange/generated/boe/
 !.exchange/generated/boe/**
 .exchange/local-generated/
+/release/
 site/dist/
 site/.astro/
 site/public/downloads/

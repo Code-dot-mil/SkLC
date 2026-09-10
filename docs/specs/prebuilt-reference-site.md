@@ -32,6 +32,8 @@ deployment-kit-prebuilt-<version>/
   contracts/
     release-manifest/v1/
       release-manifest.schema.json
+  scripts/
+    verify_prebuilt.py
   public/
     index.html
     assets/
@@ -51,6 +53,7 @@ Required release contents:
 - `docs/deploy-static-hosting.md` documents how to host the released `public/` directory on a static web server or static hosting service.
 - `release-manifest.json` conforms to `contracts/release-manifest/v1/release-manifest.schema.json`.
 - `contracts/release-manifest/v1/release-manifest.schema.json` is vendored so customer verification does not require network access.
+- `scripts/verify_prebuilt.py` is the single offline verifier used by installation and GitLab CI. It requires Python 3.12 or newer and no third-party packages.
 - `SHA256SUMS.txt` contains checksums for the same archive-relative paths recorded in `release-manifest.json`.
 
 The `assets/` and `downloads/` directories may contain nested files. This spec requires their deployable location and verification behavior only; it does not specify site internals, page layout, visual content, or skill presentation details beyond static output that can be served by GitLab Pages or another static host.
@@ -73,6 +76,26 @@ The `assets/` and `downloads/` directories may contain nested files. This spec r
 - Verification fails if any recorded file is missing, any digest differs, any extra file is referenced by the site but absent from `public/downloads/`, or any path escapes the archive root.
 
 The install documentation must give a copy/paste verification flow that validates both files: schema validation for `release-manifest.json`, digest verification from `SHA256SUMS.txt`, and a manifest-to-checksum comparison.
+
+Both installation and the shipped GitLab job run
+`python3 -I -S scripts/verify_prebuilt.py .` from the package/project root.
+The GitLab job explicitly selects a Python container image, defaulting to the
+official `python:3.12-slim` image. Reuse the `PYTHON_IMAGE_REGISTRY`,
+`PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, and full `PYTHON_IMAGE` override
+variables so an approved image can be selected without changing package files.
+The selected image must provide a POSIX shell and `python3` running Python 3.12
+or newer. The Linux runner must support and be allowed to pull job images;
+`PAGES_RUNNER_TAG` selects the runner independently. Python is used only for
+verification, not for building or serving the prebuilt site.
+The verifier must reject unsupported schema features instead of silently skipping
+them. It checks timestamp syntax, calendar dates, and timezone offset ranges;
+space-separated dates and invalid offsets such as `+01:60` must fail.
+Its manifest file set must match the installation files on disk, including the
+verifier itself. Only the two root metadata files and the customer's top-level
+`.git` entry are excluded from that comparison. Package links and unsafe paths
+must fail. Installation additionally passes `--expected-version` to compare the
+manifest with the selected archive version. The default verification must work
+in a GitLab checkout with an arbitrary directory name.
 
 ## Guided documentation requirements
 

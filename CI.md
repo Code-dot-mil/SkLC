@@ -4,7 +4,22 @@ The repository owns GitHub validation in `.github/workflows/ci.yml`, protected S
 
 ## GitHub Validation
 
-The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute Python and site lint and tests; any failed command blocks the final artifact job. A Python producer checks out full history, reuses successful exact-current-content tracked BOE, and runs pinned upstream SkillSpector 2.10.0 in static-only mode when preview evidence is missing. Repository and immutable commit context from the pull-request head or push override the placeholder site configuration so generated source links target the revision being built, including for fork pull requests. This preview generation never uses an LLM and never commits BOE. The Node.js consumer downloads the generated data, builds `site/dist/`, verifies that the catalog, detail pages, and skill downloads are present, and uploads the downloadable `static-site` zip artifact.
+The `CI` workflow runs on every pull request targeting `main` and every push to `main`. GitHub-hosted Ubuntu runners execute the Python and site lint and test commands defined by the local `Justfile`; any failed command blocks the final artifact job. A Python producer checks out full history, reuses successful exact-current-content tracked BOE, and runs pinned upstream SkillSpector 2.10.0 in static-only mode when preview evidence is missing. Repository and immutable commit context from the pull-request head or push override the placeholder site configuration so generated source links target the revision being built, including for fork pull requests. This preview generation never uses an LLM and never commits BOE. The Node.js consumer downloads the generated data and builds `site/dist/`.
+
+The final artifact job then sets up Python 3.12 and runs the prebuilt release
+builder against that site output. It extracts the resulting archive and runs the
+included `scripts/verify_prebuilt.py`, with an expected-version check, before
+checking that catalog detail pages and skill ZIPs are present. Only that verified
+package root is uploaded as the downloadable `static-site` ZIP, including hidden
+files such as `.gitlab-ci.yml`. Extracting the ZIP gives `public/`, documentation,
+the deployment job, vendored schema, verifier, manifest, and checksums together;
+it does not give bare website files or another archive to unpack.
+
+CI uses the test-only version `0.0.0-ci.<run-id>.<run-attempt>` and records
+`github.sha` as the source revision: the checked-out PR merge commit or push
+commit. This job creates no tag or GitHub Release and selects no product release
+version. Packaging and extraction use a fresh directory under `RUNNER_TEMP`.
+Any build, extraction, verification, or required-content failure prevents upload.
 
 ## GitHub SkillSpector Workflow
 
@@ -29,6 +44,57 @@ Configure these GitHub repository settings before enabling the workflow:
 The self-hosted workflow passes `RUNNER_CA_BUNDLE_PATH` to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`. This allows Node-based actions and the Python CI helper that posts review comments to trust the enterprise TLS CA chain without disabling certificate verification. The workflow fails before Python setup if the variable is unset or the bundle is unreadable. The bundle must be present in the runner execution environment, including the runner container when one is used.
 
 The repository or organization Actions policy must allow `GITHUB_TOKEN` write access, and the `main` branch ruleset must allow the GitHub Actions publication identity to push the generated-evidence commit. The review job requests `pull-requests: write` only to add its generated review comment for same-repository pull requests; the publication job requests only `contents: write`. If branch policy forbids direct bot pushes, configure an equivalent ruleset bypass for the publication workflow before running it. Do not replace `GITHUB_TOKEN` with the LLM gateway credential or reuse the gateway credential for repository access.
+
+## Prebuilt Releases
+
+`.github/workflows/release.yml` runs when a maintainer pushes a `v<version>` tag.
+Tag creation is the release approval action: complete the human-reviewed checklist
+in `docs/specs/release-process.md`, including clean GitLab Pages acceptance proof,
+before tagging. This workflow does not create tags or approve release readiness.
+Only `deployment-kit-prebuilt` is packaged in this first release implementation;
+standalone catalog packaging belongs to its follow-up PR.
+
+The tagged commit must contain exactly one nonempty `## <version>` section in
+`RELEASE_NOTES.md`. The workflow rejects invalid versions, missing/duplicate/empty
+notes, untracked or modified notes, and a checkout that does not match the tag.
+Fenced Markdown examples do not count as release headings. The accepted section
+becomes the release body, not a separate downloadable asset.
+
+After Python and site checks, the workflow regenerates the site data using only
+exact-content tracked BOE, builds the site, and uses the same prebuilt builder and
+shipped verifier as ordinary CI. Missing evidence fails without running a scanner.
+It extracts and verifies the package and checks the external checksum file before
+publishing. Temporary output stays under `RUNNER_TEMP`; source revision and
+repeatable archive timestamps come from the tagged commit.
+
+The GitHub Release contains exactly the prebuilt `.tar.gz`, the external
+`release-manifest.json`, and `SHA256SUMS.txt`. `gh release create --verify-tag`
+requires the tag to exist and does not overwrite an existing release. SemVer
+prereleases are marked as GitHub prereleases. Checkout does not persist Git
+credentials, and `GH_TOKEN` is exposed only to the publishing step. The job uses
+GitHub-hosted Ubuntu, a 30-minute timeout, and per-tag concurrency without cancelling
+an in-progress release.
+
+## Prebuilt Consumer Verification
+
+The deployment-only template at
+`products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml` consumes a complete
+prebuilt release package, not a flat site build. Its Linux runner must support
+job images and match the configured `PAGES_RUNNER_TAG`. The `pages` job selects
+`$PYTHON_IMAGE`, defaulting to the official `python:3.12-slim` image, rather than
+relying on Python being installed in the runner's default image. The runner must
+be allowed to pull that image. Override `PYTHON_IMAGE_REGISTRY`,
+`PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, or the complete `PYTHON_IMAGE`
+through project/group CI/CD variables when an internal registry is required.
+An override must provide a POSIX shell and `python3` running Python 3.12 or newer.
+The `pages` job runs `python3 -I -S scripts/verify_prebuilt.py .`, the same offline
+verification command documented in the package installation guide. It checks
+manifest/schema consistency, file checksums, required contents, safe paths, and
+referenced downloads before publishing the unchanged `public/` directory.
+The verification script does not install dependencies, fetch inputs, build a site,
+or run assessments. Python is not needed to serve the published static files.
+The `static-site` CI download uses this same complete package layout and verifier;
+it is a CI test build, not a published product release.
 
 ## GitLab Pipeline Shape
 

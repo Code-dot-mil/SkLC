@@ -4,6 +4,44 @@ Skill Exchange Site is a static catalog for publishing agent skills with review 
 
 This repository is intentionally self-contained. The site, exchange builder, CI helpers, policy files, GitHub Actions workflows, and legacy GitLab CI definition all live here so the project can move between networks without importing environment-specific CI components.
 
+## Use the prebuilt site
+
+The prebuilt deployment kit contains an already-built site. Customers need an
+archive extractor and Python 3.12 or newer for offline verification, but no Node.js,
+`uv`, site build, or assessment tools.
+
+Choose the download:
+
+- **Published release:** When a prebuilt version is available in
+  [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), download
+  `deployment-kit-prebuilt-<version>.tar.gz`, not the automatically generated
+  source-code archives. Follow the
+  [installation guide](products/deployment-kit/docs/prebuilt/install.md) to extract
+  it and verify the selected version.
+- **CI test build:** From a successful
+  [CI run](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml) that includes
+  prebuilt packaging, download the `static-site` artifact ZIP. This is not a
+  published product release. Extract the ZIP to get the complete package (no tar
+  archive to unpack), then run the verification command below.
+  See [CI package details](CI.md#github-validation).
+
+From the extracted package root (the folder containing `public/`, `README.md`,
+and `.gitlab-ci.yml`, not this source repository), run the shared verifier:
+
+```sh
+python3 -I -S scripts/verify_prebuilt.py .
+```
+
+Stop if verification fails. Once it passes, follow the included README or choose:
+
+- [GitLab Pages](products/deployment-kit/docs/prebuilt/deploy-gitlab-pages.md): copy
+  the complete package, including hidden files. Configure `PAGES_RUNNER_TAG` for
+  an available Linux runner that supports and can pull the job's Python image.
+- [Another static host](products/deployment-kit/docs/prebuilt/deploy-static-hosting.md):
+  serve the complete `public/` directory unchanged, at a domain root or URL prefix.
+
+The developer setup below is for working on the source, not deploying this package.
+
 ## Vision
 
 The exchange should give users a simple way to discover approved skills while giving maintainers a repeatable way to evaluate and publish them. The first implementation is a static MVP:

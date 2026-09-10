@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import tarfile
+import zipfile
 from pathlib import Path
 
 from release_tools.build import assemble_release
@@ -18,9 +19,17 @@ def parse_checksums(path: Path) -> dict[str, str]:
     return {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in path.read_text().splitlines()}
 
 
+def make_wheel(path: Path, version: str = "0.1.0") -> Path:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr(
+            f"skill_assessment-{version}.dist-info/METADATA",
+            f"Metadata-Version: 2.4\nName: skill-assessment\nVersion: {version}\n",
+        )
+    return path
+
+
 def test_release_archive_and_two_layer_checksums_follow_contract(tmp_path: Path):
-    wheel = tmp_path / "skill_assessment-0.1.0-py3-none-any.whl"
-    wheel.write_bytes(b"test wheel bytes")
+    wheel = make_wheel(tmp_path / "skill_assessment-0.1.0-py3-none-any.whl")
     output = tmp_path / "release"
 
     archive, external_manifest, external_checksums = assemble_release(
@@ -60,8 +69,7 @@ def test_release_archive_and_two_layer_checksums_follow_contract(tmp_path: Path)
 
 
 def test_release_assembly_is_byte_deterministic(tmp_path: Path):
-    wheel = tmp_path / "skill_assessment-0.1.0-py3-none-any.whl"
-    wheel.write_bytes(b"test wheel bytes")
+    wheel = make_wheel(tmp_path / "skill_assessment-0.1.0-py3-none-any.whl")
     common = {
         "repository_root": REPOSITORY_ROOT,
         "version": "0.1.0",
@@ -74,3 +82,23 @@ def test_release_assembly_is_byte_deterministic(tmp_path: Path):
     second = assemble_release(**common, output_directory=tmp_path / "second")
 
     assert [path.read_bytes() for path in first] == [path.read_bytes() for path in second]
+
+
+def test_release_accepts_python_normalized_prerelease_wheel_version(tmp_path: Path):
+    wheel = make_wheel(
+        tmp_path / "skill_assessment-1.2.3rc1+build.7-py3-none-any.whl",
+        "1.2.3rc1+build.7",
+    )
+
+    assets = assemble_release(
+        repository_root=REPOSITORY_ROOT,
+        version="1.2.3-rc.1+build.7",
+        source_revision="c" * 40,
+        created_at="2026-09-10T16:00:00Z",
+        wheel=wheel,
+        output_directory=tmp_path / "release",
+    )
+
+    manifest = json.loads(assets[1].read_text())
+    assert manifest["version"] == "1.2.3-rc.1+build.7"
+    assert manifest["components"]["skill-assessment"] == "1.2.3rc1+build.7"

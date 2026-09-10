@@ -57,9 +57,11 @@ def test_release_manifest_example_lists_installed_files_without_self_reference()
 def test_skill_package_example_uses_portable_standard_name():
     contract_root = CONTRACTS_ROOT / "skill-package" / "v1"
     metadata_schema = json.loads((contract_root / "metadata.schema.json").read_text())
-    frontmatter, _body = parse_frontmatter((contract_root / "examples" / "SKILL.md").read_text())
+    example = contract_root / "examples" / "example-review"
+    frontmatter, _body = parse_frontmatter((example / "SKILL.md").read_text())
 
     name_rule = metadata_schema["properties"]["name"]
     assert name_rule["minLength"] <= len(frontmatter["name"]) <= name_rule["maxLength"]
     assert re.fullmatch(name_rule["pattern"], frontmatter["name"])
+    assert frontmatter["name"] == example.name
     assert frontmatter["description"].strip()

@@ -721,9 +721,12 @@ inputs fail the build; the builder does not generate substitute documentation.
 
 The package's manifest and checksums cover the same installation files, excluding
 only their own two root metadata files. Nested assets with either metadata filename
-are included. External `release-manifest.json` records only the prebuilt archive;
-external `SHA256SUMS.txt` covers that archive and the external manifest. No catalog
-archive or release-notes asset is produced by this builder.
+are included. The external
+`deployment-kit-prebuilt-<version>.release-manifest.json` is byte-identical to
+the internal manifest and describes extracted files. The external
+`deployment-kit-prebuilt-<version>.SHA256SUMS.txt` covers the archive and
+external manifest. No catalog archive or release-notes asset is produced by
+this builder.
 
 The builder also vendors `products/deployment-kit/scripts/verify_prebuilt.py`
 as `scripts/verify_prebuilt.py` and includes it in the manifest and checksums.
@@ -852,7 +855,17 @@ Do not use unrelated CI credentials as an implicit publication fallback. Silent 
 
 The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
 
-Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and runs `publish-local` with the locked `scan` extra in static-only mode. It reuses successful exact-current-content tracked BOE and runs SkillSpector only for missing preview evidence. Preview generation must not use an LLM or commit BOE. The producer uploads derived data for a Node.js 22 consumer. The consumer waits for validation and builds `site/dist/`.
+Python 3.12 jobs run Ruff over the existing exchange tooling and the standalone
+assessment-kit source, tests, and release tools, then run the complete Pytest
+suite. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site
+run test` after `npm ci --prefix site`. Each command is a blocking check. A
+separate Python 3.12 producer fetches full Git history, sets source repository
+and immutable commit context from the pull-request head or push, and runs
+`publish-local` with the locked `scan` extra in static-only mode. It reuses
+successful exact-current-content tracked BOE and runs SkillSpector only for
+missing preview evidence. Preview generation must not use an LLM or commit BOE.
+The producer uploads derived data for a Node.js 22 consumer. The consumer waits
+for validation and builds `site/dist/`.
 
 The artifact job must package the built site with `skill_exchange.release build`
 under Python 3.12, extract the archive, and run its included
@@ -890,7 +903,8 @@ GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and
 ## GitHub Release Automation
 
 `.github/workflows/release.yml` implements the manual-tag path from
-`docs/specs/release-process.md` for `deployment-kit-prebuilt` only. It runs on
+`docs/specs/release-process.md` for `deployment-kit-prebuilt` and
+`assessment-kit`. It runs on
 `v*.*.*` tag pushes, validates the version as SemVer without its leading `v`, and
 requires the checkout to match the tag's commit. It neither chooses a release
 version nor creates a tag. Maintainers must complete the release checklist first.
@@ -904,15 +918,18 @@ The workflow reads committed, unmodified notes from the tagged checkout before
 build steps and uses the extracted snippet as the GitHub Release description.
 
 Python 3.12 and Node.js 22 run repository checks, reuse-only exchange generation,
-and the site build. No scanner or LLM may run. The release uses the same builder
-and included verifier as CI, with extraction, expected-version checking, required
-site-content checks, and external checksum verification before publication. Build
-metadata records the tag's commit, with `SOURCE_DATE_EPOCH` from that commit.
+and the site build. The prebuilt site path runs no scanner or LLM. The workflow
+builds the assessment wheel from a temporary source copy whose package version
+is set to the accepted release version, assembles and verifies both assessment
+sidecar layers, installs the released wheel in an isolated environment, installs
+the exact supported SkillSpector revision, and exercises `validate`, `advise`,
+`assess`, and `verify-boe` in explicit `static-only` mode. Build metadata records
+the tag's commit, with `SOURCE_DATE_EPOCH` from that commit.
 
-Use a fresh directory under `RUNNER_TEMP`. Publish exactly
-`deployment-kit-prebuilt-<version>.tar.gz`, `release-manifest.json`, and
-`SHA256SUMS.txt` via `gh release create --verify-tag --notes-file ...`. No catalog
-archive or release-notes asset is uploaded. Existing releases must not be
+Use a fresh directory under `RUNNER_TEMP`. Publish exactly the prebuilt and
+assessment-kit archives plus each archive's product-qualified release-manifest
+and checksum sidecars via `gh release create --verify-tag --notes-file ...`.
+No catalog archive or release-notes asset is uploaded. Existing releases must not be
 overwritten. SemVer prereleases are marked as GitHub prereleases. Keep the release
 token scoped to the publishing step, disable persisted checkout credentials, and
 use a 30-minute GitHub-hosted job with non-cancelling per-tag concurrency.

@@ -29,7 +29,9 @@ python -m build --wheel --outdir <wheel-output> products/assessment-kit
 ```
 
 Release assembly takes an explicit version, source revision, timestamp, wheel,
-and output directory. It does not infer release identity from the checkout:
+and output directory. The release workflow updates the version in a temporary
+source copy before building, so the checkout remains unchanged. The assembler
+does not infer release identity from the checkout:
 
 ```text
 python products/assessment-kit/release_tools/build.py \

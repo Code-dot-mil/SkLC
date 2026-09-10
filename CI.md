@@ -57,8 +57,8 @@ The repository or organization Actions policy must allow `GITHUB_TOKEN` write ac
 Tag creation is the release approval action: complete the human-reviewed checklist
 in `docs/specs/release-process.md`, including clean GitLab Pages acceptance proof,
 before tagging. This workflow does not create tags or approve release readiness.
-Only `deployment-kit-prebuilt` is packaged in this first release implementation;
-standalone catalog packaging belongs to its follow-up PR.
+The workflow packages `deployment-kit-prebuilt` and the standalone
+`assessment-kit`; standalone catalog packaging belongs to its follow-up work.
 
 The tagged commit must contain exactly one nonempty `## <version>` section in
 `RELEASE_NOTES.md`. The workflow rejects invalid versions, missing/duplicate/empty
@@ -69,12 +69,17 @@ becomes the release body, not a separate downloadable asset.
 After Python and site checks, the workflow regenerates the site data using only
 exact-content tracked BOE, builds the site, and uses the same prebuilt builder and
 shipped verifier as ordinary CI. Missing evidence fails without running a scanner.
-It extracts and verifies the package and checks the external checksum file before
-publishing. Temporary output stays under `RUNNER_TEMP`; source revision and
-repeatable archive timestamps come from the tagged commit.
+It also builds the assessment wheel from a temporary, release-versioned source
+copy, assembles the assessment archive, verifies both checksum scopes, installs
+the wheel and exact supported SkillSpector revision in an isolated environment,
+and exercises all four CLI commands with an explicit static scan. Temporary
+output stays under `RUNNER_TEMP`; source revision and repeatable archive
+timestamps come from the tagged commit.
 
-The GitHub Release contains exactly the prebuilt `.tar.gz`, the external
-`release-manifest.json`, and `SHA256SUMS.txt`. `gh release create --verify-tag`
+The GitHub Release contains the prebuilt and assessment-kit `.tar.gz` files plus
+each product's product-qualified external `.release-manifest.json` and
+`.SHA256SUMS.txt`.
+`gh release create --verify-tag`
 requires the tag to exist and does not overwrite an existing release. SemVer
 prereleases are marked as GitHub prereleases. Checkout does not persist Git
 credentials, and `GH_TOKEN` is exposed only to the publishing step. The job uses

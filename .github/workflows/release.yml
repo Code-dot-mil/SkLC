@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   release:
-    name: Build and publish prebuilt release
+    name: Build and publish release products
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -48,8 +48,9 @@ jobs:
             --version "$version" --notes-file RELEASE_NOTES.md \
             --output "$release_dir/release-body.md"
           source_date_epoch="$(git show -s --format=%ct "$source_revision")"
-          printf 'RELEASE_VERSION=%s\nSOURCE_REVISION=%s\nSOURCE_DATE_EPOCH=%s\nRELEASE_DIR=%s\n' \
-            "$version" "$source_revision" "$source_date_epoch" "$release_dir" >> "$GITHUB_ENV"
+          created_at="$(python -c 'from datetime import UTC, datetime; import sys; print(datetime.fromtimestamp(int(sys.argv[1]), UTC).isoformat().replace("+00:00", "Z"))' "$source_date_epoch")"
+          printf 'RELEASE_VERSION=%s\nSOURCE_REVISION=%s\nSOURCE_DATE_EPOCH=%s\nCREATED_AT=%s\nRELEASE_DIR=%s\n' \
+            "$version" "$source_revision" "$source_date_epoch" "$created_at" "$release_dir" >> "$GITHUB_ENV"
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -61,6 +62,8 @@ jobs:
       - name: Run repository checks
         run: |
           uv run --extra test ruff check scripts tests products/deployment-kit/scripts/verify_prebuilt.py
+          uv run --extra test ruff check products/assessment-kit/src \
+            products/assessment-kit/tests products/assessment-kit/release_tools
           uv run --extra test pytest
           npm --prefix site run lint
           npm --prefix site run test
@@ -75,10 +78,18 @@ jobs:
           --reuse-boe-only
       - name: Build static site
         run: npm --prefix site run build
+      - name: Build assessment kit wheel
+        shell: bash
+        run: |
+          cp -R products/assessment-kit "$RELEASE_DIR/assessment-kit-source"
+          cd "$RELEASE_DIR/assessment-kit-source"
+          uv version "$RELEASE_VERSION" --frozen
+          uv build --no-sources --wheel --out-dir "$RELEASE_DIR/wheels"
       - name: Build and verify release assets
         id: release-assets
         shell: bash
         run: |
+          repository_root="$PWD"
           python -m skill_exchange.release build \
             --repo-root . --site-dir site/dist \
             --version "$RELEASE_VERSION" --source-revision "$SOURCE_REVISION" \
@@ -93,7 +104,52 @@ jobs:
           test -n "$(find public/downloads -type f -name '*.zip' -print -quit)"
           test ! -e public/.gitkeep
           cd "$RELEASE_DIR/assets"
+          sha256sum --strict --check \
+            "deployment-kit-prebuilt-$RELEASE_VERSION.SHA256SUMS.txt"
+          set -- "$RELEASE_DIR/wheels"/skill_assessment-*-py3-none-any.whl
+          test "$#" -eq 1
+          assessment_wheel="$1"
+          test -f "$assessment_wheel"
+          cd "$repository_root"
+          python products/assessment-kit/release_tools/build.py \
+            --repository-root "$repository_root" --version "$RELEASE_VERSION" \
+            --source-revision "$SOURCE_REVISION" --created-at "$CREATED_AT" \
+            --wheel "$assessment_wheel" --output-directory "$RELEASE_DIR/assets"
+          tar -xzf "$RELEASE_DIR/assets/assessment-kit-$RELEASE_VERSION.tar.gz" \
+            -C "$RELEASE_DIR/extracted"
+          cmp "$RELEASE_DIR/assets/assessment-kit-$RELEASE_VERSION.release-manifest.json" \
+            "$RELEASE_DIR/extracted/assessment-kit-$RELEASE_VERSION/release-manifest.json"
+          cd "$RELEASE_DIR/assets"
+          sha256sum --strict --check \
+            "assessment-kit-$RELEASE_VERSION.SHA256SUMS.txt"
+          cd "$RELEASE_DIR/extracted/assessment-kit-$RELEASE_VERSION"
           sha256sum --strict --check SHA256SUMS.txt
+      - name: Install and exercise released assessment kit
+        shell: bash
+        run: |
+          assessment_root="$RELEASE_DIR/extracted/assessment-kit-$RELEASE_VERSION"
+          assessment_env="$RELEASE_DIR/assessment-venv"
+          uv venv "$assessment_env" --python 3.12
+          set -- "$assessment_root/dist"/skill_assessment-*-py3-none-any.whl
+          test "$#" -eq 1
+          test -f "$1"
+          uv pip install --python "$assessment_env/bin/python" \
+            "$1" \
+            "skillspector @ git+https://github.com/NVIDIA/SkillSpector.git@e29b16d305b0e738e3d4b952ba102f5522a6f084"
+          assessment_cli="$assessment_env/bin/skill-assessment"
+          skill="$assessment_root/contracts/skill-package/v1/examples/example-review"
+          "$assessment_cli" --help
+          "$assessment_cli" validate --skill "$skill"
+          SKILLSPECTOR_BIN="$assessment_env/bin/skillspector" \
+            SKLC_SKILLSPECTOR_SCAN_MODE=static-only \
+            "$assessment_cli" advise --skill "$skill" --assessor skillspector \
+            --output "$RELEASE_DIR/assessment-proof/advice"
+          SKILLSPECTOR_BIN="$assessment_env/bin/skillspector" \
+            SKLC_SKILLSPECTOR_SCAN_MODE=static-only \
+            "$assessment_cli" assess --skill "$skill" --assessor skillspector \
+            --boe-root "$RELEASE_DIR/assessment-proof/boe"
+          "$assessment_cli" verify-boe --skill "$skill" \
+            "$RELEASE_DIR/assessment-proof/boe/example-review"
       - name: Create GitHub Release
         id: publish-release
         shell: bash
@@ -106,8 +162,11 @@ jobs:
           fi
           gh release create "$GITHUB_REF_NAME" \
             "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.tar.gz" \
-            "$RELEASE_DIR/assets/release-manifest.json" \
-            "$RELEASE_DIR/assets/SHA256SUMS.txt" \
+            "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.release-manifest.json" \
+            "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.SHA256SUMS.txt" \
+            "$RELEASE_DIR/assets/assessment-kit-$RELEASE_VERSION.tar.gz" \
+            "$RELEASE_DIR/assets/assessment-kit-$RELEASE_VERSION.release-manifest.json" \
+            "$RELEASE_DIR/assets/assessment-kit-$RELEASE_VERSION.SHA256SUMS.txt" \
             --verify-tag --title "$GITHUB_REF_NAME" \
             --notes-file "$RELEASE_DIR/release-body.md" \
             "${prerelease_args[@]}"

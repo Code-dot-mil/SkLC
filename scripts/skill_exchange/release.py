@@ -102,7 +102,6 @@ def _write_metadata(
     version: str,
     source_revision: str,
     created_at: str,
-    checksum_manifest: bool = False,
 ) -> list[Path]:
     entries = [
         {"path": path.relative_to(root).as_posix(), "sha256": f"sha256:{_sha256(path)}"}
@@ -120,12 +119,9 @@ def _write_metadata(
     }
     manifest_path = root / "release-manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
-    checksum_entries = list(entries)
-    if checksum_manifest:
-        checksum_entries.append({"path": manifest_path.name, "sha256": f"sha256:{_sha256(manifest_path)}"})
     checksum_path = root / "SHA256SUMS.txt"
     checksum_path.write_text(
-        "".join(f"{entry['sha256'].removeprefix('sha256:')}  {entry['path']}\n" for entry in checksum_entries),
+        "".join(f"{entry['sha256'].removeprefix('sha256:')}  {entry['path']}\n" for entry in entries),
         encoding="utf-8",
         newline="\n",
     )
@@ -192,19 +188,24 @@ def build_release(
         _stage_deployment_kit(repo_root, site_dir, package_root)
         # Enumerate before writing root metadata; nested files with the same names
         # are ordinary assets and must remain covered by the checksums.
-        _write_metadata(
+        internal_metadata = _write_metadata(
             package_root, _regular_files(package_root), product=product, version=version,
             source_revision=source_revision, created_at=timestamp,
         )
         # Invalid sources must fail before any release assets are published here.
         output_dir.mkdir(parents=True, exist_ok=True)
         _write_tar_gz(package_root, archive_path, source_date_epoch=epoch)
+        manifest_path = output_dir / f"{product}-{version}.release-manifest.json"
+        shutil.copy2(internal_metadata[0], manifest_path)
 
-    metadata_paths = _write_metadata(
-        output_dir, [archive_path], product="sklc", version=version,
-        source_revision=source_revision, created_at=timestamp, checksum_manifest=True,
+    checksum_path = output_dir / f"{product}-{version}.SHA256SUMS.txt"
+    checksum_path.write_text(
+        f"{_sha256(archive_path)}  {archive_path.name}\n"
+        f"{_sha256(manifest_path)}  {manifest_path.name}\n",
+        encoding="utf-8",
+        newline="\n",
     )
-    return [archive_path, *metadata_paths]
+    return [archive_path, manifest_path, checksum_path]
 
 
 def extract_release_notes(notes_path: Path, version: str) -> str:

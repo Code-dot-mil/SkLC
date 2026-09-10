@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import zipfile
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -244,7 +245,9 @@ def test_build_release_extracts_prebuilt_only_package_with_matching_checksums(tm
     built = _build(repo, site, output)
 
     archive_name = f"deployment-kit-prebuilt-{VERSION}.tar.gz"
-    assert [path.name for path in built] == [archive_name, "release-manifest.json", "SHA256SUMS.txt"]
+    manifest_name = f"deployment-kit-prebuilt-{VERSION}.release-manifest.json"
+    checksums_name = f"deployment-kit-prebuilt-{VERSION}.SHA256SUMS.txt"
+    assert [path.name for path in built] == [archive_name, manifest_name, checksums_name]
     assert {path.name for path in output.iterdir()} == {path.name for path in built}
     extracted = tmp_path / "extracted"
     with tarfile.open(built[0], "r:gz") as archive:
@@ -287,12 +290,7 @@ def test_build_release_extracts_prebuilt_only_package_with_matching_checksums(tm
         "artifacts": [{"path": relative, "sha256": f"sha256:{digests[relative]}"} for relative in sorted(expected)],
     }
     assert _checksums(package / "SHA256SUMS.txt") == digests
-    outer_manifest = json.loads(built[1].read_text(encoding="utf-8"))
-    assert outer_manifest["product"] == "sklc"
-    assert outer_manifest["version"] == VERSION
-    assert outer_manifest["artifacts"] == [
-        {"path": archive_name, "sha256": f"sha256:{hashlib.sha256(built[0].read_bytes()).hexdigest()}"}
-    ]
+    assert built[1].read_bytes() == (package / "release-manifest.json").read_bytes()
     assert _checksums(built[2]) == {
         path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in built[:2]
     }
@@ -349,7 +347,9 @@ def test_build_cli_uses_existing_site_layout(tmp_path: Path):
 
     assert result.returncode == 0, result.stderr
     assert [Path(path).name for path in json.loads(result.stdout)["artifacts"]] == [
-        f"deployment-kit-prebuilt-{VERSION}.tar.gz", "release-manifest.json", "SHA256SUMS.txt"
+        f"deployment-kit-prebuilt-{VERSION}.tar.gz",
+        f"deployment-kit-prebuilt-{VERSION}.release-manifest.json",
+        f"deployment-kit-prebuilt-{VERSION}.SHA256SUMS.txt",
     ]
 
 
@@ -560,7 +560,7 @@ def test_both_customer_paths_validate_manifest_schema(tmp_path: Path, field: str
     ("tamper", "checksum mismatch"), ("missing", "missing required package files"),
     ("extra", "file list does not match"), ("mismatched-checksums", "do not match"),
     ("duplicate-checksum", "duplicate checksum path"), ("bad-checksum", "invalid checksum entry"),
-    ("duplicate-manifest", "duplicate manifest path"), ("duplicate-json", "duplicate JSON field"),
+    ("duplicate-manifest", "duplicate items"), ("duplicate-json", "duplicate JSON field"),
     ("unsupported-schema", "unsupported release-manifest schema"),
 ])
 def test_both_customer_paths_reject_damaged_package(tmp_path: Path, change: str, error: str):
@@ -952,6 +952,16 @@ def _run_release_workflow(repo: Path, tmp_path: Path, *, version: str = VERSION,
     for filename in ("__init__.py", "release.py"):
         _write(repo / "scripts/skill_exchange" / filename,
                (REPOSITORY_ROOT / "scripts/skill_exchange" / filename).read_bytes())
+    shutil.copytree(
+        REPOSITORY_ROOT / "products/assessment-kit",
+        repo / "products/assessment-kit",
+    )
+    for contract in ("skill-package", "boe", "assessment-artifacts", "release-manifest"):
+        shutil.copytree(
+            REPOSITORY_ROOT / "contracts" / contract / "v1",
+            repo / "contracts" / contract / "v1",
+            dirs_exist_ok=True,
+        )
     notes = f"## {version}\n\n- Ready-to-deploy site.\n"
     if broken == "missing-notes":
         notes = "## 0.1.0\n\nEarlier release.\n"
@@ -1028,6 +1038,16 @@ Path(os.environ['SKLC_RECORDED_RELEASE']).write_text(
         prefix += 'export RUNNER_TEMP="$(cygpath -u "$RUNNER_TEMP")"\n'
     results = []
     for step in steps:
+        if step["id"] == "release-assets":
+            release_directory = Path(env["RELEASE_DIR"])
+            wheel_version = version.replace("-rc.", "rc").replace("-", ".")
+            wheel = release_directory / "wheels" / f"skill_assessment-{wheel_version}-py3-none-any.whl"
+            wheel.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(wheel, "w") as archive:
+                archive.writestr(
+                    f"skill_assessment-{wheel_version}.dist-info/METADATA",
+                    f"Metadata-Version: 2.4\nName: skill-assessment\nVersion: {wheel_version}\n",
+                )
         result = subprocess.run(
             [bash, "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", prefix + step["run"]],
             cwd=repo, env=env, capture_output=True, text=True, check=False, timeout=60,
@@ -1044,7 +1064,7 @@ Path(os.environ['SKLC_RECORDED_RELEASE']).write_text(
     (VERSION, False, False), (VERSION, True, False),
     ("1.2.3-rc.1+build.7", True, True), ("1.2.3+build-test", False, False),
 ])
-def test_release_workflow_verifies_prebuilt_and_publishes_only_accepted_assets(
+def test_release_workflow_verifies_and_publishes_releasable_product_assets(
     tmp_path: Path, version: str, annotated: bool, prerelease: bool,
 ):
     repo, _site = _release_fixture(tmp_path)
@@ -1054,24 +1074,39 @@ def test_release_workflow_verifies_prebuilt_and_publishes_only_accepted_assets(
     assert len(results) == 3
     assert all(result.returncode == 0 for result in results), "\n".join(r.stdout + r.stderr for r in results)
     assert "Prebuilt package verified" in results[1].stdout
-    assert "release-manifest.json: OK" in results[1].stdout
+    assert f"deployment-kit-prebuilt-{version}.release-manifest.json: OK" in results[1].stdout
+    assert f"assessment-kit-{version}.release-manifest.json: OK" in results[1].stdout
     assert record is not None
     args = record["args"]
     assert args[:3] == ["release", "create", f"v{version}"]
-    assets = [Path(value) for value in args[3:6]]
+    assets = [Path(value) for value in args[3:9]]
     assert [path.name for path in assets] == [
-        f"deployment-kit-prebuilt-{version}.tar.gz", "release-manifest.json", "SHA256SUMS.txt",
+        f"deployment-kit-prebuilt-{version}.tar.gz",
+        f"deployment-kit-prebuilt-{version}.release-manifest.json",
+        f"deployment-kit-prebuilt-{version}.SHA256SUMS.txt",
+        f"assessment-kit-{version}.tar.gz",
+        f"assessment-kit-{version}.release-manifest.json",
+        f"assessment-kit-{version}.SHA256SUMS.txt",
     ]
     assert set(assets[0].parent.iterdir()) == set(assets)
-    assert args[6:10] == ["--verify-tag", "--title", f"v{version}", "--notes-file"]
-    assert args[11:] == (["--prerelease"] if prerelease else [])
+    assert args[9:13] == ["--verify-tag", "--title", f"v{version}", "--notes-file"]
+    assert args[14:] == (["--prerelease"] if prerelease else [])
     assert record["body"] == f"## {version}\n\n- Ready-to-deploy site.\n"
-    assert Path(args[10]).parent != assets[0].parent
+    assert Path(args[13]).parent != assets[0].parent
     manifest = json.loads(assets[1].read_text(encoding="utf-8"))
     assert manifest["source_revision"] == revision
     assert manifest["version"] == version
     assert _checksums(assets[2]) == {
         path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in assets[:2]
+    }
+    with tarfile.open(assets[3], "r:gz") as assessment_archive:
+        internal_manifest = assessment_archive.extractfile(
+            f"assessment-kit-{version}/release-manifest.json"
+        )
+        assert internal_manifest is not None
+        assert assets[4].read_bytes() == internal_manifest.read()
+    assert _checksums(assets[5]) == {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in assets[3:5]
     }
     customer = tmp_path / "customer"
     with tarfile.open(assets[0]) as archive:

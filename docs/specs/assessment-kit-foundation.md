@@ -49,7 +49,7 @@ assessment-kit-<version>/
   release-manifest.json
   SHA256SUMS.txt
   dist/
-    skill_assessment-<version>-py3-none-any.whl
+    skill_assessment-<python-normalized-version>-py3-none-any.whl
   contracts/
     skill-package/v1/
     boe/v1/
@@ -61,6 +61,14 @@ assessment-kit-<version>/
     assessor-configuration.md
     generated-files.md
 ```
+
+For stable releases, `<python-normalized-version>` equals `<version>`. Python
+package tooling may normalize a SemVer prerelease or build suffix, such as
+`1.2.3-rc.1` to `1.2.3rc1`. The release manifest keeps the accepted SkLC
+SemVer in `version` and records the installed Python version under
+`components.skill-assessment`. Release assembly must verify that the two forms
+are semantically equivalent and that the wheel filename matches its embedded
+package metadata.
 
 `README.md` or `docs/assessor-configuration.md` must include a
 `Dependencies` or `Prerequisites` section. For the first release it states that

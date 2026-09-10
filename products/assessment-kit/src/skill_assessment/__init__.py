@@ -1,3 +1,8 @@
 """Standalone skill assessment kit."""
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("skill-assessment")
+except PackageNotFoundError:
+    __version__ = "source"

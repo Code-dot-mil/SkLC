@@ -9,8 +9,10 @@ import shutil
 import sys
 import tarfile
 import tempfile
+import zipfile
 from collections.abc import Sequence
 from datetime import datetime
+from email.parser import BytesParser
 from pathlib import Path
 
 PRODUCT = "assessment-kit"
@@ -21,7 +23,12 @@ CONTRACT_PATHS = (
     Path("assessment-artifacts/v1"),
     Path("release-manifest/v1"),
 )
-VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
+VERSION_RE = re.compile(
+    r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+)
 REVISION_RE = re.compile(r"^[a-f0-9]{40}$")
 
 
@@ -33,7 +40,37 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _validate_inputs(version: str, source_revision: str, created_at: str, wheel: Path) -> None:
+def _canonical_version(value: str) -> str:
+    normalized = value.lower()
+    normalized = re.sub(r"[-_.]?(alpha|a)[-_.]?", "a", normalized)
+    normalized = re.sub(r"[-_.]?(beta|b)[-_.]?", "b", normalized)
+    normalized = re.sub(r"[-_.]?(preview|pre|rc)[-_.]?", "rc", normalized)
+    return re.sub(r"[-_.+]", "", normalized)
+
+
+def _wheel_version(wheel: Path) -> str:
+    try:
+        with zipfile.ZipFile(wheel) as archive:
+            metadata_names = [
+                name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
+            ]
+            if len(metadata_names) != 1:
+                raise ValueError("wheel must contain exactly one dist-info/METADATA file")
+            metadata = BytesParser().parsebytes(archive.read(metadata_names[0]))
+    except (OSError, zipfile.BadZipFile) as exc:
+        raise ValueError("wheel is not a readable Python wheel archive") from exc
+    if metadata.get("Name", "").lower().replace("_", "-") != "skill-assessment":
+        raise ValueError("wheel metadata is not for skill-assessment")
+    wheel_version = metadata.get("Version", "").strip()
+    if not wheel_version:
+        raise ValueError("wheel metadata is missing Version")
+    expected_name = f"{PACKAGE_DISTRIBUTION}-{wheel_version.replace('-', '_')}-py3-none-any.whl"
+    if wheel.name != expected_name:
+        raise ValueError(f"wheel filename must match its metadata: {expected_name}")
+    return wheel_version
+
+
+def _validate_inputs(version: str, source_revision: str, created_at: str, wheel: Path) -> str:
     if not VERSION_RE.fullmatch(version):
         raise ValueError("version must be an explicit semantic version")
     if not REVISION_RE.fullmatch(source_revision):
@@ -44,9 +81,12 @@ def _validate_inputs(version: str, source_revision: str, created_at: str, wheel:
         raise ValueError("created-at must be an ISO 8601 date-time with timezone") from exc
     if parsed_created_at.tzinfo is None:
         raise ValueError("created-at must include a timezone")
-    expected_wheel = f"{PACKAGE_DISTRIBUTION}-{version}-py3-none-any.whl"
-    if wheel.name != expected_wheel or not wheel.is_file() or wheel.is_symlink():
-        raise ValueError(f"wheel must be a regular file named {expected_wheel}")
+    if not wheel.is_file() or wheel.is_symlink():
+        raise ValueError("wheel must be a regular file")
+    wheel_version = _wheel_version(wheel)
+    if _canonical_version(wheel_version) != _canonical_version(version):
+        raise ValueError(f"wheel version {wheel_version} does not match release version {version}")
+    return wheel_version
 
 
 def _reject_symlinks(path: Path) -> None:
@@ -107,7 +147,7 @@ def assemble_release(
     wheel: Path,
     output_directory: Path,
 ) -> tuple[Path, Path, Path]:
-    _validate_inputs(version, source_revision, created_at, wheel)
+    wheel_version = _validate_inputs(version, source_revision, created_at, wheel)
     product_root = repository_root / "products" / "assessment-kit"
     contracts_root = repository_root / "contracts"
     required_sources = [product_root / "README.md", product_root / "docs"]
@@ -152,7 +192,7 @@ def assemble_release(
             "consumes": {"skill_package": ["urn:skill-exchange:skill-package:v1"]},
             "artifacts": artifacts,
             "components": {
-                "skill-assessment": version,
+                "skill-assessment": wheel_version,
                 "skillspector": "2.10.0@e29b16d305b0e738e3d4b952ba102f5522a6f084",
             },
         }

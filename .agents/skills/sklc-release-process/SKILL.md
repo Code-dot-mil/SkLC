@@ -52,9 +52,9 @@ recovery plan.
    product-selection menu. Once a product is releasable it remains in subsequent
    releases. Confirm this skill exists and required tooling/access is available.
 
-   The current workflow supports only `deployment-kit-prebuilt`. Standalone
-   `skill-catalog`, `assessment-kit`, and `deployment-kit-operator` packaging is
-   outside this implementation. If another product is now releasable, stop for
+   The current workflow supports `deployment-kit-prebuilt` and `assessment-kit`.
+   Standalone `skill-catalog` and `deployment-kit-operator` packaging is outside
+   this implementation. If another product is now releasable, stop for
    the necessary release-tooling update; do not silently omit it or assemble it
    ad hoc. Missing acceptance proof is still a release blocker, not evidence
    that the prebuilt product is ready.
@@ -112,9 +112,9 @@ recovery plan.
    confirmed GitHub repository URL, and `SKILL_EXCHANGE_SOURCE_BRANCH` to the
    candidate commit. Run `publish-local` with `--scan-mode static-only
    --reuse-boe-only`: this reuses successful exact-content tracked BOE and must
-   fail if evidence is missing. Do not invoke Skillspector or an LLM, remove
-   `--reuse-boe-only`, or alter tracked BOE to make a release pass. Python
-   produces exchange data; the Node build only consumes it.
+   fail if evidence is missing. Do not invoke SkillSpector in this prebuilt-site
+   generation path, remove `--reuse-boe-only`, or alter tracked BOE to make a
+   release pass. Python produces exchange data; the Node build only consumes it.
 
    Package the built `site/dist` using `uv run python -m skill_exchange.release
    build --repo-root . --site-dir site/dist --version <version>
@@ -123,8 +123,18 @@ recovery plan.
    `SOURCE_DATE_EPOCH` to the candidate's commit timestamp, as the workflow does.
    Keep derived data, caches, previews, and artifacts out of the source worktree.
 
-9. **Verify the extracted artifacts.** Ask before checking external
-   `SHA256SUMS.txt`, extracting into a new directory, and running the shipped
+   Also follow the workflow's assessment-kit path: copy the product source into
+   the temporary directory, set that copy to the accepted version with `uv
+   version --frozen`, build its wheel, and assemble the product-qualified
+   archive and sidecars with `products/assessment-kit/release_tools/build.py`.
+   Install the released wheel and the exact supported SkillSpector revision in
+   a fresh environment. Exercise `validate`, `advise`, `assess`, and
+   `verify-boe` against the vendored contract example with explicit
+   `static-only`; do not configure or call an LLM for release proof.
+
+9. **Verify the extracted artifacts.** Ask before checking each
+   product-qualified external checksum file, extracting into a new directory,
+   and running the shipped
    verifier from the extracted package root:
    `python3 -I -S scripts/verify_prebuilt.py . --expected-version <version>`.
    Use the accepted version. Run the same required-content checks as the release
@@ -134,6 +144,10 @@ recovery plan.
    manifest/checksums, and every referenced download. Review for secrets, local
    paths, generated caches, maintainer-only files, and unpublished artifacts.
    Verification failures block tagging; never edit checksums to conceal them.
+   For the assessment kit, also confirm the external and internal manifests are
+   byte-identical, verify the internal extracted-file checksums, inspect the
+   vendored v1 contracts and documentation, install the one wheel, and rerun the
+   four-command static proof.
 
 10. **Prove candidate deployment.** Ask before using a clean GitLab project,
     changing its configuration, or committing/pushing the extracted package.
@@ -163,14 +177,17 @@ recovery plan.
 13. **Push the release tag and authorize publication.** Ask separately before
     pushing that exact tag to the confirmed GitHub remote. Explain that the
     push starts `.github/workflows/release.yml`, which builds and verifies the
-    package, generates external metadata/checksums, creates the GitHub Release
+    products, generates external metadata/checksums, creates the GitHub Release
     using the accepted notes, and uploads exactly:
 
     - `deployment-kit-prebuilt-<version>.tar.gz`
-    - `release-manifest.json`
-    - `SHA256SUMS.txt`
+    - `deployment-kit-prebuilt-<version>.release-manifest.json`
+    - `deployment-kit-prebuilt-<version>.SHA256SUMS.txt`
+    - `assessment-kit-<version>.tar.gz`
+    - `assessment-kit-<version>.release-manifest.json`
+    - `assessment-kit-<version>.SHA256SUMS.txt`
 
-    Release notes are the description, never a fourth uploaded asset. Obtain
+    Release notes are the description, never a separate uploaded asset. Obtain
     explicit approval for these automatic effects before the tag push; do not
     run `gh release create` or upload assets manually alongside the workflow.
 
@@ -180,14 +197,18 @@ recovery plan.
     extracted accepted snippet, prerelease status matches the accepted version,
     and exactly the expected assets exist. Download to a new temporary directory,
     check external checksums and manifest asset entries, then extract and run
-    the included verifier again. A failed/partial workflow is not a successful
-    release; stop and request a recovery decision rather than overwriting it.
+    the included verifier again. Install and exercise the published assessment
+    kit from its downloaded archive as well. A failed/partial workflow is not a
+    successful release; stop and request a recovery decision rather than
+    overwriting it.
 
 15. **Record published-package acceptance and finish.** Ask before testing the
     downloaded GitHub Release package in a clean GitLab project using the shipped
     instructions, with separate approvals for external changes. Record the
-    release tag, archive filename, passing `pages` pipeline/job evidence and
-    served Pages URL, as required by `docs/specs/prebuilt-reference-site.md`.
+    release tag, both archive filenames, passing `pages` pipeline/job evidence,
+    served Pages URL, and assessment-kit clean-workspace proof, as required by
+    `docs/specs/prebuilt-reference-site.md` and
+    `docs/specs/assessment-kit-foundation.md`.
     Candidate deployment proof alone does not complete this published-artifact
     acceptance check. Report publication and customer deployment as separate
     outcomes, with any outstanding blockers. Ask before removing only identified

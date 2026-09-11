@@ -10,7 +10,7 @@ Exchange-site developers maintain:
 
 - Python tooling under `scripts/skill_exchange/`.
 - The Astro site under `site/`.
-- GitLab CI in `.gitlab-ci.yml`.
+- GitHub Actions workflows under `.github/workflows/`.
 - Exchange policy files under `.exchange/`.
 - Developer and operator documentation.
 - Tests for validation, generated data, CI behavior, site behavior, and security-sensitive rendering.
@@ -19,7 +19,7 @@ Skill packages under `skills/` are exchange content. Treat changes there as skil
 
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22, `npm`, `just`, and [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector). SkillSpector can be on `PATH` or configured with `SKILLSPECTOR_BIN`.
+Install Python 3.12, `uv`, Node.js 22, `npm`, and `just`. Install the repository's pinned [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) dependency with `uv sync --extra scan`; an independently installed binary can instead be placed on `PATH` or configured with `SKILLSPECTOR_BIN`.
 
 Install project dependencies:
 
@@ -80,17 +80,17 @@ The site must be able to build from deploy-time generated artifacts. When `.exch
 
 ## CI Changes
 
-The GitLab CI definition must remain standalone in `.gitlab-ci.yml`; do not import external CI components.
+The repository's GitHub Actions workflows must remain self-contained under `.github/workflows/`. Customer-facing GitLab deployment templates under `products/deployment-kit/` are release inputs, not maintainer CI.
 
 When changing CI:
 
-- Keep runner tags configurable.
-- Keep Docker image registry, repository, tag, and full-image override variables configurable.
+- Keep self-hosted runner settings configurable.
+- Keep customer deployment image registry, repository, tag, and full-image override variables configurable.
 - Keep environment-specific credentials, endpoints, scanner install commands, and bot settings in CI variables.
 - Do not introduce organization-specific variable names.
-- Preserve the path rules: lint, test, and audit run for site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; deploy runs from default-branch push pipelines and schedules.
+- Preserve the path rules: validation covers site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; official publication runs for default-branch skill changes and schedules.
 - Keep dependency-vulnerability triage in GitHub Security; do not add a scheduled CI job that duplicates the Dependabot backlog.
-- Validate with `glab ci lint` when GitLab access is available.
+- Validate changed workflow YAML and run the relevant local checks before pushing.
 
 ## Generated Files
 
@@ -113,4 +113,4 @@ Keep changes focused and reviewable. A typical platform change should include:
 - Documentation updates when operators or developers need to know about the change.
 - A conventional commit message.
 
-Before pushing, run the relevant local checks. For CI or release behavior, prefer running the full `just ci-local` gate plus `glab ci lint` when available.
+Before pushing, run the relevant local checks. For CI or release behavior, prefer running the full `just ci-local` gate.

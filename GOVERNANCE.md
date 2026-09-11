@@ -6,32 +6,32 @@ This repository uses a lightweight governance model for the static skill exchang
 
 Human contributors may author skill content, skill metadata, and proposed exchange policy changes. They must not author official generated evidence.
 
-Official bill-of-evidence bundles are produced by protected scheduled CI. Candidate MR scanner output is reviewer context only; it is not official evidence. Generated exchange index files, scanner tables, runtime zip artifacts, and public scanner-run mirrors are deploy-time projections of BOE and source skills.
+Official bill-of-evidence bundles are produced by protected scheduled CI. Candidate pull request scanner output is reviewer context only; it is not official evidence. Generated exchange index files, scanner tables, runtime zip artifacts, and public scanner-run mirrors are deploy-time projections of BOE and source skills.
 
 ## Roles
 
 | Role | Responsibilities |
 |---|---|
-| Contributor | Proposes new or changed skills by merge request and responds to review feedback. |
+| Contributor | Proposes new or changed skills by pull request and responds to review feedback. |
 | Skill owner | Optional in the MVP. Accountable for declared skill purpose, usefulness, and maintenance. |
 | Reviewer | Reviews skill content, metadata, validation warnings, and [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) assessment context. |
 | Maintainer | Owns merge authority and protects governance files, CI configuration, exchange policy, and publication rules. |
-| Exchange bot | Runs protected scheduled publication, produces official BOE bundles, commits BOE evidence, and publishes Pages output. |
+| Exchange bot | Runs protected publication, produces official BOE bundles, commits BOE evidence, and publishes verified artifacts. |
 
 The exchange bot is the only actor that may produce or commit official generated BOE.
 
 ## Human Skill Change Workflow
 
-1. A contributor opens a merge request with a new or changed skill under `skills/`.
-2. MR CI validates package structure and inline `SKILL.md` metadata.
-3. MR CI warns on unknown category or tag values.
-4. MR CI runs SkillSpector when feasible.
-5. MR CI prepares reviewer-facing assessment artifacts and may post a merge request comment when comment credentials are configured.
+1. A contributor opens a pull request with a new or changed skill under `skills/`.
+2. Pull request CI validates package structure and inline `SKILL.md` metadata.
+3. Pull request CI warns on unknown category or tag values.
+4. Pull request CI runs SkillSpector.
+5. Pull request CI prepares reviewer-facing assessment artifacts and posts a comment for same-repository contributions.
 6. At least one human reviewer inspects the diff, metadata, validation output, and scanner context.
 7. A maintainer merges after required human approvals.
 8. The protected scheduled publication pipeline produces or reuses official BOE for the default branch.
 9. The exchange bot commits BOE bundles under `.exchange/generated/boe/` when bot publication is configured.
-10. GitLab Pages publishes the updated static exchange from generated CI artifacts.
+10. GitHub Actions publishes verified static-site and release artifacts.
 
 ## Generated Output Workflow
 
@@ -41,14 +41,14 @@ BOE bundles are also the authoritative scan reuse source. When a later publicati
 
 Generated index files, scanner tables, public scanner-run mirrors, generated skill records, and runtime skill zip artifacts are derived deploy artifacts. They should be generated in CI or locally and should not be committed.
 
-Generated-output merge requests from the exchange bot may be exempt from human review only when the diff is limited to BOE bundles under `.exchange/generated/boe/`.
+Generated-output pull requests from the exchange bot may be exempt from human review only when the diff is limited to BOE bundles under `.exchange/generated/boe/`.
 
-Bot generated-output merge requests must fail validation and must not automerge when they modify human-authored skill content, exchange policy files, CI configuration, documentation, or governance files.
+Bot generated-output pull requests must fail validation and must not automerge when they modify human-authored skill content, exchange policy files, CI configuration, documentation, or governance files.
 
 ## Governance Rules
 
 - Human contributors do not author official BOE.
-- MR SkillSpector output is advisory in the MVP.
+- Pull request SkillSpector output is advisory in the MVP.
 - Official BOE comes from protected scheduled CI.
 - Unknown categories and tags warn in CI, but do not fail publication in the MVP.
 - Maintainers may reject unhelpful category or tag values during human review.

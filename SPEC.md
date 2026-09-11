@@ -4,23 +4,23 @@ Date: 2026-06-19
 
 ## Purpose
 
-This repository implements a static skill exchange for publishing agent skills with visible scanner-backed risk context, reviewer assessment context, generated bill-of-evidence bundles, runtime zip downloads, and a GitLab Pages catalog.
+This repository implements a static skill exchange for publishing agent skills with visible scanner-backed risk context, reviewer assessment context, generated bill-of-evidence bundles, runtime zip downloads, and a static catalog artifact.
 
-The exchange starts as a GitLab repository plus a GitLab Pages static site. The repository is the source of truth for skill content and exchange policy. Python tooling validates skills, runs NVIDIA SkillSpector, generates official evidence, produces deploy-time data, and packages skill downloads. The Astro site renders the generated data into a searchable catalog and detail pages.
+The exchange migrated from GitLab to GitHub. The repository remains the source of truth for skill content and exchange policy. Python tooling validates skills, runs NVIDIA SkillSpector, generates official evidence, produces deploy-time data, and packages skill downloads. The Astro site renders the generated data into a searchable catalog and detail pages. GitHub Actions owns validation, protected SkillSpector publication, and releases. GitLab CI retained under `products/deployment-kit/` is customer-facing deployment content, not this repository's maintainer pipeline.
 
 The design deliberately avoids a backend service, database, MCP endpoint, user account model, custom AI review workflow, executable eval harness, click tracking, view tracking, install tracking, and download tracking. CI is the publisher. The generated data contract and BOE layout are the migration path if a backend is added later.
 
 ## Goals
 
-- Publish a searchable static skill catalog for authenticated organization users through GitLab Pages.
+- Publish a searchable static skill catalog artifact.
 - Show plain-language use guidance for every displayed skill: `Safe to use`, `Use caution`, `Avoid installing`, or `Unknown`.
 - Preserve the underlying scanner risk level for every displayed skill: `Low`, `Medium`, `High`, or `Unknown`.
 - Use SkillSpector assessment output as the first scanner-backed consumer risk signal.
-- Give human reviewers merge request assessment context before accepting new or changed skills.
+- Give human reviewers pull request assessment context before accepting new or changed skills.
 - Produce official BOE only from protected publication CI, not from human-authored files.
 - Reuse official BOE when the computed scan cache key already exists.
 - Support both `static-only` and `llm-assisted` SkillSpector scans.
-- Keep all environment-specific settings configurable through environment variables or GitLab CI variables.
+- Keep all environment-specific settings configurable through environment variables or hosting-platform CI variables.
 - Keep the site and tooling self-contained so the repository can move between networks without importing external CI components.
 
 ## Non-Goals
@@ -33,7 +33,7 @@ The design deliberately avoids a backend service, database, MCP endpoint, user a
 - No executable skill evaluation harness or no-skill baseline comparison.
 - No custom AI-backed reviewer.
 - No protected-branch administration logic in application code.
-- No GitLab API simulator in the current codebase.
+- No hosting-provider API simulator in the current codebase.
 
 ## Repository Shape
 
@@ -143,7 +143,6 @@ tests/
   test_zips.py
 
 .gitignore
-.gitlab-ci.yml
 AGENTS.md
 CI.md
 CONTRIBUTING.md
@@ -391,7 +390,7 @@ Execution:
 skillspector scan <skill-path> --format json --output <output-path>
 ```
 
-Append `--no-llm` for `static-only` scans. Use the scanner output file as the success criterion: if the output JSON file exists, parse and return it even when the process exit code is nonzero. This is required because scanners may return a finding exit code while still producing a valid report. If no output file exists, raise `RuntimeError` with stderr, stdout, or the exit code.
+Append `--no-llm` for `static-only` scans. Use the scanner output file rather than the process exit code as the initial result: if the output JSON file exists, parse it even when the process exit code is nonzero because scanners may return a finding exit code while still producing a valid report. Reject the parsed report as a scanner execution failure when root `execution_successful` is false or when an LLM-requested report declares `llm_degraded` or fewer successful than attempted LLM calls. Preserve that raw report for diagnostics. If no output file exists, raise `RuntimeError` with stderr, stdout, or the exit code.
 
 Version detection:
 
@@ -402,20 +401,29 @@ Version detection:
 
 Generic LLM environment mapping:
 
-| Exchange variable | SkillSpector/OpenAI variable |
-|---|---|
-| `SKILL_EXCHANGE_LLM_API_KEY` | `OPENAI_API_KEY` |
-| `SKILL_EXCHANGE_LLM_BASE_URL` | `OPENAI_BASE_URL` |
-| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` |
-| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
+| Exchange variable | Native OpenAI target | OpenAI-compatible target | Native Azure OpenAI target |
+|---|---|---|---|
+| `SKILL_EXCHANGE_LLM_API_KEY` | `OPENAI_API_KEY` | `SKILLSPECTOR_COMPAT_API_KEY` | `AZURE_OPENAI_API_KEY` |
+| `SKILL_EXCHANGE_LLM_BASE_URL` | `OPENAI_BASE_URL` | `SKILLSPECTOR_COMPAT_BASE_URL` | `AZURE_OPENAI_ENDPOINT` |
+| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` | `SKILLSPECTOR_MODEL` | `SKILLSPECTOR_MODEL` |
+| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` | `SKILLSPECTOR_PROVIDER` | `SKILLSPECTOR_PROVIDER` |
+| `SKILL_EXCHANGE_LLM_DEPLOYMENT` | not mapped | not mapped | `AZURE_OPENAI_DEPLOYMENT` |
+| `SKILL_EXCHANGE_LLM_API_VERSION` | not mapped | not mapped | `AZURE_OPENAI_API_VERSION` |
+| `SKILL_EXCHANGE_LLM_API_KEY_HEADER` | not mapped | repository adapter `default_headers` | not mapped |
+| `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` | not mapped | repository adapter shared rate limiter | not mapped |
+| `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS` | not mapped | repository adapter provider output cap | not mapped |
+| `SKILL_EXCHANGE_SCAN_MAX_SECONDS` | repository adapter workflow budget | repository adapter workflow budget | repository adapter workflow budget |
 
-Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing scanner/provider environment variables win over exchange variables. Do not add organization-specific LLM variable names.
+Select the mapping from the effective `SKILLSPECTOR_PROVIDER`. Set `SKILLSPECTOR_PROVIDER=openai` only when API key, base URL, or model is set and provider is otherwise absent. Existing native scanner/provider environment variables win over exchange variables. Populate only the effective provider's native credential variables. Do not add organization-specific or provider-specific exchange variable names.
+
+`skillspector_llm_config()` returns provider, model, optional Azure deployment and API version, an optional API-key header name for the OpenAI-compatible provider, an optional shared request-start rate, an optional maximum output-token cap, an optional per-skill scanner workflow budget, and a SHA-256 endpoint digest. When any adapter setting is configured, the repository invokes the pinned SkillSpector CLI through a narrow adapter that supplies the existing API key to LangChain as a default header, shares one in-memory rate limiter across analyzer clients, caps the provider's discovered or fallback output limit, and replaces the pinned scanner's default workflow budget for that invocation. Scanner configuration and cache hashing include all non-empty values, including the non-secret header name, rate, output cap, and workflow budget, so evidence is not reused across materially different endpoint configurations. Invalid or non-positive rate, output-cap, and workflow-budget values fail closed. The endpoint itself and credentials must never be written to scanner configuration or BOE.
 
 ## Risk And Recommendation Mapping
 
 `risk.py` maps SkillSpector JSON to exchange risk:
 
 - If report metadata contains `scan_error`, return `Unknown` with reason `scanner_failed: <error>`.
+- If root `execution_successful` is false or an LLM-requested report is degraded or has incomplete LLM calls, return `Unknown` with a `scanner_failed` reason.
 - If `issues` is not a list or `risk_assessment` is not a mapping, return `Unknown` with reason `Scanner report did not match the expected SkillSpector shape.`
 - If any issue severity is `critical` or `high`, or native `risk_assessment.severity` is `critical` or `high`, return `High`.
 - Else if any issue severity is `medium`, or native `risk_assessment.severity` is `medium`, return `Medium`.
@@ -486,7 +494,7 @@ Each bundle contains:
 - `scanner-config.json`
 - `hashes.json`
 
-`skillspector.json` is the raw native report copied from the scanner output path. `summary.json` contains `risk`, `risk_reason`, and `confidence_flags`. `scanner-config.json` contains the scan config used in cache-key computation. `hashes.json` contains SHA-256 hashes for `boe.json`, `scanner-config.json`, `skillspector.json`, and `summary.json`.
+`skillspector.json` is the raw native report copied from the scanner output path, including reports whose `execution_successful` field is false or whose LLM execution is degraded so scanner failures remain diagnosable. `summary.json` contains `risk`, `risk_reason`, and `confidence_flags`. `scanner-config.json` contains the scan config used in cache-key computation. `hashes.json` contains SHA-256 hashes for `boe.json`, `scanner-config.json`, `skillspector.json`, and `summary.json`.
 
 `boe.json` schema version is `skill-exchange-boe/v0` and includes:
 
@@ -527,10 +535,11 @@ Behavior:
    - when `reuse_boe_only` is true, preflight exact-current-content tracked BOE for every valid skill and requested mode, require a complete symlink-free bundle with matching declared SHA-256 hashes, recomputed scan key, scanner version/mode, LLM provenance, a successful scanner report with the expected issue and risk-assessment shape and no error markers, and assessment fields consistent across the report, summary, and BOE, select the newest valid bundle deterministically by scan timestamp and scan cache key, and fail with the missing skill/mode list before writing derived output;
    - the reuse-only path obtains scanner version, configuration, report, and provenance from tracked BOE and never calls SkillSpector, computes a live scanner configuration, reads live LLM configuration, or writes BOE;
    - otherwise compute scanner version, scanner config, and scan cache key;
-   - first reuse matching current scanner-run table entries when the native report still exists;
-   - otherwise reuse matching tracked BOE bundles from `.exchange/generated/boe/`;
+   - first reuse matching current scanner-run table entries only when their status is `completed` and the native report still exists, has the expected successful report shape, has no scanner error markers, and does not declare `execution_successful: false`;
+   - otherwise reuse matching tracked BOE bundles from `.exchange/generated/boe/` only after applying the same complete-file, symlink, declared-hash, scan-key, scanner provenance, report-success, and cross-artifact assessment checks used by `reuse_boe_only`; an invalid matching bundle is ignored and regenerated;
    - otherwise run SkillSpector;
-   - if SkillSpector raises, synthesize a scanner failure report with metadata `scan_error`, write it to the temporary report path, and continue with `Unknown` risk;
+   - treat a native report with `execution_successful: false` as a scanner failure even when the scanner wrote JSON; preserve that report unchanged for diagnostics, record a failed run with `Unknown` risk, and allow a later publication to retry it;
+   - if SkillSpector raises without writing a native failure report, synthesize a scanner failure report with metadata `scan_error`, write it to the temporary report path, and continue with `Unknown` risk;
    - write BOE;
    - mirror run artifacts into `.exchange/generated/scanner-runs/<run-id>/`;
    - append rows for scanner runs, scanner artifacts, and scanner findings.
@@ -696,7 +705,7 @@ uv run python -m skill_exchange.cli publish-local --generated-dir .exchange/loca
 
 ## CI Helper CLI
 
-`ci.py` provides GitLab-focused commands:
+`ci.py` provides CI-focused commands:
 
 ```sh
 uv run python -m skill_exchange.ci review --artifacts-dir review-artifacts
@@ -709,8 +718,8 @@ Supported scan modes are `static-only` and `llm-assisted`. `parse_scan_modes()` 
 
 The review command:
 
-- resolves base ref from explicit args, `SKILL_EXCHANGE_DIFF_BASE`, `CI_MERGE_REQUEST_DIFF_BASE_SHA`, or merge-base with the target/default branch;
-- resolves head ref from explicit args, `SKILL_EXCHANGE_DIFF_HEAD`, `CI_COMMIT_SHA`, or `HEAD`;
+- resolves base ref from explicit args, `SKILL_EXCHANGE_DIFF_BASE`, or merge-base with `SKILL_EXCHANGE_TARGET_BRANCH` (default `main`);
+- resolves head ref from explicit args, `SKILL_EXCHANGE_DIFF_HEAD`, or `HEAD`;
 - detects changed skill package roots from `git diff --name-only --diff-filter=ACMRT <base> <head> -- skills`;
 - validates only changed skill package roots;
 - runs SkillSpector for each changed valid skill;
@@ -718,9 +727,16 @@ The review command:
 - writes `review-artifacts/changed-skills.json`;
 - writes `review-artifacts/comment.md`;
 - writes `review-artifacts/result.json`;
-- optionally posts a merge request comment.
+- optionally posts a pull request comment.
 
 Review validation errors fail the job when `SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS` is true. Scanner errors fail the job only when `SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR` is true. Scanner failure otherwise appears as `Unknown` review context.
+
+Detailed scanner failures are written to the CI job's stderr and preserved in
+`review-artifacts/changed-skills.json`. The generated pull-request comment and job
+summary must not include captured scanner output. When the failed native report
+provides `metadata.llm_error`, the comment includes that structured value and
+directs the reader to the CI logs. Otherwise it uses the fixed message
+`SkillSpector failed. Check the CI logs for details.`
 
 The review comment must include:
 
@@ -729,16 +745,12 @@ The review comment must include:
 - every scanner finding with severity, issue ID, category/pattern title, location, confidence, finding text, explanation, remediation, and code snippet;
 - `Exchange validation` section listing errors, warnings, and metadata flags.
 
-Merge request comments use:
-
-- `SKILL_EXCHANGE_POST_REVIEW_COMMENT` to enable posting;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE` to name the token variable, default `GITLAB_TOKEN`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER` to override the header, otherwise `JOB-TOKEN` for `CI_JOB_TOKEN` or `PRIVATE-TOKEN` for other token variables.
+Pull request comments use `SKILL_EXCHANGE_POST_REVIEW_COMMENT` to enable posting and the GitHub Actions `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, and `GITHUB_EVENT_PATH` context.
 
 Posting targets:
 
 ```text
-POST <CI_API_V4_URL>/projects/<CI_PROJECT_ID>/merge_requests/<CI_MERGE_REQUEST_IID>/notes
+POST <GITHUB_API_URL>/repos/<GITHUB_REPOSITORY>/issues/<pull-request-number>/comments
 ```
 
 ### Publish Command
@@ -753,22 +765,21 @@ When `--commit-generated` or `EXCHANGE_PUBLISH_COMMIT=true` is set, `commit_gene
 - return `no BOE generated` when no BOE directory exists;
 - return `no generated changes` when staged BOE is unchanged;
 - use conventional default commit message `chore: update generated exchange evidence`;
-- push to `EXCHANGE_PUBLISH_BRANCH` or `CI_DEFAULT_BRANCH` when `EXCHANGE_PUBLISH_PUSH` is true.
+- push to `EXCHANGE_PUBLISH_BRANCH` (default `main`) when `EXCHANGE_PUBLISH_PUSH` is true.
 
-Publish authentication must keep review credentials separate from publication credentials. Push remote configuration order:
+Push remote configuration order:
 
 1. Use `EXCHANGE_PUBLISH_PUSH_URL` when provided.
-2. Else use `EXCHANGE_PUBLISH_TOKEN` with `EXCHANGE_PUBLISH_USERNAME` or username `oauth2`.
-3. Else use `CI_JOB_TOKEN` with username `gitlab-ci-token`.
-4. Else fail with an explicit error explaining required publication variables.
+2. Else require `EXCHANGE_PUBLISH_TOKEN`, `EXCHANGE_PUBLISH_USERNAME`, `EXCHANGE_PUBLISH_SERVER_URL`, and `EXCHANGE_PUBLISH_REPOSITORY` together.
+3. Else fail with an explicit error explaining required publication variables.
 
-Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be a review/comment token with insufficient protected-branch permissions. Silent credential substitution hides defects.
+Do not use unrelated CI credentials as an implicit publication fallback. Silent credential substitution hides defects.
 
-## GitHub Validation
+## GitHub Actions
 
 The repository owns `.github/workflows/ci.yml`. The workflow runs on every pull request targeting `main` and every push to `main` using GitHub-hosted Ubuntu runners.
 
-Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and uses reuse-BOE-only mode to create non-empty derived exchange data. Reused BOE must represent a successful scan with the expected report shape and internally consistent assessment fields. The producer uploads the derived data for a Node.js 22 consumer. The consumer waits for validation and builds `site/dist/`.
+Python 3.12 jobs run `uv run --extra test ruff check scripts tests` and `uv run --extra test pytest`. Node.js 22 jobs run `npm --prefix site run lint` and `npm --prefix site run test` after `npm ci --prefix site`. Each command is a blocking check. A separate Python 3.12 producer fetches full Git history, sets source repository and immutable commit context from the pull-request head or push, and runs `publish-local` with the locked `scan` extra in static-only mode. It reuses successful exact-current-content tracked BOE and runs SkillSpector only for missing preview evidence. Preview generation must not use an LLM or commit BOE. The producer uploads derived data for a Node.js 22 consumer. The consumer waits for validation and builds `site/dist/`.
 
 The artifact job must package the built site with `skill_exchange.release build`
 under Python 3.12, extract the archive, and run its included
@@ -787,6 +798,21 @@ the checked-out PR merge commit or push commit. This validation job creates no
 tag or GitHub Release. Regression tests must execute the workflow's packaging
 commands against already-built fixture content, verify the configured upload
 layout after ZIP extraction, and prove invalid download references stop the job.
+
+The repository also owns `.github/workflows/skillspector.yml`:
+
+- Trigger pull-request review only for `skills/**` changes.
+- Use the OpenAI-compatible LLM gateway for same-repository pull requests and explicitly use static-only review for fork pull requests, where GitHub withholds repository secrets.
+- Put the generated review Markdown in the job summary, post it as a comment on same-repository pull requests using the job-scoped `GITHUB_TOKEN` with `pull-requests: write`, and retain all review artifacts without committing them. Fork pull requests retain the artifact but do not receive comments because their workflow tokens are read-only.
+- Trigger protected publication for default-branch `skills/**` pushes, a nightly schedule, and manual dispatch.
+- Install upstream SkillSpector 2.10.0 from the locked `scan` optional dependency, pinned to NVIDIA's immutable `v2.10.0` Git commit because that release is not available from PyPI; do not install the legacy private GitLab fork or require a model container.
+- Require API key, base URL, model, provider, API-key header name, shared request rate, maximum output-token cap, and scanner workflow budget before any LLM-assisted job and require the provider value to be `openai_compatible`.
+- Run official publication with `static-only,llm-assisted`, commit only `.exchange/generated/boe/`, and upload full generated output plus the publication result.
+- Give only the publication job `contents: write`; all other jobs remain read-only.
+- Push official BOE with job-scoped `GITHUB_TOKEN`, the repository path from GitHub context, and the default branch from GitHub event context.
+- Reuse tracked BOE scan keys, including hashed endpoint identity.
+
+GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_API_KEY_HEADER`, `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`, `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS`, `SKILL_EXCHANGE_SCAN_MAX_SECONDS`, and `RUNNER_CA_BUNDLE_PATH`. The provider variable must equal `openai_compatible`. The API-key header variable names the gateway-defined HTTP header and is not a credential. The request-rate variable controls the shared rate limiter across analyzer clients, the output-token variable caps each request, and the scanner-workflow variable allows paced calls to finish within a per-skill budget. All four values participate in scanner cache hashing. `RUNNER_CA_BUNDLE_PATH` must resolve, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain. The SkillSpector jobs pass it to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`, and fail closed when it is missing or unreadable. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
 
 ## GitHub Release Automation
 
@@ -818,121 +844,54 @@ overwritten. SemVer prereleases are marked as GitHub prereleases. Keep the relea
 token scoped to the publishing step, disable persisted checkout credentials, and
 use a 30-minute GitHub-hosted job with non-cancelling per-tag concurrency.
 
-## GitLab CI
-
-The repository owns `.gitlab-ci.yml` directly. Do not import external CI components.
-
-Stages:
-
-```yaml
-stages:
-  - lint
-  - test
-  - audit
-  - review
-  - publish
-  - deploy
-```
-
-Workflow creates pipelines for schedules, merge requests, default-branch commits, and tags.
-
-Global CI defaults:
-
-- `GIT_DEPTH: "0"` so git history is available for timestamps and diffs.
-- Python image defaults to `docker.io/library/python:3.12-bookworm`.
-- Node image defaults to `docker.io/library/node:22-bookworm-slim`.
-- `PYTHON_BOOTSTRAP_COMMAND` defaults to installing `uv`.
-- `SKILL_EXCHANGE_RUNNER_TAG` and `PAGES_RUNNER_TAG` route jobs without hardcoding one environment's runner setup.
-- `SKILLSPECTOR_INSTALL_COMMAND` defaults empty and may install SkillSpector at runtime.
-- Review scan mode defaults `static-only`.
-- Publish scan modes default `static-only`.
-- Review comments default disabled.
-- Publish commits default disabled globally but enabled in `publish:exchange`.
-
-Path rules:
-
-- `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, policy, lockfiles, or CI configuration changes.
-- `review:skills` runs only for merge requests with `skills/**/*` changes.
-- `publish:exchange` runs on schedules and default-branch push pipelines with `skills/**/*` changes.
-- `generate:exchange` runs on default-branch push pipelines that do not change skills.
-- `pages` runs on schedules and default-branch push pipelines and consumes artifacts from `publish:exchange` or `generate:exchange`.
-
-Python jobs:
-
-- run in `$PYTHON_IMAGE`;
-- use `$SKILL_EXCHANGE_RUNNER_TAG`;
-- run `uv sync --extra test`;
-- cache `.uv-cache/`.
-
-Node jobs:
-
-- run in `$NODE_IMAGE`;
-- use `$SKILL_EXCHANGE_RUNNER_TAG` except `pages`;
-- run `npm ci --prefix site --cache "$NPM_CACHE_DIR" --prefer-offline`;
-- cache `.npm/`.
-
-Jobs:
-
-- `lint:python`: `ruff check`, `compileall`, and YAML parse for `.gitlab-ci.yml`.
-- `lint:site`: `npm --prefix site run lint`.
-- `test:python`: `uv run pytest`.
-- `test:site`: `npm --prefix site run test`.
-- `audit:python`: configurable `PYTHON_AUDIT_COMMAND`.
-- `audit:site`: `npm audit --prefix site --audit-level "$NPM_AUDIT_LEVEL"`.
-- `review:skills`: installs or locates SkillSpector, runs CI review, stores `review-artifacts/`.
-- `publish:exchange`: installs or locates SkillSpector, runs CI publish, stores `.exchange/generated/` and result JSON.
-- `generate:exchange`: same as publish but without committing BOE.
-- `pages`: builds the site, replaces top-level `public/` with `site/dist`, and publishes `public/`.
-
-`pages` must be named exactly `pages` and publish a top-level `public/` artifact for GitLab Pages.
-
-Merges to the default branch that change skills must run `publish:exchange` before `pages` so the first deploy of changed skills uses committed BOE instead of waiting for scheduled backfill.
-
 ## Dependency Vulnerability Management
 
 GitHub Dependabot is the authoritative dependency-vulnerability control. Repository settings must enable Dependabot alerts and Dependabot security updates. Alert triage occurs only in GitHub Security; scheduled CI must not create a duplicate issue backlog.
 
 The Dependabot configuration must cover the root Python `pyproject.toml` and `uv.lock` through the `uv` ecosystem and the Node `site/package.json` and `site/package-lock.json` through the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, major updates remain separate, default dependency and ecosystem labels are used, and pull requests are assigned to `Fnorgh2`.
 
-`Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
+`Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`.
 
 ## CI Configuration And Permissions
 
-All environment-specific values must be configured through generic CI variables. Do not add organization-specific variable names, registry names, credentials, or provider names.
+All environment-specific values must be configured through GitHub Actions secrets and variables or generic helper environment variables. Do not add organization-specific variable names, credentials, or provider names.
 
 Important variables:
 
-- `PYTHON_IMAGE_REGISTRY`, `PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, `PYTHON_IMAGE`;
-- `PYTHON_BOOTSTRAP_COMMAND`;
-- `NODE_IMAGE_REGISTRY`, `NODE_IMAGE_REPOSITORY`, `NODE_IMAGE_TAG`, `NODE_IMAGE`;
-- `SKILL_EXCHANGE_RUNNER_TAG`;
-- `PAGES_RUNNER_TAG`;
-- `SKILLSPECTOR_INSTALL_COMMAND`;
 - `SKILLSPECTOR_BIN`;
+- `SKILL_EXCHANGE_DIFF_BASE`;
+- `SKILL_EXCHANGE_DIFF_HEAD`;
+- `SKILL_EXCHANGE_TARGET_BRANCH`;
 - `SKILL_EXCHANGE_REVIEW_SCAN_MODE`;
 - `SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS`;
 - `SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR`;
 - `SKILL_EXCHANGE_POST_REVIEW_COMMENT`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER`;
 - `SKILL_EXCHANGE_PUBLISH_SCAN_MODES`;
 - `SKILL_EXCHANGE_LLM_API_KEY`;
 - `SKILL_EXCHANGE_LLM_BASE_URL`;
 - `SKILL_EXCHANGE_LLM_MODEL`;
 - `SKILL_EXCHANGE_LLM_PROVIDER`;
+- `SKILL_EXCHANGE_LLM_API_KEY_HEADER`;
+- `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`;
+- `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS`;
+- `SKILL_EXCHANGE_SCAN_MAX_SECONDS`;
+- `SKILL_EXCHANGE_LLM_DEPLOYMENT`;
+- `SKILL_EXCHANGE_LLM_API_VERSION`;
 - `EXCHANGE_PUBLISH_COMMIT`;
 - `EXCHANGE_PUBLISH_PUSH`;
 - `EXCHANGE_PUBLISH_BRANCH`;
 - `EXCHANGE_PUBLISH_PUSH_URL`;
 - `EXCHANGE_PUBLISH_TOKEN`;
 - `EXCHANGE_PUBLISH_USERNAME`;
+- `EXCHANGE_PUBLISH_SERVER_URL`;
+- `EXCHANGE_PUBLISH_REPOSITORY`;
 - `EXCHANGE_BOT_GIT_NAME`;
 - `EXCHANGE_BOT_GIT_EMAIL`;
 - `EXCHANGE_PUBLISH_COMMIT_MESSAGE`.
 
-Review token and publish token paths are intentionally separate. Review credentials post optional MR notes. Publish credentials push BOE to the protected default branch. If GitLab job-token repository push is enabled, publication may use `CI_JOB_TOKEN` with username `gitlab-ci-token`; otherwise configure a masked `EXCHANGE_PUBLISH_TOKEN` for a publisher identity allowed to push to the protected default branch.
+The GitHub workflow supplies review and publication credentials through the job-scoped `GITHUB_TOKEN`. It maps GitHub context into the generic publication variables and never substitutes an unrelated CI credential.
 
-Schedule variables override project variables. Avoid duplicating project-level CI variables on a schedule unless the schedule intentionally needs a different value, especially `SKILL_EXCHANGE_PUBLISH_SCAN_MODES`.
+Customer-facing GitLab deployment image and runner variables are specified with the deployment-kit product rather than this maintainer CI configuration.
 
 ## Site Data Loading
 
@@ -1070,28 +1029,28 @@ Roles:
 
 | Role | Responsibilities |
 |---|---|
-| Contributor | Proposes new or changed skills by merge request and responds to review feedback. |
+| Contributor | Proposes new or changed skills by pull request and responds to review feedback. |
 | Skill owner | Optional in the MVP. Accountable for declared skill purpose, usefulness, and maintenance. |
 | Reviewer | Reviews skill content, metadata, validation warnings, and SkillSpector context. |
 | Maintainer | Owns merge authority and protects governance files, CI configuration, exchange policy, and publication rules. |
-| Exchange bot | Runs protected publication, produces official BOE, commits BOE evidence, and publishes Pages output. |
+| Exchange bot | Runs protected publication, produces official BOE, commits BOE evidence, and publishes verified artifacts. |
 
 Human workflow:
 
-1. Contributor opens an MR with a new or changed skill.
-2. MR CI validates package structure and metadata.
-3. MR CI warns on unknown categories and tags.
-4. MR CI runs SkillSpector when feasible.
-5. MR CI writes artifacts and may post a reviewer-facing comment.
+1. Contributor opens a pull request with a new or changed skill.
+2. Pull request CI validates package structure and metadata.
+3. Pull request CI warns on unknown categories and tags.
+4. Pull request CI runs SkillSpector.
+5. Pull request CI writes artifacts and posts reviewer-facing context for same-repository contributions.
 6. At least one human reviewer inspects the diff and assessment context.
 7. Maintainer merges after required human approvals.
 8. Default-branch skill changes or scheduled publication produce or reuse official BOE.
 9. Publication commits BOE bundles under `.exchange/generated/boe/` when configured.
-10. GitLab Pages publishes from generated artifacts.
+10. GitHub Actions publishes verified static-site and release artifacts.
 
-Human contributors never author official BOE. MR SkillSpector output is advisory. Official BOE comes from protected publication CI.
+Human contributors never author official BOE. Pull request SkillSpector output is advisory. Official BOE comes from protected publication CI.
 
-Generated-output MRs from the exchange bot may be exempt from human review only when the diff is limited to generated BOE bundles under `.exchange/generated/boe/`. Human-authored MRs must never automerge under this rule. Any MR that changes source code, skill instructions, CI, policy, config, permissions, documentation, or governance files requires human review.
+Generated-output pull requests from the exchange bot may be exempt from human review only when the diff is limited to generated BOE bundles under `.exchange/generated/boe/`. Human-authored pull requests must never automerge under this rule. Any pull request that changes source code, skill instructions, CI, policy, config, permissions, documentation, or governance files requires human review.
 
 ## Seed Skills
 
@@ -1130,7 +1089,7 @@ Examples:
 - Do not replace missing generated BOE with unofficial human-authored evidence.
 - Do not hardcode environment-specific registries, providers, endpoints, runner tags, or credentials.
 
-The few intentional fallback behaviors in this spec are explicitly documented and tested, such as empty site data for initial empty builds, git timestamp fallback to mtimes outside a checkout, and `CI_JOB_TOKEN` publication only when no explicit publish token is configured.
+The few intentional fallback behaviors in this spec are explicitly documented and tested, such as empty site data for initial empty builds and git timestamp fallback to mtimes outside a checkout.
 
 ## Tests
 
@@ -1144,6 +1103,7 @@ Python tests must cover:
 - SkillSpector failure without report;
 - SkillSpector version normalization;
 - generic LLM environment mapping;
+- generic OpenAI, OpenAI-compatible, and Azure OpenAI mapping, native-variable precedence, and non-secret endpoint hashing;
 - absence of legacy organization-specific LLM variable names in key docs/code;
 - exchange build writing index, BOE, zip, tables, recommendation, risk, provenance, source URL, timestamps, and content hash;
 - invalid metadata blocking publication output;
@@ -1161,8 +1121,7 @@ Python tests must cover:
 - review comment inclusion of every scanner finding;
 - scan-mode parser;
 - BOE-only generated commit behavior;
-- publish authentication using `CI_JOB_TOKEN` when no publish token is configured;
-- publish authentication not reusing review token;
+- explicit publication authentication context and rejection of incomplete context;
 - zip layout and symlink rejection;
 - local CLI generated-dir handling.
 

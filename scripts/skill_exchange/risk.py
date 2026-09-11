@@ -2,11 +2,20 @@ from __future__ import annotations
 
 from typing import Any
 
+from .skillspector import skillspector_execution_failure
+
 
 def assess_report(report: dict[str, Any]) -> dict[str, Any]:
     issues = report.get("issues")
     risk_assessment = report.get("risk_assessment")
     metadata = report.get("metadata") or {}
+    execution_failure = skillspector_execution_failure(report)
+    if execution_failure:
+        return {
+            "risk": "Unknown",
+            "reason": f"scanner_failed: {execution_failure}",
+            "confidence_flags": [],
+        }
     if isinstance(metadata, dict) and metadata.get("scan_error"):
         return {
             "risk": "Unknown",

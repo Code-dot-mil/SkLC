@@ -2,7 +2,7 @@
 
 Skill Exchange Site is a static catalog for publishing agent skills with review evidence, risk signals, and downloadable runtime bundles. The goal is to make skill sharing boring and inspectable: every listed skill should have clear metadata, policy validation, scanner output, and a generated bill of evidence before it is promoted through the exchange.
 
-This repository is intentionally self-contained. The site, exchange builder, CI helpers, policy files, and GitLab CI definition all live here so the project can move between networks without importing environment-specific CI components.
+This repository is intentionally self-contained. The site, exchange builder, CI helpers, policy files, and GitHub Actions workflows all live here. Customer-facing GitLab deployment templates are packaged separately under `products/deployment-kit/`.
 
 ## Use the prebuilt site
 
@@ -49,7 +49,7 @@ The exchange should give users a simple way to discover approved skills while gi
 - Contributors add skills under `skills/<namespace>/<skill-id>/`.
 - CI reviews skill changes only when skill packages change.
 - Scheduled publication and default-branch skill changes build official exchange evidence and generated catalog data.
-- GitLab Pages deploys the static site from generated data on default-branch pushes and scheduled publication pipelines.
+- GitHub Actions validates and packages the static site, reviews changed skills, and publishes official evidence from default-branch skill changes and scheduled publication runs.
 - All environment-specific details, including images, scanner installation, credentials, runner tags, and deployment routing, stay configurable through environment variables or CI variables.
 
 The long-term direction is to keep this exchange portable: a target environment should be able to supply its own registry, runner tags, credentials, scanner installation command, and publication cadence without changing repository code.
@@ -60,7 +60,7 @@ The exchange has three main layers:
 
 1. Skill packages live under `skills/`. Each package contains a `SKILL.md` file with frontmatter and skill content.
 2. Python tooling under `scripts/skill_exchange/` validates skills, runs [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), applies exchange policy, writes bill-of-evidence bundles, creates runtime zip files, and produces derived site data under `.exchange/generated/`.
-3. The Astro site under `site/` reads derived `.exchange/generated/` data and builds a static catalog that can be published by GitLab Pages.
+3. The Astro site under `site/` reads derived `.exchange/generated/` data and builds a static catalog artifact.
 
 Tracked generated evidence lives under `.exchange/generated/boe/`. Other generated outputs under `.exchange/generated/` are deploy-time site inputs and should not be committed.
 
@@ -69,7 +69,8 @@ BOE bundles are also the durable scanner cache. If a later publication computes 
 ## Repository Map
 
 - `.exchange/` stores exchange policy, display configuration, tags, categories, and generated catalog output.
-- `.gitlab-ci.yml` defines the standalone GitLab CI pipeline.
+- `.github/workflows/ci.yml` validates the codebase and builds preview catalog artifacts.
+- `.github/workflows/skillspector.yml` reviews changed skills and publishes official SkillSpector evidence.
 - `CI.md` documents CI variables, schedules, review behavior, and deploy behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
 - `contracts/` contains draft versioned schemas and examples for serialized interfaces shared across the planned product boundaries; current runtime output remains on the implemented `v0` formats.
@@ -88,12 +89,13 @@ Install the local toolchain:
 - Python 3.12 with `uv`.
 - Node.js 22 with `npm`.
 - `just` for cross-stack commands.
-- SkillSpector on `PATH`, or `SKILLSPECTOR_BIN` pointing to a SkillSpector binary, when running local generation or deploy-equivalent builds.
+- The locked `scan` dependency extra, SkillSpector on `PATH`, or `SKILLSPECTOR_BIN` pointing to a SkillSpector binary when running local generation or deploy-equivalent builds.
 
 Install dependencies:
 
 ```sh
 uv sync --extra test
+uv sync --extra scan
 npm ci --prefix site
 ```
 
@@ -134,13 +136,9 @@ Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow de
 
 ## CI Workflow
 
-The GitLab pipeline has six stages: `lint`, `test`, `audit`, `review`, `publish`, and `deploy`.
-
-- `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, lockfiles, policy, or CI configuration changes.
-- `review:skills` runs only for merge requests that change `skills/**/*`.
-- `publish:exchange` runs from scheduled pipelines and default-branch skill-change pipelines, and can commit BOE bundles when bot variables are configured.
-- `generate:exchange` runs on default-branch push pipelines that do not change skills, and produces deploy-time generated site artifacts.
-- `pages` runs on default-branch push pipelines and scheduled publication pipelines, consuming generated artifacts and publishing a top-level `public/` artifact for GitLab Pages.
+- `CI` runs lint and tests, generates static-only preview evidence when tracked BOE is absent, builds the site, and uploads catalog artifacts.
+- `SkillSpector` reviews skill pull requests and runs protected `static-only,llm-assisted` publication on default-branch skill changes, nightly schedules, and manual dispatches.
+- Official publication uses upstream SkillSpector 2.10.0 with its native OpenAI-compatible provider and commits only durable BOE bundles.
 - GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
 
 See [CI.md](CI.md) for the full configuration reference.
@@ -150,10 +148,10 @@ See [CI.md](CI.md) for the full configuration reference.
 Configuration is part of the portability model. Do not hardcode network-specific values into the repository. Use CI variables or environment variables for:
 
 - Python and Node image registry, repository, tag, or full image override.
-- GitLab runner tags for CI jobs and Pages deployment.
-- SkillSpector binary path or installation command.
+- Customer GitLab runner tags for packaged Pages deployment.
+- SkillSpector binary path or the locked `scan` dependency extra.
 - LLM-assisted scan provider endpoint, model, and API key.
-- Merge request comment token behavior.
+- Pull request comment behavior.
 - Scheduled publication branch, bot identity, push URL, and token.
 - Audit thresholds and scan modes.
 
@@ -161,4 +159,4 @@ Secrets should be configured as masked CI variables in the target environment an
 
 ## Current Boundaries
 
-This is a static exchange MVP. It does not implement a live application server, interactive approval workflow, protected-branch administration, GitLab API simulation, or user account model. Those responsibilities belong to the hosting GitLab environment and future exchange services.
+This is a static exchange MVP. It does not implement a live application server, interactive approval workflow, protected-branch administration, hosting-provider API simulation, or user account model. Those responsibilities belong to the hosting platform and future exchange services.

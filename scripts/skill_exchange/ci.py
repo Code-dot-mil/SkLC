@@ -15,7 +15,7 @@ from .exchange_builder import build_exchange
 from .policy import load_exchange_policy
 from .risk import assess_report
 from .skills import discover_skills
-from .skillspector import run_skillspector
+from .skillspector import SkillSpectorExecutionError, run_skillspector
 from .validation import validate_skill
 
 SCAN_MODES = ("static-only", "llm-assisted")
@@ -230,11 +230,14 @@ def review_changed_skills(
             scanner_errors += 1
             scanner_error = str(exc)
             print(f"SkillSpector failed for {skill.metadata.display_id}: {scanner_error}", file=sys.stderr)
+            scanner_llm_error = skillspector_llm_error(exc)
             assessment = {
                 "risk": "Unknown",
                 "reason": f"scanner_failed: {scanner_error}",
                 "confidence_flags": [],
             }
+        else:
+            scanner_llm_error = None
 
         summary_rows.append(
             {
@@ -245,6 +248,7 @@ def review_changed_skills(
                 "scan_mode": scan_mode,
                 "report": str(report_path),
                 "scanner_error": scanner_error,
+                "scanner_llm_error": scanner_llm_error,
                 "scanner_findings": scanner_findings,
             }
         )
@@ -276,7 +280,7 @@ def render_review_comment(summary_rows: list[dict[str, Any]], validation_rows: l
         lines.append("| - | - | - | - | No changed skill packages were detected. |")
     for row in summary_rows:
         flags = ", ".join(row["confidence_flags"]) if row["confidence_flags"] else "-"
-        reason = SCANNER_FAILURE_COMMENT if row.get("scanner_error") else row["reason"]
+        reason = scanner_failure_comment(row, escape_table=True) if row.get("scanner_error") else row["reason"]
         lines.append(f"| `{row['skill']}` | {row['risk']} | {flags} | {row['scan_mode']} | {reason} |")
 
     lines.extend(["", "## Scanner findings"])
@@ -285,7 +289,7 @@ def render_review_comment(summary_rows: list[dict[str, Any]], validation_rows: l
     for row in summary_rows:
         lines.append(f"### `{row['skill']}`")
         if row.get("scanner_error"):
-            lines.append(f"- {SCANNER_FAILURE_COMMENT}")
+            lines.append(f"- {scanner_failure_comment(row)}")
             continue
 
         findings = row.get("scanner_findings") or []
@@ -319,6 +323,24 @@ def render_review_comment(summary_rows: list[dict[str, Any]], validation_rows: l
         flags = ", ".join(row["metadata_flags"]) if row["metadata_flags"] else "none"
         lines.append(f"- `{row['skill']}` errors: {errors}; warnings: {warnings}; metadata flags: {flags}")
     return "\n".join(lines) + "\n"
+
+
+def skillspector_llm_error(error: Exception) -> str | None:
+    if not isinstance(error, SkillSpectorExecutionError):
+        return None
+    metadata = error.report.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    return one_line(metadata.get("llm_error")) or None
+
+
+def scanner_failure_comment(row: dict[str, Any], *, escape_table: bool = False) -> str:
+    llm_error = one_line(row.get("scanner_llm_error"))
+    if not llm_error:
+        return SCANNER_FAILURE_COMMENT
+    if escape_table:
+        llm_error = llm_error.replace("|", "\\|")
+    return f"SkillSpector failed: {llm_error}. Check the CI logs for details."
 
 
 def scanner_findings_from_report(report: dict[str, Any]) -> list[dict[str, str]]:

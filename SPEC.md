@@ -733,8 +733,10 @@ Review validation errors fail the job when `SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDA
 
 Detailed scanner failures are written to the CI job's stderr and preserved in
 `review-artifacts/changed-skills.json`. The generated pull-request comment and job
-summary must not include those details; they use the fixed message
-`SkillSpector failed. Check the CI logs for details.` instead.
+summary must not include captured scanner output. When the failed native report
+provides `metadata.llm_error`, the comment includes that structured value and
+directs the reader to the CI logs. Otherwise it uses the fixed message
+`SkillSpector failed. Check the CI logs for details.`
 
 The review comment must include:
 

@@ -116,7 +116,7 @@ The `SkillSpector` workflow publishes official evidence after default-branch ski
 
 Publication commits only `.exchange/generated/boe/` and pushes it to the configured default branch. The job-scoped `GITHUB_TOKEN`, GitHub server URL, and repository path are mapped to the generic `EXCHANGE_PUBLISH_*` variables. Repository rules must permit this workflow to push generated-evidence commits.
 
-Pull request comments use the job-scoped `GITHUB_TOKEN`. A scanner failure comment contains only `SkillSpector failed. Check the CI logs for details.`; detailed failure output remains in the workflow logs and retained artifacts.
+Pull request comments use the job-scoped `GITHUB_TOKEN`. A scanner failure comment may include the native report's structured `metadata.llm_error`, but never captured scanner stdout or stderr; detailed failure output remains in the workflow logs and retained artifacts. When no structured LLM error is available, the comment says `SkillSpector failed. Check the CI logs for details.`
 
 ## Publish Authentication
 

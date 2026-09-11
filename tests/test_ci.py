@@ -123,6 +123,7 @@ def test_review_changed_skills_writes_reviewer_artifacts(monkeypatch, tmp_path: 
             "scan_mode": "static-only",
             "report": str(artifacts / "skillspector" / "team" / "reviewed-skill" / "report.json"),
             "scanner_error": None,
+            "scanner_llm_error": None,
             "scanner_findings": [],
         }
     ]
@@ -136,7 +137,11 @@ def test_review_changed_skills_counts_failed_execution_and_preserves_report(monk
     artifacts = tmp_path / "review-artifacts"
     failed_report = {
         "execution_successful": False,
-        "metadata": {"llm_requested": True, "skillspector_version": "2.1.5"},
+        "metadata": {
+            "llm_requested": True,
+            "llm_error": "OpenAIModelNotFoundError | unavailable model",
+            "skillspector_version": "2.1.5",
+        },
         "risk_assessment": {"score": 100, "severity": "CRITICAL", "recommendation": "BLOCK"},
         "issues": [{"id": "E2", "severity": "HIGH"}],
     }
@@ -147,7 +152,7 @@ def test_review_changed_skills_counts_failed_execution_and_preserves_report(monk
         output_path.parent.mkdir(parents=True)
         output_path.write_text(json.dumps(failed_report))
         raise SkillSpectorExecutionError(
-            "skillspector reported execution_successful=false: OpenAIModelNotFoundError",
+            "skillspector reported execution_successful=false: captured runner output",
             report=failed_report,
         )
 
@@ -169,9 +174,11 @@ def test_review_changed_skills_counts_failed_execution_and_preserves_report(monk
     assert result["scanner_errors"] == 1
     assert changed_skills[0]["risk"] == "Unknown"
     assert "execution_successful=false" in changed_skills[0]["scanner_error"]
-    assert comment.count("SkillSpector failed. Check the CI logs for details.") == 2
-    assert "OpenAIModelNotFoundError" not in comment
-    assert "OpenAIModelNotFoundError" in capsys.readouterr().err
+    assert changed_skills[0]["scanner_llm_error"] == "OpenAIModelNotFoundError | unavailable model"
+    assert comment.count("SkillSpector failed:") == 2
+    assert "OpenAIModelNotFoundError \\| unavailable model" in comment
+    assert "captured runner output" not in comment
+    assert "captured runner output" in capsys.readouterr().err
     assert json.loads(report_path.read_text()) == failed_report
 
 
@@ -242,6 +249,12 @@ def test_review_comment_includes_all_scanner_findings(monkeypatch, tmp_path: Pat
     assert "Remediation: Protect agent memory and state from untrusted content." in comment
     assert "line one" in comment
     assert "`[question]` - unclear context that could hide a real issue" in comment
+
+
+def test_scanner_failure_comment_falls_back_when_no_llm_error():
+    assert ci.scanner_failure_comment({"scanner_llm_error": None}) == (
+        "SkillSpector failed. Check the CI logs for details."
+    )
 
 
 def test_parse_scan_modes_accepts_comma_and_space_separated_values():

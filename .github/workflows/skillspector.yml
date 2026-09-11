@@ -133,9 +133,8 @@ jobs:
       EXCHANGE_PUBLISH_USERNAME: "x-access-token"
       EXCHANGE_BOT_GIT_NAME: "github-actions[bot]"
       EXCHANGE_BOT_GIT_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
-      CI_SERVER_PROTOCOL: "https"
-      CI_SERVER_HOST: "github.com"
-      CI_PROJECT_PATH: "${{ github.repository }}"
+      EXCHANGE_PUBLISH_SERVER_URL: "${{ github.server_url }}"
+      EXCHANGE_PUBLISH_REPOSITORY: "${{ github.repository }}"
     steps:
       - name: Check out default branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

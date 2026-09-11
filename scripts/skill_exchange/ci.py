@@ -5,6 +5,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -18,6 +19,7 @@ from .skillspector import run_skillspector
 from .validation import validate_skill
 
 SCAN_MODES = ("static-only", "llm-assisted")
+SCANNER_FAILURE_COMMENT = "SkillSpector failed. Check the CI logs for details."
 
 
 def main() -> None:
@@ -56,8 +58,8 @@ def main() -> None:
 
 def run_review_command(args: argparse.Namespace) -> None:
     repo_root = args.repo_root.resolve()
-    base_ref = args.base_ref or env_value("SKILL_EXCHANGE_DIFF_BASE") or env_value("CI_MERGE_REQUEST_DIFF_BASE_SHA")
-    head_ref = args.head_ref or env_value("SKILL_EXCHANGE_DIFF_HEAD") or env_value("CI_COMMIT_SHA") or "HEAD"
+    base_ref = args.base_ref or env_value("SKILL_EXCHANGE_DIFF_BASE")
+    head_ref = args.head_ref or env_value("SKILL_EXCHANGE_DIFF_HEAD") or "HEAD"
     if not base_ref:
         base_ref = resolve_default_base_ref(head_ref, repo_root)
 
@@ -227,6 +229,7 @@ def review_changed_skills(
         except Exception as exc:
             scanner_errors += 1
             scanner_error = str(exc)
+            print(f"SkillSpector failed for {skill.metadata.display_id}: {scanner_error}", file=sys.stderr)
             assessment = {
                 "risk": "Unknown",
                 "reason": f"scanner_failed: {scanner_error}",
@@ -273,7 +276,8 @@ def render_review_comment(summary_rows: list[dict[str, Any]], validation_rows: l
         lines.append("| - | - | - | - | No changed skill packages were detected. |")
     for row in summary_rows:
         flags = ", ".join(row["confidence_flags"]) if row["confidence_flags"] else "-"
-        lines.append(f"| `{row['skill']}` | {row['risk']} | {flags} | {row['scan_mode']} | {row['reason']} |")
+        reason = SCANNER_FAILURE_COMMENT if row.get("scanner_error") else row["reason"]
+        lines.append(f"| `{row['skill']}` | {row['risk']} | {flags} | {row['scan_mode']} | {reason} |")
 
     lines.extend(["", "## Scanner findings"])
     if not summary_rows:
@@ -281,7 +285,7 @@ def render_review_comment(summary_rows: list[dict[str, Any]], validation_rows: l
     for row in summary_rows:
         lines.append(f"### `{row['skill']}`")
         if row.get("scanner_error"):
-            lines.append(f"- Scanner failed: {row['scanner_error']}")
+            lines.append(f"- {SCANNER_FAILURE_COMMENT}")
             continue
 
         findings = row.get("scanner_findings") or []
@@ -376,9 +380,7 @@ def one_line(value: Any) -> str:
 
 
 def post_review_comment(body: str) -> str:
-    if os.environ.get("GITHUB_ACTIONS") == "true":
-        return post_github_review_comment(body)
-    return post_gitlab_review_comment(body)
+    return post_github_review_comment(body)
 
 
 def post_github_review_comment(body: str) -> str:
@@ -416,30 +418,6 @@ def post_github_review_comment(body: str) -> str:
         return f"posted: HTTP {response.status}"
 
 
-def post_gitlab_review_comment(body: str) -> str:
-    token_variable = os.environ.get("SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE", "GITLAB_TOKEN")
-    token = os.environ.get(token_variable)
-    api_url = os.environ.get("CI_API_V4_URL")
-    project_id = os.environ.get("CI_PROJECT_ID")
-    mr_iid = os.environ.get("CI_MERGE_REQUEST_IID")
-    if not token:
-        return f"skipped: {token_variable} is not set"
-    if not api_url or not project_id or not mr_iid:
-        return "skipped: GitLab merge request environment is incomplete"
-
-    token_header = os.environ.get("SKILL_EXCHANGE_REVIEW_TOKEN_HEADER")
-    if not token_header:
-        token_header = "JOB-TOKEN" if token_variable == "CI_JOB_TOKEN" else "PRIVATE-TOKEN"
-    route = (
-        f"{api_url.rstrip('/')}/projects/{urllib.parse.quote(project_id, safe='')}"
-        f"/merge_requests/{urllib.parse.quote(mr_iid, safe='')}/notes"
-    )
-    payload = urllib.parse.urlencode({"body": body}).encode()
-    request = urllib.request.Request(route, data=payload, headers={token_header: token})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return f"posted: HTTP {response.status}"
-
-
 def commit_generated_outputs(*, repo_root: Path, generated_dir: Path) -> dict[str, Any]:
     boe_dir = generated_dir / "boe"
     if not boe_dir.exists():
@@ -468,7 +446,7 @@ def commit_generated_outputs(*, repo_root: Path, generated_dir: Path) -> dict[st
     pushed = False
     if env_flag("EXCHANGE_PUBLISH_PUSH", default=True):
         configure_push_remote(repo_root)
-        branch = os.environ.get("EXCHANGE_PUBLISH_BRANCH") or os.environ.get("CI_DEFAULT_BRANCH", "main")
+        branch = os.environ.get("EXCHANGE_PUBLISH_BRANCH", "main")
         run_git(repo_root, "push", "origin", f"HEAD:{branch}")
         pushed = True
     return {"committed": True, "pushed": pushed, "path": relative_generated_dir}
@@ -479,30 +457,26 @@ def configure_push_remote(repo_root: Path) -> None:
     if not push_url:
         token = os.environ.get("EXCHANGE_PUBLISH_TOKEN")
         username = os.environ.get("EXCHANGE_PUBLISH_USERNAME")
-        if not token and os.environ.get("CI_JOB_TOKEN"):
-            token = os.environ["CI_JOB_TOKEN"]
-            username = username or "gitlab-ci-token"
-        username = username or "oauth2"
-        protocol = os.environ.get("CI_SERVER_PROTOCOL", "https")
-        host = os.environ.get("CI_SERVER_HOST")
-        project_path = os.environ.get("CI_PROJECT_PATH")
-        if not token or not host or not project_path:
+        server_url = os.environ.get("EXCHANGE_PUBLISH_SERVER_URL")
+        repository = os.environ.get("EXCHANGE_PUBLISH_REPOSITORY")
+        if not token or not username or not server_url or not repository:
             raise RuntimeError(
-                "set EXCHANGE_PUBLISH_PUSH_URL, or set EXCHANGE_PUBLISH_TOKEN with CI_SERVER_HOST and CI_PROJECT_PATH"
+                "set EXCHANGE_PUBLISH_PUSH_URL, or set EXCHANGE_PUBLISH_TOKEN, "
+                "EXCHANGE_PUBLISH_USERNAME, EXCHANGE_PUBLISH_SERVER_URL, and EXCHANGE_PUBLISH_REPOSITORY"
             )
-        push_url = (
-            f"{protocol}://{urllib.parse.quote(username, safe='')}:"
-            f"{urllib.parse.quote(token, safe='')}@{host}/{project_path}.git"
+        parsed_server = urllib.parse.urlsplit(server_url)
+        if parsed_server.scheme != "https" or not parsed_server.netloc:
+            raise RuntimeError("EXCHANGE_PUBLISH_SERVER_URL must be an absolute HTTPS URL")
+        credentials = f"{urllib.parse.quote(username, safe='')}:{urllib.parse.quote(token, safe='')}"
+        repository_path = f"{parsed_server.path.rstrip('/')}/{repository}.git"
+        push_url = urllib.parse.urlunsplit(
+            (parsed_server.scheme, f"{credentials}@{parsed_server.netloc}", repository_path, "", "")
         )
     run_git(repo_root, "remote", "set-url", "origin", push_url)
 
 
 def resolve_default_base_ref(head_ref: str, repo_root: Path) -> str:
-    target_branch = (
-        os.environ.get("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
-        or os.environ.get("CI_DEFAULT_BRANCH")
-        or "main"
-    )
+    target_branch = os.environ.get("SKILL_EXCHANGE_TARGET_BRANCH", "main")
     remote_ref = f"origin/{target_branch}"
     fetch = subprocess.run(
         ["git", "fetch", "--quiet", "origin", f"{target_branch}:refs/remotes/{remote_ref}"],

@@ -6,7 +6,7 @@ Date: 2026-06-19
 
 This repository implements a static skill exchange for publishing agent skills with visible scanner-backed risk context, reviewer assessment context, generated bill-of-evidence bundles, runtime zip downloads, and a static catalog artifact.
 
-The exchange migrated from GitLab to GitHub. The repository remains the source of truth for skill content and exchange policy. Python tooling validates skills, runs NVIDIA SkillSpector, generates official evidence, produces deploy-time data, and packages skill downloads. The Astro site renders the generated data into a searchable catalog and detail pages. The legacy GitLab pipeline remains tracked while GitHub Actions owns current validation and protected SkillSpector publication.
+The exchange migrated from GitLab to GitHub. The repository remains the source of truth for skill content and exchange policy. Python tooling validates skills, runs NVIDIA SkillSpector, generates official evidence, produces deploy-time data, and packages skill downloads. The Astro site renders the generated data into a searchable catalog and detail pages. GitHub Actions owns validation, protected SkillSpector publication, and releases. GitLab CI retained under `products/deployment-kit/` is customer-facing deployment content, not this repository's maintainer pipeline.
 
 The design deliberately avoids a backend service, database, MCP endpoint, user account model, custom AI review workflow, executable eval harness, click tracking, view tracking, install tracking, and download tracking. CI is the publisher. The generated data contract and BOE layout are the migration path if a backend is added later.
 
@@ -16,7 +16,7 @@ The design deliberately avoids a backend service, database, MCP endpoint, user a
 - Show plain-language use guidance for every displayed skill: `Safe to use`, `Use caution`, `Avoid installing`, or `Unknown`.
 - Preserve the underlying scanner risk level for every displayed skill: `Low`, `Medium`, `High`, or `Unknown`.
 - Use SkillSpector assessment output as the first scanner-backed consumer risk signal.
-- Give human reviewers merge request assessment context before accepting new or changed skills.
+- Give human reviewers pull request assessment context before accepting new or changed skills.
 - Produce official BOE only from protected publication CI, not from human-authored files.
 - Reuse official BOE when the computed scan cache key already exists.
 - Support both `static-only` and `llm-assisted` SkillSpector scans.
@@ -33,7 +33,7 @@ The design deliberately avoids a backend service, database, MCP endpoint, user a
 - No executable skill evaluation harness or no-skill baseline comparison.
 - No custom AI-backed reviewer.
 - No protected-branch administration logic in application code.
-- No GitLab API simulator in the current codebase.
+- No hosting-provider API simulator in the current codebase.
 
 ## Repository Shape
 
@@ -143,7 +143,6 @@ tests/
   test_zips.py
 
 .gitignore
-.gitlab-ci.yml
 AGENTS.md
 CI.md
 CONTRIBUTING.md
@@ -706,7 +705,7 @@ uv run python -m skill_exchange.cli publish-local --generated-dir .exchange/loca
 
 ## CI Helper CLI
 
-`ci.py` provides GitLab-focused commands:
+`ci.py` provides CI-focused commands:
 
 ```sh
 uv run python -m skill_exchange.ci review --artifacts-dir review-artifacts
@@ -719,8 +718,8 @@ Supported scan modes are `static-only` and `llm-assisted`. `parse_scan_modes()` 
 
 The review command:
 
-- resolves base ref from explicit args, `SKILL_EXCHANGE_DIFF_BASE`, `CI_MERGE_REQUEST_DIFF_BASE_SHA`, or merge-base with the target/default branch;
-- resolves head ref from explicit args, `SKILL_EXCHANGE_DIFF_HEAD`, `CI_COMMIT_SHA`, or `HEAD`;
+- resolves base ref from explicit args, `SKILL_EXCHANGE_DIFF_BASE`, or merge-base with `SKILL_EXCHANGE_TARGET_BRANCH` (default `main`);
+- resolves head ref from explicit args, `SKILL_EXCHANGE_DIFF_HEAD`, or `HEAD`;
 - detects changed skill package roots from `git diff --name-only --diff-filter=ACMRT <base> <head> -- skills`;
 - validates only changed skill package roots;
 - runs SkillSpector for each changed valid skill;
@@ -728,9 +727,14 @@ The review command:
 - writes `review-artifacts/changed-skills.json`;
 - writes `review-artifacts/comment.md`;
 - writes `review-artifacts/result.json`;
-- optionally posts a merge request comment.
+- optionally posts a pull request comment.
 
 Review validation errors fail the job when `SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS` is true. Scanner errors fail the job only when `SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR` is true. Scanner failure otherwise appears as `Unknown` review context.
+
+Detailed scanner failures are written to the CI job's stderr and preserved in
+`review-artifacts/changed-skills.json`. The generated pull-request comment and job
+summary must not include those details; they use the fixed message
+`SkillSpector failed. Check the CI logs for details.` instead.
 
 The review comment must include:
 
@@ -739,16 +743,12 @@ The review comment must include:
 - every scanner finding with severity, issue ID, category/pattern title, location, confidence, finding text, explanation, remediation, and code snippet;
 - `Exchange validation` section listing errors, warnings, and metadata flags.
 
-Merge request comments use:
-
-- `SKILL_EXCHANGE_POST_REVIEW_COMMENT` to enable posting;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE` to name the token variable, default `GITLAB_TOKEN`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER` to override the header, otherwise `JOB-TOKEN` for `CI_JOB_TOKEN` or `PRIVATE-TOKEN` for other token variables.
+Pull request comments use `SKILL_EXCHANGE_POST_REVIEW_COMMENT` to enable posting and the GitHub Actions `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, and `GITHUB_EVENT_PATH` context.
 
 Posting targets:
 
 ```text
-POST <CI_API_V4_URL>/projects/<CI_PROJECT_ID>/merge_requests/<CI_MERGE_REQUEST_IID>/notes
+POST <GITHUB_API_URL>/repos/<GITHUB_REPOSITORY>/issues/<pull-request-number>/comments
 ```
 
 ### Publish Command
@@ -763,16 +763,15 @@ When `--commit-generated` or `EXCHANGE_PUBLISH_COMMIT=true` is set, `commit_gene
 - return `no BOE generated` when no BOE directory exists;
 - return `no generated changes` when staged BOE is unchanged;
 - use conventional default commit message `chore: update generated exchange evidence`;
-- push to `EXCHANGE_PUBLISH_BRANCH` or `CI_DEFAULT_BRANCH` when `EXCHANGE_PUBLISH_PUSH` is true.
+- push to `EXCHANGE_PUBLISH_BRANCH` (default `main`) when `EXCHANGE_PUBLISH_PUSH` is true.
 
-Publish authentication must keep review credentials separate from publication credentials. Push remote configuration order:
+Push remote configuration order:
 
 1. Use `EXCHANGE_PUBLISH_PUSH_URL` when provided.
-2. Else use `EXCHANGE_PUBLISH_TOKEN` with `EXCHANGE_PUBLISH_USERNAME` or username `oauth2`.
-3. Else use `CI_JOB_TOKEN` with username `gitlab-ci-token`.
-4. Else fail with an explicit error explaining required publication variables.
+2. Else require `EXCHANGE_PUBLISH_TOKEN`, `EXCHANGE_PUBLISH_USERNAME`, `EXCHANGE_PUBLISH_SERVER_URL`, and `EXCHANGE_PUBLISH_REPOSITORY` together.
+3. Else fail with an explicit error explaining required publication variables.
 
-Do not use `GITLAB_TOKEN` as an implicit publication fallback. That token may be a review/comment token with insufficient protected-branch permissions. Silent credential substitution hides defects.
+Do not use unrelated CI credentials as an implicit publication fallback. Silent credential substitution hides defects.
 
 ## GitHub Actions
 
@@ -843,103 +842,28 @@ overwritten. SemVer prereleases are marked as GitHub prereleases. Keep the relea
 token scoped to the publishing step, disable persisted checkout credentials, and
 use a 30-minute GitHub-hosted job with non-cancelling per-tag concurrency.
 
-## GitLab CI
-
-The repository owns `.gitlab-ci.yml` directly. Do not import external CI components.
-
-Stages:
-
-```yaml
-stages:
-  - lint
-  - test
-  - audit
-  - review
-  - publish
-  - deploy
-```
-
-Workflow creates pipelines for schedules, merge requests, default-branch commits, and tags.
-
-Global CI defaults:
-
-- `GIT_DEPTH: "0"` so git history is available for timestamps and diffs.
-- Python image defaults to `docker.io/library/python:3.12-bookworm`.
-- Node image defaults to `docker.io/library/node:22-bookworm-slim`.
-- `PYTHON_BOOTSTRAP_COMMAND` defaults to installing `uv`.
-- `SKILL_EXCHANGE_RUNNER_TAG` and `PAGES_RUNNER_TAG` route jobs without hardcoding one environment's runner setup.
-- `SKILLSPECTOR_INSTALL_COMMAND` defaults empty and may install SkillSpector at runtime.
-- Review scan mode defaults `static-only`.
-- Publish scan modes default `static-only`.
-- Review comments default disabled.
-- Publish commits default disabled globally but enabled in `publish:exchange`.
-
-Path rules:
-
-- `lint`, `test`, and `audit` run only when site code, exchange tooling, tests, policy, lockfiles, or CI configuration changes.
-- `review:skills` runs only for merge requests with `skills/**/*` changes.
-- `publish:exchange` runs on schedules and default-branch push pipelines with `skills/**/*` changes.
-- `generate:exchange` runs on default-branch push pipelines that do not change skills.
-- `pages` runs on schedules and default-branch push pipelines and consumes artifacts from `publish:exchange` or `generate:exchange`.
-
-Python jobs:
-
-- run in `$PYTHON_IMAGE`;
-- use `$SKILL_EXCHANGE_RUNNER_TAG`;
-- run `uv sync --extra test`;
-- cache `.uv-cache/`.
-
-Node jobs:
-
-- run in `$NODE_IMAGE`;
-- use `$SKILL_EXCHANGE_RUNNER_TAG` except `pages`;
-- run `npm ci --prefix site --cache "$NPM_CACHE_DIR" --prefer-offline`;
-- cache `.npm/`.
-
-Jobs:
-
-- `lint:python`: `ruff check`, `compileall`, and YAML parse for `.gitlab-ci.yml`.
-- `lint:site`: `npm --prefix site run lint`.
-- `test:python`: `uv run pytest`.
-- `test:site`: `npm --prefix site run test`.
-- `audit:python`: configurable `PYTHON_AUDIT_COMMAND`.
-- `audit:site`: `npm audit --prefix site --audit-level "$NPM_AUDIT_LEVEL"`.
-- `review:skills`: installs or locates SkillSpector, runs CI review, stores `review-artifacts/`.
-- `publish:exchange`: installs or locates SkillSpector, runs CI publish, stores `.exchange/generated/` and result JSON.
-- `generate:exchange`: same as publish but without committing BOE.
-- `pages`: builds the site, replaces top-level `public/` with `site/dist`, and publishes `public/`.
-
-`pages` must be named exactly `pages` and publish a top-level `public/` artifact for GitLab Pages.
-
-Merges to the default branch that change skills must run `publish:exchange` before `pages` so the first deploy of changed skills uses committed BOE instead of waiting for scheduled backfill.
-
 ## Dependency Vulnerability Management
 
 GitHub Dependabot is the authoritative dependency-vulnerability control. Repository settings must enable Dependabot alerts and Dependabot security updates. Alert triage occurs only in GitHub Security; scheduled CI must not create a duplicate issue backlog.
 
 The Dependabot configuration must cover the root Python `pyproject.toml` and `uv.lock` through the `uv` ecosystem and the Node `site/package.json` and `site/package-lock.json` through the `npm` ecosystem. Version updates run weekly on Monday. Minor and patch updates are grouped per ecosystem, major updates remain separate, default dependency and ecosystem labels are used, and pull requests are assigned to `Fnorgh2`.
 
-`Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`. The legacy `.gitlab-ci.yml` is not an active dependency-vulnerability control for this GitHub repository.
+`Fnorgh2` owns alert triage and notifications for high- and critical-severity alerts. High and critical alerts are reviewed when received, the remaining backlog is reviewed weekly, and unresolved alerts are escalated to repository administrator `scotluns`.
 
 ## CI Configuration And Permissions
 
-All environment-specific values must be configured through generic CI variables. Do not add organization-specific variable names, registry names, credentials, or provider names.
+All environment-specific values must be configured through GitHub Actions secrets and variables or generic helper environment variables. Do not add organization-specific variable names, credentials, or provider names.
 
 Important variables:
 
-- `PYTHON_IMAGE_REGISTRY`, `PYTHON_IMAGE_REPOSITORY`, `PYTHON_IMAGE_TAG`, `PYTHON_IMAGE`;
-- `PYTHON_BOOTSTRAP_COMMAND`;
-- `NODE_IMAGE_REGISTRY`, `NODE_IMAGE_REPOSITORY`, `NODE_IMAGE_TAG`, `NODE_IMAGE`;
-- `SKILL_EXCHANGE_RUNNER_TAG`;
-- `PAGES_RUNNER_TAG`;
-- `SKILLSPECTOR_INSTALL_COMMAND`;
 - `SKILLSPECTOR_BIN`;
+- `SKILL_EXCHANGE_DIFF_BASE`;
+- `SKILL_EXCHANGE_DIFF_HEAD`;
+- `SKILL_EXCHANGE_TARGET_BRANCH`;
 - `SKILL_EXCHANGE_REVIEW_SCAN_MODE`;
 - `SKILL_EXCHANGE_REVIEW_FAIL_ON_VALIDATION_ERRORS`;
 - `SKILL_EXCHANGE_REVIEW_FAIL_ON_SCANNER_ERROR`;
 - `SKILL_EXCHANGE_POST_REVIEW_COMMENT`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_VARIABLE`;
-- `SKILL_EXCHANGE_REVIEW_TOKEN_HEADER`;
 - `SKILL_EXCHANGE_PUBLISH_SCAN_MODES`;
 - `SKILL_EXCHANGE_LLM_API_KEY`;
 - `SKILL_EXCHANGE_LLM_BASE_URL`;
@@ -957,13 +881,15 @@ Important variables:
 - `EXCHANGE_PUBLISH_PUSH_URL`;
 - `EXCHANGE_PUBLISH_TOKEN`;
 - `EXCHANGE_PUBLISH_USERNAME`;
+- `EXCHANGE_PUBLISH_SERVER_URL`;
+- `EXCHANGE_PUBLISH_REPOSITORY`;
 - `EXCHANGE_BOT_GIT_NAME`;
 - `EXCHANGE_BOT_GIT_EMAIL`;
 - `EXCHANGE_PUBLISH_COMMIT_MESSAGE`.
 
-Review token and publish token paths are intentionally separate. Review credentials post optional MR notes. Publish credentials push BOE to the protected default branch. If GitLab job-token repository push is enabled, publication may use `CI_JOB_TOKEN` with username `gitlab-ci-token`; otherwise configure a masked `EXCHANGE_PUBLISH_TOKEN` for a publisher identity allowed to push to the protected default branch.
+The GitHub workflow supplies review and publication credentials through the job-scoped `GITHUB_TOKEN`. It maps GitHub context into the generic publication variables and never substitutes an unrelated CI credential.
 
-Schedule variables override project variables. Avoid duplicating project-level CI variables on a schedule unless the schedule intentionally needs a different value, especially `SKILL_EXCHANGE_PUBLISH_SCAN_MODES`.
+Customer-facing GitLab deployment image and runner variables are specified with the deployment-kit product rather than this maintainer CI configuration.
 
 ## Site Data Loading
 
@@ -1101,28 +1027,28 @@ Roles:
 
 | Role | Responsibilities |
 |---|---|
-| Contributor | Proposes new or changed skills by merge request and responds to review feedback. |
+| Contributor | Proposes new or changed skills by pull request and responds to review feedback. |
 | Skill owner | Optional in the MVP. Accountable for declared skill purpose, usefulness, and maintenance. |
 | Reviewer | Reviews skill content, metadata, validation warnings, and SkillSpector context. |
 | Maintainer | Owns merge authority and protects governance files, CI configuration, exchange policy, and publication rules. |
-| Exchange bot | Runs protected publication, produces official BOE, commits BOE evidence, and publishes Pages output. |
+| Exchange bot | Runs protected publication, produces official BOE, commits BOE evidence, and publishes verified artifacts. |
 
 Human workflow:
 
-1. Contributor opens an MR with a new or changed skill.
-2. MR CI validates package structure and metadata.
-3. MR CI warns on unknown categories and tags.
-4. MR CI runs SkillSpector when feasible.
-5. MR CI writes artifacts and may post a reviewer-facing comment.
+1. Contributor opens a pull request with a new or changed skill.
+2. Pull request CI validates package structure and metadata.
+3. Pull request CI warns on unknown categories and tags.
+4. Pull request CI runs SkillSpector.
+5. Pull request CI writes artifacts and posts reviewer-facing context for same-repository contributions.
 6. At least one human reviewer inspects the diff and assessment context.
 7. Maintainer merges after required human approvals.
 8. Default-branch skill changes or scheduled publication produce or reuse official BOE.
 9. Publication commits BOE bundles under `.exchange/generated/boe/` when configured.
-10. GitLab Pages publishes from generated artifacts.
+10. GitHub Actions publishes verified static-site and release artifacts.
 
-Human contributors never author official BOE. MR SkillSpector output is advisory. Official BOE comes from protected publication CI.
+Human contributors never author official BOE. Pull request SkillSpector output is advisory. Official BOE comes from protected publication CI.
 
-Generated-output MRs from the exchange bot may be exempt from human review only when the diff is limited to generated BOE bundles under `.exchange/generated/boe/`. Human-authored MRs must never automerge under this rule. Any MR that changes source code, skill instructions, CI, policy, config, permissions, documentation, or governance files requires human review.
+Generated-output pull requests from the exchange bot may be exempt from human review only when the diff is limited to generated BOE bundles under `.exchange/generated/boe/`. Human-authored pull requests must never automerge under this rule. Any pull request that changes source code, skill instructions, CI, policy, config, permissions, documentation, or governance files requires human review.
 
 ## Seed Skills
 
@@ -1161,7 +1087,7 @@ Examples:
 - Do not replace missing generated BOE with unofficial human-authored evidence.
 - Do not hardcode environment-specific registries, providers, endpoints, runner tags, or credentials.
 
-The few intentional fallback behaviors in this spec are explicitly documented and tested, such as empty site data for initial empty builds, git timestamp fallback to mtimes outside a checkout, and `CI_JOB_TOKEN` publication only when no explicit publish token is configured.
+The few intentional fallback behaviors in this spec are explicitly documented and tested, such as empty site data for initial empty builds and git timestamp fallback to mtimes outside a checkout.
 
 ## Tests
 
@@ -1193,8 +1119,7 @@ Python tests must cover:
 - review comment inclusion of every scanner finding;
 - scan-mode parser;
 - BOE-only generated commit behavior;
-- publish authentication using `CI_JOB_TOKEN` when no publish token is configured;
-- publish authentication not reusing review token;
+- explicit publication authentication context and rejection of incomplete context;
 - zip layout and symlink rejection;
 - local CLI generated-dir handling.
 

@@ -2,7 +2,7 @@
 
 Skill Exchange Site is a static catalog for publishing agent skills with review evidence, risk signals, and downloadable runtime bundles. The goal is to make skill sharing boring and inspectable: every listed skill should have clear metadata, policy validation, scanner output, and a generated bill of evidence before it is promoted through the exchange.
 
-This repository is intentionally self-contained. The site, exchange builder, CI helpers, policy files, GitHub Actions workflows, and legacy GitLab CI definition all live here so the project can move between networks without importing environment-specific CI components.
+This repository is intentionally self-contained. The site, exchange builder, CI helpers, policy files, and GitHub Actions workflows all live here. Customer-facing GitLab deployment templates are packaged separately under `products/deployment-kit/`.
 
 ## Use the prebuilt site
 
@@ -71,7 +71,6 @@ BOE bundles are also the durable scanner cache. If a later publication computes 
 - `.exchange/` stores exchange policy, display configuration, tags, categories, and generated catalog output.
 - `.github/workflows/ci.yml` validates the codebase and builds preview catalog artifacts.
 - `.github/workflows/skillspector.yml` reviews changed skills and publishes official SkillSpector evidence.
-- `.gitlab-ci.yml` preserves the standalone legacy GitLab CI pipeline.
 - `CI.md` documents CI variables, schedules, review behavior, and deploy behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
 - `contracts/` contains draft versioned schemas and examples for serialized interfaces shared across the planned product boundaries; current runtime output remains on the implemented `v0` formats.
@@ -140,7 +139,6 @@ Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow de
 - `CI` runs lint and tests, generates static-only preview evidence when tracked BOE is absent, builds the site, and uploads catalog artifacts.
 - `SkillSpector` reviews skill pull requests and runs protected `static-only,llm-assisted` publication on default-branch skill changes, nightly schedules, and manual dispatches.
 - Official publication uses upstream SkillSpector 2.10.0 with its native OpenAI-compatible provider and commits only durable BOE bundles.
-- The legacy GitLab pipeline remains tracked for migration history but is not the active GitHub control.
 - GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
 
 See [CI.md](CI.md) for the full configuration reference.
@@ -150,10 +148,10 @@ See [CI.md](CI.md) for the full configuration reference.
 Configuration is part of the portability model. Do not hardcode network-specific values into the repository. Use CI variables or environment variables for:
 
 - Python and Node image registry, repository, tag, or full image override.
-- GitLab runner tags for CI jobs and Pages deployment.
+- Customer GitLab runner tags for packaged Pages deployment.
 - SkillSpector binary path or the locked `scan` dependency extra.
 - LLM-assisted scan provider endpoint, model, and API key.
-- Merge request comment token behavior.
+- Pull request comment behavior.
 - Scheduled publication branch, bot identity, push URL, and token.
 - Audit thresholds and scan modes.
 

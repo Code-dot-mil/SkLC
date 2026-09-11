@@ -12,22 +12,21 @@ These instructions apply to this repository.
 
 ## Configuration Rules
 
-- Keep environment-specific settings configurable through environment variables or GitLab CI variables.
+- Keep environment-specific settings configurable through environment variables or GitHub Actions secrets and variables.
 - Do not add organization-specific or provider-specific environment variable names. Prefer generic names such as `SKILL_EXCHANGE_LLM_*`, image registry variables, and runner tag variables.
 - Do not add silent fallbacks anywhere in the codebase. Hidden substitution masks defects. If fallback behavior is truly required, make it explicit in code, document the precedence, test the intended behavior, and fail closed when no valid value is available.
 - Do not commit secrets, tokens, endpoint credentials, or generated bot credentials.
 - Docker image references must remain configurable. Use the existing image registry, repository, tag, and full-image override variables instead of hardcoding a network-specific registry.
-- GitLab Pages runner routing must remain configurable through `PAGES_RUNNER_TAG`.
+- Customer-facing GitLab Pages templates under `products/deployment-kit/` must keep runner routing configurable through `PAGES_RUNNER_TAG`.
 
 ## CI And Publishing
 
-- The GitLab CI definition is standalone in `.gitlab-ci.yml`; do not import external CI components.
-- `lint`, `test`, and `audit` should run only for site, tooling, tests, policy, lockfile, or CI changes.
-- Skill review should run only for merge requests that change `skills/**/*`.
-- Scheduled publication and default-branch skill-change pipelines produce official exchange evidence and may commit BOE bundles only when bot variables are configured.
-- Deploy jobs consume generated artifacts produced by Python jobs; Node jobs must not generate exchange data.
-- Exact scan cache key matches must be reused from tracked BOE bundles. Do not depend on GitLab runner caches as the authoritative scanner-output cache.
-- The GitLab Pages job must be named `pages` and must publish a top-level `public/` artifact.
+- Keep the GitHub Actions workflows self-contained under `.github/workflows/`.
+- `lint` and `test` should cover site, tooling, tests, policy, lockfile, or CI changes.
+- Skill review should run only for pull requests that change `skills/**/*`.
+- Scheduled publication and default-branch skill-change workflows produce official exchange evidence and commit only BOE bundles.
+- Node jobs must not generate exchange data; they consume artifacts produced by Python jobs.
+- Exact scan cache key matches must be reused from tracked BOE bundles. Do not depend on workflow caches as the authoritative scanner-output cache.
 
 ## Local Development
 

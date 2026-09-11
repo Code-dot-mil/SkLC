@@ -2,6 +2,7 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
 from skill_exchange import ci
 from skill_exchange.skillspector import SkillSpectorExecutionError
 
@@ -130,7 +131,7 @@ def test_review_changed_skills_writes_reviewer_artifacts(monkeypatch, tmp_path: 
     assert "## Exchange validation" in comment
 
 
-def test_review_changed_skills_counts_failed_execution_and_preserves_report(monkeypatch, tmp_path: Path):
+def test_review_changed_skills_counts_failed_execution_and_preserves_report(monkeypatch, tmp_path: Path, capsys):
     reviewed = _write_skill(tmp_path, "team", "reviewed-skill")
     artifacts = tmp_path / "review-artifacts"
     failed_report = {
@@ -168,7 +169,9 @@ def test_review_changed_skills_counts_failed_execution_and_preserves_report(monk
     assert result["scanner_errors"] == 1
     assert changed_skills[0]["risk"] == "Unknown"
     assert "execution_successful=false" in changed_skills[0]["scanner_error"]
-    assert "Scanner failed" in comment
+    assert comment.count("SkillSpector failed. Check the CI logs for details.") == 2
+    assert "OpenAIModelNotFoundError" not in comment
+    assert "OpenAIModelNotFoundError" in capsys.readouterr().err
     assert json.loads(report_path.read_text()) == failed_report
 
 
@@ -282,7 +285,7 @@ def test_commit_generated_outputs_force_adds_only_boe_bundle(monkeypatch, tmp_pa
     ]
 
 
-def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypatch, tmp_path: Path):
+def test_configure_push_remote_uses_explicit_publication_context(monkeypatch, tmp_path: Path):
     calls = []
 
     def fake_run_git(repo_root: Path, *args: str):
@@ -290,13 +293,10 @@ def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypat
 
     monkeypatch.setattr(ci, "run_git", fake_run_git)
     monkeypatch.delenv("EXCHANGE_PUBLISH_PUSH_URL", raising=False)
-    monkeypatch.delenv("EXCHANGE_PUBLISH_TOKEN", raising=False)
-    monkeypatch.delenv("GITLAB_TOKEN", raising=False)
-    monkeypatch.delenv("EXCHANGE_PUBLISH_USERNAME", raising=False)
-    monkeypatch.setenv("CI_JOB_TOKEN", "job-token-value")
-    monkeypatch.setenv("CI_SERVER_PROTOCOL", "https")
-    monkeypatch.setenv("CI_SERVER_HOST", "gitlab.example.invalid")
-    monkeypatch.setenv("CI_PROJECT_PATH", "group/project")
+    monkeypatch.setenv("EXCHANGE_PUBLISH_TOKEN", "publish-token")
+    monkeypatch.setenv("EXCHANGE_PUBLISH_USERNAME", "publisher")
+    monkeypatch.setenv("EXCHANGE_PUBLISH_SERVER_URL", "https://code.example.invalid")
+    monkeypatch.setenv("EXCHANGE_PUBLISH_REPOSITORY", "group/project")
 
     ci.configure_push_remote(tmp_path)
 
@@ -307,38 +307,18 @@ def test_configure_push_remote_uses_ci_job_token_when_no_publish_token(monkeypat
                 "remote",
                 "set-url",
                 "origin",
-                "https://gitlab-ci-token:job-token-value@gitlab.example.invalid/group/project.git",
+                "https://publisher:publish-token@code.example.invalid/group/project.git",
             ),
         )
     ]
 
 
-def test_configure_push_remote_does_not_reuse_review_token_for_publish(monkeypatch, tmp_path: Path):
-    calls = []
-
-    def fake_run_git(repo_root: Path, *args: str):
-        calls.append((repo_root, args))
-
-    monkeypatch.setattr(ci, "run_git", fake_run_git)
+def test_configure_push_remote_rejects_incomplete_publication_context(monkeypatch, tmp_path: Path):
     monkeypatch.delenv("EXCHANGE_PUBLISH_PUSH_URL", raising=False)
     monkeypatch.delenv("EXCHANGE_PUBLISH_TOKEN", raising=False)
     monkeypatch.delenv("EXCHANGE_PUBLISH_USERNAME", raising=False)
-    monkeypatch.setenv("GITLAB_TOKEN", "review-comment-token")
-    monkeypatch.setenv("CI_JOB_TOKEN", "job-token-value")
-    monkeypatch.setenv("CI_SERVER_PROTOCOL", "https")
-    monkeypatch.setenv("CI_SERVER_HOST", "gitlab.example.invalid")
-    monkeypatch.setenv("CI_PROJECT_PATH", "group/project")
+    monkeypatch.delenv("EXCHANGE_PUBLISH_SERVER_URL", raising=False)
+    monkeypatch.delenv("EXCHANGE_PUBLISH_REPOSITORY", raising=False)
 
-    ci.configure_push_remote(tmp_path)
-
-    assert calls == [
-        (
-            tmp_path,
-            (
-                "remote",
-                "set-url",
-                "origin",
-                "https://gitlab-ci-token:job-token-value@gitlab.example.invalid/group/project.git",
-            ),
-        )
-    ]
+    with pytest.raises(RuntimeError, match="EXCHANGE_PUBLISH_TOKEN"):
+        ci.configure_push_remote(tmp_path)

@@ -1,0 +1,37 @@
+{
+  "confidence_flags": [
+    "Low confidence"
+  ],
+  "display_id": "ai4sdlc/code-change-description",
+  "generated_at": "2026-09-11T19:54:45.416902+00:00",
+  "metadata_flags": [],
+  "model": null,
+  "namespace": "ai4sdlc",
+  "paths": {
+    "hashes": "/home/goldmanj/actions-runner/_work/SkLC/SkLC/.exchange/generated/boe/ai4sdlc/code-change-description/f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672/ai4sdlc--code-change-description--f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672--skillspector-2.10.0--static-only--no-llm--9a705f32dd4049d0/hashes.json",
+    "report_source": "/home/goldmanj/actions-runner/_work/SkLC/SkLC/.exchange/generated/tmp/ai4sdlc/code-change-description/static-only/report.json",
+    "scanner_config": "/home/goldmanj/actions-runner/_work/SkLC/SkLC/.exchange/generated/boe/ai4sdlc/code-change-description/f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672/ai4sdlc--code-change-description--f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672--skillspector-2.10.0--static-only--no-llm--9a705f32dd4049d0/scanner-config.json",
+    "skillspector": "/home/goldmanj/actions-runner/_work/SkLC/SkLC/.exchange/generated/boe/ai4sdlc/code-change-description/f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672/ai4sdlc--code-change-description--f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672--skillspector-2.10.0--static-only--no-llm--9a705f32dd4049d0/skillspector.json",
+    "summary": "/home/goldmanj/actions-runner/_work/SkLC/SkLC/.exchange/generated/boe/ai4sdlc/code-change-description/f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672/ai4sdlc--code-change-description--f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672--skillspector-2.10.0--static-only--no-llm--9a705f32dd4049d0/summary.json"
+  },
+  "pipeline": {
+    "id": null,
+    "job_id": null
+  },
+  "provider": null,
+  "risk": "Low",
+  "risk_reason": "No medium, high, or critical findings detected.",
+  "scan_cache_key": "ai4sdlc--code-change-description--f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672--skillspector-2.10.0--static-only--no-llm--9a705f32dd4049d0",
+  "scan_mode": "static-only",
+  "scan_timestamp": "2026-09-11T19:54:45.415271+00:00",
+  "scanner": {
+    "name": "skillspector",
+    "version": "2.10.0"
+  },
+  "schema_version": "skill-exchange-boe/v0",
+  "skill_content_hash": "f3eac64e866280288a345f34d3026104ea64a22ca529797371cf1c515a6a3672",
+  "skill_id": "code-change-description",
+  "skill_path": "/home/goldmanj/actions-runner/_work/SkLC/SkLC/skills/ai4sdlc/code-change-description",
+  "source_commit_sha": "504f3368ba639034574800ed15887f29e94fb336",
+  "validation_warnings": []
+}

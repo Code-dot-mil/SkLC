@@ -1,0 +1,7 @@
+{
+  "confidence_flags": [
+    "Low confidence"
+  ],
+  "risk": "High",
+  "risk_reason": "Critical or high severity finding detected."
+}

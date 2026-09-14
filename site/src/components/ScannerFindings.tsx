@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
+import { formatDate } from "../lib/format-date.mjs";
 
 type ScannerRun = {
   id: string;
@@ -329,14 +330,4 @@ function RiskPills({ risk, flags }: { risk: string; flags: string[] }) {
       ))}
     </span>
   );
-}
-
-function formatDate(value?: string) {
-  if (!value) {
-    return "Unknown";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }

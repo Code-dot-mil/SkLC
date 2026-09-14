@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { RECOMMENDATION_OPTIONS, RECOMMENDATION_VALUES } from "../lib/recommendation-options.mjs";
+import { formatDate } from "../lib/format-date.mjs";
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 
 type Skill = {
@@ -230,14 +231,4 @@ function recommendationToRisk(value: string) {
     return "Low";
   }
   return "Unknown";
-}
-
-function formatDate(value: string) {
-  if (!value) {
-    return "Unknown";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }

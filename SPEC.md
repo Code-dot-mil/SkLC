@@ -987,6 +987,7 @@ Skill Markdown is content authored by contributors. The detail page must not all
 Rendering rules:
 
 - Use Astro's Markdown processor to render the body after frontmatter parsing.
+- Render skill-supplied raw HTML as escaped text before Astro parses it, so forms, scripts, and other active HTML cannot become page elements.
 - Replace Markdown links with inert spans during rendering so links in skill instructions do not become active site links.
 - Sanitize rendered HTML with `sanitizeSkillHtml()`.
 

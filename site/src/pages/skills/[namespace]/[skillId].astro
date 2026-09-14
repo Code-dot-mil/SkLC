@@ -47,8 +47,10 @@ const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
 
 function disableMarkdownLinks() {
   return (tree) => {
-    visit(tree, "element", (node) => {
-      if (node.tagName !== "a") {
+    visit(tree, (node) => {
+      // Keep skill-supplied HTML inert before Astro parses raw HTML.
+      if (node.type === "raw") node.type = "text";
+      if (node.type !== "element" || node.tagName !== "a") {
         return;
       }
       node.tagName = "span";

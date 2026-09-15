@@ -4,8 +4,8 @@ import RecommendationBadge from "../../../components/RecommendationBadge.astro";
 import ScannerFindings from "../../../components/ScannerFindings";
 import { showSourceLinks } from "../../../lib/build-options.mjs";
 import { sanitizeSkillHtml } from "../../../lib/sanitize-skill-html.mjs";
+import { sanitizeSkillMarkdown } from "../../../lib/sanitize-skill-markdown.mjs";
 import { createMarkdownProcessor, parseFrontmatter } from "@astrojs/markdown-remark";
-import { visit } from "unist-util-visit";
 import {
   exchangeIndex as index,
   scannerArtifactsTable,
@@ -38,26 +38,12 @@ const scannerProvenance = skill.scanner_provenance || {
   model: undefined,
 };
 const markdownProcessor = await createMarkdownProcessor({
-  rehypePlugins: [disableMarkdownLinks],
+  rehypePlugins: [sanitizeSkillMarkdown],
 });
 const parsedSkillMarkdown = parseFrontmatter(skill.skill_md_content);
 const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmatter);
 const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
 const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
-
-function disableMarkdownLinks() {
-  return (tree) => {
-    visit(tree, "element", (node) => {
-      if (node.tagName !== "a") {
-        return;
-      }
-      node.tagName = "span";
-      delete node.properties?.href;
-      delete node.properties?.target;
-      delete node.properties?.rel;
-    });
-  };
-}
 
 function formatDate(value) {
   if (!value) {

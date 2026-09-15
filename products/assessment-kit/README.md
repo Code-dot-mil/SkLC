@@ -25,16 +25,19 @@ From the repository root, use `just lint` and `just test`. To build the
 standalone wheel directly:
 
 ```text
-python -m build --wheel --outdir <wheel-output> products/assessment-kit
+uv build --no-sources --wheel --out-dir wheel-output products/assessment-kit
 ```
 
 Release assembly takes an explicit version, source revision, timestamp, wheel,
 and output directory. The release workflow updates the version in a temporary
 source copy before building, so the checkout remains unchanged. The assembler
-does not infer release identity from the checkout:
+does not infer release identity from the checkout. Its development dependencies
+include `packaging` for Python version comparison. SemVer prereleases must map
+to Python prereleases (for example `-rc.1`); spellings that Python interprets
+as post-releases are rejected:
 
 ```text
-python products/assessment-kit/release_tools/build.py \
+uv run --extra test python products/assessment-kit/release_tools/build.py \
   --repository-root . \
   --version 0.1.0 \
   --source-revision <full-40-character-git-commit> \

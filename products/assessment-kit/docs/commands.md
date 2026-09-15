@@ -54,3 +54,10 @@ workspace/shared/unit-tests`.
 Arguments select skills, assessors, config files, and output paths. The CLI does
 not read environment aliases for `--root`, `--skill`, `--assessor`, `--config`,
 `--output`, or `--boe-root`.
+
+A current-directory selection such as `--skill .` or `--root .` uses the
+resolved package directory name. LF and CRLF frontmatter are accepted; the
+content digest always uses the original file bytes. Explicit null values for
+schema-typed metadata fields are invalid. Omit an unused optional field instead.
+Unreadable directories fail discovery, including when other readable packages
+have already been found. A truly empty root succeeds without creating output.

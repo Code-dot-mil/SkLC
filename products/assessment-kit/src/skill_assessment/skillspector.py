@@ -27,13 +27,15 @@ class NativeReport:
 def resolve_binary(environ: Mapping[str, str] | None = None) -> str:
     env = os.environ if environ is None else environ
     configured = env.get("SKILLSPECTOR_BIN", "").strip()
-    if configured:
+    if "SKILLSPECTOR_BIN" in env:
+        if not configured:
+            raise AssessmentError("SKILLSPECTOR_BIN must not be blank")
         path = Path(configured).expanduser()
         if not path.exists() or not path.is_file():
             raise AssessmentError(f"SKILLSPECTOR_BIN is not an executable file: {path}")
         if not os.access(path, os.X_OK):
             raise AssessmentError(f"SKILLSPECTOR_BIN is not executable: {path}")
-        return str(path)
+        return str(path.resolve())
     found = shutil.which("skillspector")
     if not found:
         raise AssessmentError("skillspector executable not found; set SKILLSPECTOR_BIN or add it to PATH")
@@ -41,8 +43,8 @@ def resolve_binary(environ: Mapping[str, str] | None = None) -> str:
 
 
 def _normalized_version(output: str) -> str:
-    matches = re.findall(r"(?<!\d)v?(\d+\.\d+\.\d+)(?!\d)", output)
-    return matches[-1] if matches else ""
+    matches = re.findall(r"(?im)^skillspector v?(\S+)[ \t]*$", output)
+    return matches[0] if len(matches) == 1 else ""
 
 
 def require_supported_version(binary: str) -> None:
@@ -94,7 +96,7 @@ def _diagnostic(completed: subprocess.CompletedProcess[str], config: SkillSpecto
     for secret in secrets:
         if secret:
             detail = detail.replace(secret, "[REDACTED]")
-    return detail[:2000] or f"SkillSpector exited {completed.returncode}"
+    return detail or f"SkillSpector exited {completed.returncode}"
 
 
 def _validate_report(content: bytes, config: SkillSpectorConfig, returncode: int) -> dict[str, Any]:
@@ -109,12 +111,13 @@ def _validate_report(content: bytes, config: SkillSpectorConfig, returncode: int
         raise AssessmentError("SkillSpector report is missing metadata")
     if str(metadata.get("skillspector_version", "")).removeprefix("v") != SUPPORTED_SKILLSPECTOR_VERSION:
         raise AssessmentError("SkillSpector report identifies an unsupported version")
+    if config.scan_mode == "llm-assisted" and metadata.get("llm_degraded") is True:
+        raise RetryableAssessmentError("SkillSpector report has degraded LLM coverage")
     if returncode not in {0, 1} or parsed.get("execution_successful") is not True:
         raise AssessmentError("SkillSpector scan did not complete successfully")
     if config.scan_mode == "llm-assisted" and (
         metadata.get("llm_requested") is not True
         or metadata.get("llm_available") is not True
-        or metadata.get("llm_degraded") is True
     ):
         raise RetryableAssessmentError("SkillSpector report has degraded or unavailable LLM coverage")
     return parsed
@@ -156,13 +159,13 @@ def run(skill_path: Path, config: SkillSpectorConfig, *, binary: str, output_roo
         except OSError as exc:
             raise AssessmentError(f"could not run SkillSpector: {exc}") from exc
 
+        diagnostic = _diagnostic(completed, config)
+        detail = diagnostic[:2000]
+        temporary_failure = completed.returncode == 75 or (
+            config.scan_mode == "llm-assisted" and re.search(r"\b429\b", diagnostic) is not None
+        )
         if not output_path.is_file():
-            detail = _diagnostic(completed, config)
-            error_type = (
-                RetryableAssessmentError
-                if config.scan_mode == "llm-assisted" and "429" in detail
-                else AssessmentError
-            )
+            error_type = RetryableAssessmentError if temporary_failure else AssessmentError
             raise error_type(f"SkillSpector produced no report: {detail}")
         try:
             content = output_path.read_bytes()
@@ -171,14 +174,9 @@ def run(skill_path: Path, config: SkillSpectorConfig, *, binary: str, output_roo
         try:
             parsed = _validate_report(content, config, completed.returncode)
         except AssessmentError as exc:
-            if (
-                config.scan_mode == "llm-assisted"
-                and "429" in _diagnostic(completed, config)
-                and not isinstance(exc, RetryableAssessmentError)
-            ):
-                raise RetryableAssessmentError(str(exc)) from exc
-            raise
-        return NativeReport(content=content, parsed=parsed, diagnostics=_diagnostic(completed, config))
+            error_type = RetryableAssessmentError if temporary_failure else type(exc)
+            raise error_type(f"{exc}: {detail}") from exc
+        return NativeReport(content=content, parsed=parsed, diagnostics=detail)
     finally:
         shutil.rmtree(temporary_directory, ignore_errors=True)
         if not output_root_existed:

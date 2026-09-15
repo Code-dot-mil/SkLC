@@ -238,6 +238,20 @@ directories, emits byte-identical internal and external manifests, creates
 separate extracted-file and download checksum scopes, and normalizes archive
 metadata for deterministic output.
 
+Assessment-kit validation fails on unreadable discovery paths and schema-invalid
+null metadata. Relative selections use the resolved directory identity; LF and
+CRLF frontmatter preserve original hash bytes. Advice preserves every native
+SkillSpector issue field, including additional occurrences and code snippets.
+Retryable pair failures take exit-code precedence in mixed batches, including
+when advice cannot be written. Rate-limit classification examines the complete
+redacted diagnostics before truncating their display. Existing BOE must pass
+the same verification as `verify-boe` before any update writes evidence. Release
+assembly compares versions with Python packaging semantics and validates
+RFC 3339 timestamps. A Python 3.12 CI proof builds and installs a release
+candidate and exercises all four commands with the pinned real assessor and
+extracted schemas; incomplete proof configuration fails instead of skipping.
+Post-publication download acceptance remains separate.
+
 Contract major versions change when a required field, field meaning, or serialized shape changes incompatibly. Current catalog materialization will support only its declared current BOE major version. Legacy BOE may remain tracked as historical evidence, but it is not eligible for the current catalog and its presence alone is not an error. Currently served skill content without matching BOE in the supported schema must be reassessed or excluded.
 
 `.gitignore` must ignore `.exchange/generated/*` while re-including `.exchange/generated/.gitkeep` and `.exchange/generated/boe/**`. It must also ignore `.exchange/local-generated/`, site build output, Node dependencies, Python caches, `.uv-cache/`, `.venv/`, and bytecode.

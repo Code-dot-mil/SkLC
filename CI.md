@@ -148,3 +148,17 @@ The workflow maps GitHub context into these helper settings:
 - `EXCHANGE_BOT_GIT_NAME`, `EXCHANGE_BOT_GIT_EMAIL`, and `EXCHANGE_PUBLISH_COMMIT_MESSAGE` control generated commit metadata.
 
 When the same skill content, SkillSpector version, scan mode, and scanner configuration have already produced BOE, scheduled publication should report reused scans and avoid committing new BOE. The first LLM-assisted publication for a cache key creates LLM-backed BOE; later runs with the same key should reuse it.
+
+### Assessment kit installation proof
+
+The GitHub CI assessment-kit job builds a real standalone wheel and archive in
+a temporary directory, verifies both checksum layers and identical manifests,
+and installs the extracted wheel with pinned SkillSpector into Python 3.12.
+It runs `test_installed_cli.py` with `SKLC_TEST_INSTALLED_CLI` and
+`SKLC_TEST_RELEASE_ROOT` pointing at that installation. The test exercises all
+four commands with explicit static scanning, excludes the repository Python
+path from CLI subprocesses, and validates outputs against extracted contracts.
+Release CI runs the same test before publication. Normal unit runs skip this
+integration test unless both paths are supplied; no scanner is required for
+unit testing. Downloading and proving the published GitHub Release is still a
+separate release-acceptance requirement.

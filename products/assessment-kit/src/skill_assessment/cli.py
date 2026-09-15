@@ -61,7 +61,7 @@ def _run_assessors(packages, assessors, config, output_root: Path):
 def _failure_exit(failures: list[AssessmentError]) -> int:
     if not failures:
         return 0
-    if all(isinstance(failure, RetryableAssessmentError) for failure in failures):
+    if any(isinstance(failure, RetryableAssessmentError) for failure in failures):
         return RetryableAssessmentError.exit_code
     return AssessmentError.exit_code
 
@@ -81,14 +81,21 @@ def dispatch(args: argparse.Namespace) -> int:
     assessors = validate_assessors(args.assessor)
     config = load_skillspector_config(args.config, require_llm_values=bool(packages))
     output_argument = args.output if args.command == "advise" else args.boe_root
-    output = output_argument.expanduser().resolve()
+    try:
+        output = output_argument.expanduser().resolve()
+    except (OSError, RuntimeError) as exc:
+        raise AssessmentError(f"cannot resolve command output directory: {output_argument}") from exc
     reject_output_overlap(output, packages)
     if not packages:
         return 0
     successes, failures = _run_assessors(packages, assessors, config, output)
     if args.command == "advise":
         if successes:
-            write_advice(output, packages, assessors, successes)
+            try:
+                write_advice(output, packages, assessors, successes)
+            except AssessmentError as exc:
+                failures.append(exc)
+                print(f"advice: {exc}", file=sys.stderr)
     else:
         for package, assessor_id, report in successes:
             try:
@@ -106,6 +113,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     except AssessmentError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return exc.exit_code
+    except (OSError, UnicodeError) as exc:
+        print(f"error: cannot complete assessment: {exc}", file=sys.stderr)
+        return AssessmentError.exit_code
 
 
 if __name__ == "__main__":

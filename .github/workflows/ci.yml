@@ -38,6 +38,55 @@ jobs:
       - name: Run check
         run: ${{ matrix.command }}
 
+  assessment-kit:
+    name: Installed assessment kit proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: |
+          python -m pip install --no-cache-dir uv
+          uv sync --extra test
+      - name: Build and verify assessment archive
+        shell: bash
+        run: |
+          proof_dir="$(mktemp -d "$RUNNER_TEMP/assessment-kit-proof.XXXXXX")"
+          cp -R products/assessment-kit "$proof_dir/source"
+          uv build --no-sources --wheel --out-dir "$proof_dir/wheels" "$proof_dir/source"
+          version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("products/assessment-kit/pyproject.toml").read_text())["project"]["version"])')"
+          created_at="$(git show -s --format=%cI HEAD)"
+          uv run --no-sync python products/assessment-kit/release_tools/build.py \
+            --repository-root . --version "$version" --source-revision "$GITHUB_SHA" \
+            --created-at "$created_at" \
+            --wheel "$proof_dir/wheels/skill_assessment-$version-py3-none-any.whl" \
+            --output-directory "$proof_dir/assets"
+          cd "$proof_dir/assets"
+          sha256sum --strict --check "assessment-kit-$version.SHA256SUMS.txt"
+          mkdir "$proof_dir/extracted"
+          tar -xzf "assessment-kit-$version.tar.gz" -C "$proof_dir/extracted"
+          assessment_root="$proof_dir/extracted/assessment-kit-$version"
+          cmp "assessment-kit-$version.release-manifest.json" "$assessment_root/release-manifest.json"
+          cd "$assessment_root"
+          sha256sum --strict --check SHA256SUMS.txt
+          printf 'ASSESSMENT_ROOT=%s\nASSESSMENT_ENV=%s\n' \
+            "$assessment_root" "$proof_dir/installed" >> "$GITHUB_ENV"
+      - name: Install and exercise the extracted wheel
+        shell: bash
+        run: |
+          uv venv "$ASSESSMENT_ENV" --python 3.12
+          uv pip install --python "$ASSESSMENT_ENV/bin/python" \
+            "$ASSESSMENT_ROOT"/dist/skill_assessment-*-py3-none-any.whl \
+            "skillspector @ git+https://github.com/NVIDIA/SkillSpector.git@e29b16d305b0e738e3d4b952ba102f5522a6f084"
+          SKLC_TEST_INSTALLED_CLI="$ASSESSMENT_ENV/bin/skill-assessment" \
+            SKLC_TEST_RELEASE_ROOT="$ASSESSMENT_ROOT" \
+            uv run --no-sync pytest -q products/assessment-kit/tests/test_installed_cli.py
+
   skill-catalog:
     name: Skill catalog and BOE artifact
     runs-on: ubuntu-latest

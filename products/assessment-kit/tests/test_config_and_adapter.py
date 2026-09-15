@@ -125,3 +125,99 @@ def test_static_environment_removes_ambient_llm_configuration():
     )
 
     assert result == {"UNCHANGED": "value"}
+
+
+@pytest.mark.parametrize("version", ["2.10.0rc1", "2.10.0-dev", "2.10.0.post1"])
+def test_version_check_does_not_accept_unapproved_prerelease(monkeypatch, version):
+    monkeypatch.setattr(
+        subprocess, "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, f"SkillSpector v{version}", ""),
+    )
+    with pytest.raises(AssessmentError, match="unsupported"):
+        require_supported_version("skillspector")
+
+
+@pytest.mark.parametrize("value", [True, 0, -1, 1.5, float("inf"), None, [], {}])
+def test_invalid_timeout_is_a_configuration_error(tmp_path, value):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"assessors": {"skillspector": {"timeout_seconds": value}}}))
+    with pytest.raises(AssessmentError, match="positive integer"):
+        load_skillspector_config(path, {})
+
+
+@pytest.mark.parametrize("failure,expected_exit", [
+    ("timeout", 10), ("rate-limit", 10), ("long-rate-limit", 10),
+    ("temporary", 10), ("no-report", 2), ("malformed", 2),
+    ("exit-two", 2), ("unsuccessful", 2), ("wrong-version", 2),
+    ("llm-unavailable", 10), ("llm-not-requested", 10), ("failed-degraded", 10),
+])
+def test_failed_adapter_keeps_no_output_and_redacts_secrets(monkeypatch, tmp_path, failure, expected_exit):
+    config = SkillSpectorConfig(
+        "llm-assisted", 1, "openai_compatible", "private-key", "https://example.invalid", "model"
+    )
+
+    def execute(command, **kwargs):
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(command, 1)
+        if failure in {"rate-limit", "long-rate-limit", "temporary", "no-report"}:
+            detail = "HTTP 429 private-key" if "rate-limit" in failure else "bad"
+            stdout = "private-key " + "log " * 1000 if failure == "long-rate-limit" else ""
+            return subprocess.CompletedProcess(command, 75 if failure == "temporary" else 2, stdout, detail)
+        report = {
+            "execution_successful": failure not in {"unsuccessful", "failed-degraded"},
+            "metadata": {
+                "skillspector_version": "3.0.0" if failure == "wrong-version" else "2.10.0",
+                "llm_requested": failure != "llm-not-requested",
+                "llm_available": failure != "llm-unavailable",
+                "llm_degraded": failure == "failed-degraded",
+            },
+        }
+        output = Path(command[command.index("--output") + 1])
+        output.write_text("malformed" if failure == "malformed" else json.dumps(report))
+        return subprocess.CompletedProcess(command, 2 if failure == "exit-two" else 0, "private-key", "")
+
+    monkeypatch.setattr(subprocess, "run", execute)
+    with pytest.raises(AssessmentError) as caught:
+        run(tmp_path, config, binary="skillspector", output_root=tmp_path / "output")
+    assert caught.value.exit_code == expected_exit
+    assert "private-key" not in str(caught.value)
+    assert not (tmp_path / "output").exists()
+
+
+def test_successful_llm_report_is_retained_unchanged(monkeypatch, tmp_path):
+    content = (
+        b'{ "execution_successful": true, "metadata": {"skillspector_version": "2.10.0",'
+        b' "llm_requested": true, "llm_available": true}}\n'
+    )
+    calls = []
+
+    def execute(command, **kwargs):
+        calls.append(command)
+        Path(command[command.index("--output") + 1]).write_bytes(content)
+        return subprocess.CompletedProcess(command, 1, "", "")
+
+    monkeypatch.setattr(subprocess, "run", execute)
+    result = run(
+        tmp_path,
+        SkillSpectorConfig("llm-assisted", 600, "openai_compatible", "key", "https://example.invalid", "model"),
+        binary="skillspector", output_root=tmp_path / "output",
+    )
+    assert result.content == content
+    assert len(calls) == 1 and "--no-llm" not in calls[0]
+
+
+def test_explicit_binary_path_resolves_from_current_directory(tmp_path, monkeypatch):
+    from skill_assessment.skillspector import resolve_binary
+
+    binary = tmp_path / "scanner"
+    binary.write_text("#!/bin/sh\nexit 0\n")
+    binary.chmod(0o755)
+    monkeypatch.chdir(tmp_path)
+    assert resolve_binary({"SKILLSPECTOR_BIN": "./scanner"}) == str(binary)
+
+
+def test_blank_binary_override_does_not_select_path():
+    from skill_assessment.skillspector import resolve_binary
+
+    with pytest.raises(AssessmentError, match="must not be blank"):
+        resolve_binary({"SKILLSPECTOR_BIN": " "})

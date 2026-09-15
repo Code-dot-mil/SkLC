@@ -15,6 +15,8 @@ from datetime import datetime
 from email.parser import BytesParser
 from pathlib import Path
 
+from packaging.version import InvalidVersion, Version
+
 PRODUCT = "assessment-kit"
 PACKAGE_DISTRIBUTION = "skill_assessment"
 CONTRACT_PATHS = (
@@ -38,14 +40,6 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
-
-
-def _canonical_version(value: str) -> str:
-    normalized = value.lower()
-    normalized = re.sub(r"[-_.]?(alpha|a)[-_.]?", "a", normalized)
-    normalized = re.sub(r"[-_.]?(beta|b)[-_.]?", "b", normalized)
-    normalized = re.sub(r"[-_.]?(preview|pre|rc)[-_.]?", "rc", normalized)
-    return re.sub(r"[-_.+]", "", normalized)
 
 
 def _wheel_version(wheel: Path) -> str:
@@ -75,8 +69,13 @@ def _validate_inputs(version: str, source_revision: str, created_at: str, wheel:
         raise ValueError("version must be an explicit semantic version")
     if not REVISION_RE.fullmatch(source_revision):
         raise ValueError("source revision must be a full lowercase 40-character Git commit")
+    if not re.fullmatch(
+        r"[0-9]{4}-[0-9]{2}-[0-9]{2}[Tt][0-9]{2}:[0-9]{2}:[0-9]{2}"
+        r"(?:\.[0-9]+)?(?:[Zz]|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])", created_at
+    ):
+        raise ValueError("created-at must be an RFC 3339 date-time")
     try:
-        parsed_created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        parsed_created_at = datetime.fromisoformat(created_at.upper().replace("Z", "+00:00"))
     except ValueError as exc:
         raise ValueError("created-at must be an ISO 8601 date-time with timezone") from exc
     if parsed_created_at.tzinfo is None:
@@ -84,7 +83,14 @@ def _validate_inputs(version: str, source_revision: str, created_at: str, wheel:
     if not wheel.is_file() or wheel.is_symlink():
         raise ValueError("wheel must be a regular file")
     wheel_version = _wheel_version(wheel)
-    if _canonical_version(wheel_version) != _canonical_version(version):
+    try:
+        expected_version = Version(version)
+        actual_version = Version(wheel_version)
+    except InvalidVersion as exc:
+        raise ValueError("release and wheel versions must be representable as Python versions") from exc
+    if "-" in version.split("+", 1)[0] and (not expected_version.is_prerelease or expected_version.post is not None):
+        raise ValueError("SemVer prerelease must map to a Python prerelease, not a post-release")
+    if actual_version != expected_version:
         raise ValueError(f"wheel version {wheel_version} does not match release version {version}")
     return wheel_version
 

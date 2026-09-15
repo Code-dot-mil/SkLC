@@ -3,7 +3,8 @@
 The first release supports NVIDIA
 [SkillSpector](https://github.com/NVIDIA/SkillSpector) version `2.10.0`, source
 revision `e29b16d305b0e738e3d4b952ba102f5522a6f084`. Install that executable on
-`PATH` or set `SKILLSPECTOR_BIN` to its executable path.
+`PATH` or set `SKILLSPECTOR_BIN` to its executable path. An explicitly blank
+`SKILLSPECTOR_BIN` is an error; only an absent variable selects `PATH`.
 
 Omitting `--config` uses `llm-assisted` mode and a 600-second timeout. A config
 file is needed only to change these non-secret settings:
@@ -36,11 +37,12 @@ For a default LLM-assisted run:
 
 ```text
 export SKLC_LLM_PROVIDER=openai_compatible
-export SKLC_LLM_API_KEY=<secret>
-export SKLC_LLM_BASE_URL=https://llm.example/v1
-export SKLC_LLM_MODEL=<model>
-skill-assessment assess --skill <skill-directory> \
-  --assessor skillspector --boe-root <boe-root>
+export SKLC_SKILLSPECTOR_SCAN_MODE=llm-assisted
+: "${SKLC_LLM_API_KEY:?Export your API key}"
+: "${SKLC_LLM_BASE_URL:?Export your provider base URL}"
+: "${SKLC_LLM_MODEL:?Export your model name}"
+skill-assessment assess --skill workspace/team-a/secure-review \
+  --assessor skillspector --boe-root assessment-output/boe
 ```
 
 For an explicit static run, save this as `static.json`:
@@ -59,8 +61,9 @@ For an explicit static run, save this as `static.json`:
 Then run:
 
 ```text
-skill-assessment assess --skill <skill-directory> \
-  --assessor skillspector --config static.json --boe-root <boe-root>
+unset SKLC_SKILLSPECTOR_SCAN_MODE SKLC_SKILLSPECTOR_TIMEOUT_SECONDS
+skill-assessment assess --skill workspace/team-a/secure-review \
+  --assessor skillspector --config static.json --boe-root assessment-output/boe
 ```
 
 The adapter maps the four `SKLC_LLM_*` variables to
@@ -68,3 +71,13 @@ The adapter maps the four `SKLC_LLM_*` variables to
 `SKILLSPECTOR_COMPAT_BASE_URL`, and `SKILLSPECTOR_MODEL`. The selected values
 override conflicting inherited native values. Secret values are redacted from
 assessment-kit diagnostics.
+
+Paths in these examples match the tree in [commands](commands.md). Only
+`scan_mode` and `timeout_seconds` are accepted config keys. The timeout must be
+a positive integer; booleans, fractions, and null values are rejected.
+
+Exit `10` requests a caller-managed retry for timeout, temporary assessor exit
+`75`, HTTP `429` in LLM-assisted diagnostics, or degraded/unavailable LLM
+coverage. Other execution failures return `2`. Each pair runs once. A batch
+with any retryable failure returns `10`, even if another pair fails permanently;
+inspect all diagnostics before retrying. No failure switches to static mode.

@@ -43,7 +43,7 @@ def _load_config(path: Path | None) -> dict[str, object]:
 
 
 def _positive_int(value: object, setting: str) -> int:
-    if isinstance(value, bool):
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
         raise AssessmentError(f"{setting} must be a positive integer")
     try:
         parsed = int(value)  # type: ignore[arg-type]

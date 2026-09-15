@@ -30,14 +30,15 @@ def parse_frontmatter(raw: bytes) -> dict[str, Any]:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise AssessmentError("SKILL.md must be valid UTF-8") from exc
-    if not text.startswith("---\n"):
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
         raise AssessmentError("SKILL.md must start with YAML frontmatter")
-    marker = "\n---\n"
-    end = text.find(marker, 4)
-    if end < 0:
-        raise AssessmentError("SKILL.md frontmatter closing marker not found")
     try:
-        parsed = yaml.safe_load(text[4:end]) or {}
+        end = lines.index("---", 1)
+    except ValueError as exc:
+        raise AssessmentError("SKILL.md frontmatter closing marker not found") from exc
+    try:
+        parsed = yaml.safe_load("\n".join(lines[1:end]))
     except yaml.YAMLError as exc:
         raise AssessmentError(f"SKILL.md frontmatter is invalid YAML: {exc}") from exc
     if not isinstance(parsed, dict):
@@ -56,9 +57,9 @@ def _validate_metadata(metadata: dict[str, Any], expected_name: str) -> None:
     description = metadata.get("description")
     if not isinstance(description, str) or not description.strip():
         raise AssessmentError("SKILL.md frontmatter description must be a non-blank string")
-    extended = metadata.get("metadata")
-    if extended is None:
+    if "metadata" not in metadata:
         return
+    extended = metadata["metadata"]
     if not isinstance(extended, dict):
         raise AssessmentError("SKILL.md frontmatter metadata must be a mapping")
     for key in (
@@ -68,10 +69,10 @@ def _validate_metadata(metadata: dict[str, Any], expected_name: str) -> None:
         "ai4sdlc.upstream_url",
     ):
         value = extended.get(key)
-        if value is not None and (not isinstance(value, str) or not value):
+        if key in extended and (not isinstance(value, str) or not value):
             raise AssessmentError(f"SKILL.md frontmatter metadata.{key} must be a non-empty string")
     tags = extended.get("ai4sdlc.tags")
-    if tags is not None:
+    if "ai4sdlc.tags" in extended:
         if isinstance(tags, str):
             return
         if not isinstance(tags, list) or any(not isinstance(tag, str) or not tag for tag in tags):
@@ -92,20 +93,17 @@ def package_files(skill_dir: Path) -> list[Path]:
 
     root = skill_dir.resolve()
     files: list[Path] = []
-    walk_error: OSError | None = None
 
     def record_walk_error(error: OSError) -> None:
-        nonlocal walk_error
-        walk_error = error
+        raise AssessmentError(f"cannot read skill package {skill_dir}: {error}") from error
 
     for current, dir_names, file_names in os.walk(
         skill_dir, topdown=True, followlinks=False, onerror=record_walk_error
     ):
-        if walk_error is not None:
-            raise AssessmentError(f"cannot read skill package {skill_dir}: {walk_error}") from walk_error
         dir_names.sort()
         file_names.sort()
         current_path = Path(current)
+        directories = set(dir_names)
         for name in [*dir_names, *file_names]:
             path = current_path / name
             try:
@@ -119,7 +117,7 @@ def package_files(skill_dir: Path) -> list[Path]:
                 path.resolve().relative_to(root)
             except (OSError, ValueError) as exc:
                 raise AssessmentError(f"skill package path escapes package directory: {relative}") from exc
-            if name in dir_names:
+            if name in directories:
                 if not stat.S_ISDIR(entry_stat.st_mode):
                     raise AssessmentError(f"unsupported package filesystem object: {relative}")
                 continue
@@ -130,8 +128,6 @@ def package_files(skill_dir: Path) -> list[Path]:
             files.append(path)
             if len(files) > MAX_PACKAGE_FILES:
                 raise AssessmentError(f"skill package contains more than {MAX_PACKAGE_FILES} files")
-    if walk_error is not None:
-        raise AssessmentError(f"cannot read skill package {skill_dir}: {walk_error}") from walk_error
     return sorted(files, key=lambda path: path.relative_to(skill_dir).as_posix())
 
 
@@ -154,7 +150,7 @@ def validate_package(path: Path) -> SkillPackage:
     skill_file = path / "SKILL.md"
     if skill_file not in files:
         raise AssessmentError(f"skill package is missing SKILL.md: {path}")
-    name = path.name
+    name = path.resolve().name
     if not SKILL_NAME_RE.fullmatch(name):
         raise AssessmentError(f"package directory name does not satisfy skill-package/v1: {name}")
     try:
@@ -174,8 +170,11 @@ def discover_packages(root: Path) -> list[Path]:
     if not root.is_dir():
         raise AssessmentError(f"selection root is not a directory: {root}")
 
+    def record_walk_error(error: OSError) -> None:
+        raise AssessmentError(f"cannot read selection root {root}: {error}") from error
+
     selected: list[Path] = []
-    for current, dir_names, file_names in os.walk(root, topdown=True, followlinks=False):
+    for current, dir_names, file_names in os.walk(root, topdown=True, followlinks=False, onerror=record_walk_error):
         dir_names[:] = sorted(name for name in dir_names if not (Path(current) / name).is_symlink())
         if "SKILL.md" in file_names:
             selected.append(Path(current))

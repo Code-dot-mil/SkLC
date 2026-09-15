@@ -57,7 +57,7 @@ jobs:
           node-version: "22"
       - name: Install dependencies
         run: |
-          python -m pip install --no-cache-dir uv
+          python -m pip install --no-cache-dir uv "packaging>=25.0"
           npm ci --prefix site
       - name: Run repository checks
         run: |
@@ -136,20 +136,9 @@ jobs:
           uv pip install --python "$assessment_env/bin/python" \
             "$1" \
             "skillspector @ git+https://github.com/NVIDIA/SkillSpector.git@e29b16d305b0e738e3d4b952ba102f5522a6f084"
-          assessment_cli="$assessment_env/bin/skill-assessment"
-          skill="$assessment_root/contracts/skill-package/v1/examples/example-review"
-          "$assessment_cli" --help
-          "$assessment_cli" validate --skill "$skill"
-          SKILLSPECTOR_BIN="$assessment_env/bin/skillspector" \
-            SKLC_SKILLSPECTOR_SCAN_MODE=static-only \
-            "$assessment_cli" advise --skill "$skill" --assessor skillspector \
-            --output "$RELEASE_DIR/assessment-proof/advice"
-          SKILLSPECTOR_BIN="$assessment_env/bin/skillspector" \
-            SKLC_SKILLSPECTOR_SCAN_MODE=static-only \
-            "$assessment_cli" assess --skill "$skill" --assessor skillspector \
-            --boe-root "$RELEASE_DIR/assessment-proof/boe"
-          "$assessment_cli" verify-boe --skill "$skill" \
-            "$RELEASE_DIR/assessment-proof/boe/example-review"
+          SKLC_TEST_INSTALLED_CLI="$assessment_env/bin/skill-assessment" \
+            SKLC_TEST_RELEASE_ROOT="$assessment_root" \
+            uv run --extra test pytest -q products/assessment-kit/tests/test_installed_cli.py
       - name: Create GitHub Release
         id: publish-release
         shell: bash

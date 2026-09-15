@@ -122,8 +122,9 @@ def _report_identity(report: object, assessor_id: str) -> None:
     metadata = report.get("metadata")
     if not isinstance(metadata, dict):
         raise AssessmentError("native report does not identify SkillSpector")
+    version = metadata.get("skillspector_version")
     identified = (
-        metadata.get("skillspector_version")
+        (isinstance(version, str) and bool(version.strip()))
         or metadata.get("assessor") == "skillspector"
         or metadata.get("tool") == "skillspector"
     )
@@ -131,7 +132,7 @@ def _report_identity(report: object, assessor_id: str) -> None:
         raise AssessmentError("native report does not identify SkillSpector")
 
 
-def verify_boe(package: SkillPackage, boe_directory: Path) -> None:
+def verify_boe(package: SkillPackage, boe_directory: Path) -> dict[str, Any]:
     if boe_directory.is_symlink():
         raise AssessmentError("BOE directory must not be a symbolic link")
     manifest = load_boe(boe_directory / "boe.json")
@@ -160,19 +161,14 @@ def verify_boe(package: SkillPackage, boe_directory: Path) -> None:
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise AssessmentError(f"BOE native report is malformed JSON: {relative}") from exc
         _report_identity(parsed, assessor_id)
+    return manifest
 
 
 def update_boe(package: SkillPackage, boe_root: Path, assessor_id: str, report: NativeReport) -> Path:
     directory = boe_root / package.name
     manifest_path = directory / "boe.json"
     if manifest_path.exists():
-        manifest = load_boe(manifest_path)
-        if manifest["skill"] != {
-            "name": package.name,
-            "content_sha256": f"sha256:{package.content_sha256}",
-        }:
-            raise AssessmentError("existing BOE skill identity or content digest does not match selected package")
-        verify_boe(package, directory)
+        manifest = verify_boe(package, directory)
     else:
         manifest = {
             "schema_version": "skill-exchange-boe/v1",
@@ -207,19 +203,6 @@ def update_boe(package: SkillPackage, boe_root: Path, assessor_id: str, report: 
     return manifest_path
 
 
-ACTIONABLE_FIELDS = (
-    "severity",
-    "category",
-    "location",
-    "finding",
-    "text",
-    "pattern",
-    "confidence",
-    "explanation",
-    "remediation",
-)
-
-
 def _format_value(value: object) -> str:
     if isinstance(value, str):
         return value
@@ -247,12 +230,12 @@ def write_advice(
             }
         )
         report_sections.append(f"- `{relative}` — `sha256:{digest}`")
-        raw_findings = report.parsed.get("issues", report.parsed.get("findings", []))
+        raw_findings = report.parsed.get("issues", [])
         if isinstance(raw_findings, list):
             for index, finding in enumerate(raw_findings, start=1):
                 if not isinstance(finding, dict):
                     continue
-                fields = [(field, finding[field]) for field in ACTIONABLE_FIELDS if field in finding]
+                fields = sorted(finding.items())
                 if not fields:
                     continue
                 finding_sections.append(f"### {package.name} / {assessor_id} / finding {index}")

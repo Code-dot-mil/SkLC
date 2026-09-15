@@ -68,13 +68,19 @@ package tooling may normalize a SemVer prerelease or build suffix, such as
 SemVer in `version` and records the installed Python version under
 `components.skill-assessment`. Release assembly must verify that the two forms
 are semantically equivalent and that the wheel filename matches its embedded
-package metadata.
+package metadata. Version comparison must preserve numeric component boundaries,
+prerelease identity, and local/build components using Python packaging version
+semantics; removing punctuation is not sufficient. A SemVer prerelease must
+map to a Python prerelease; numeric or post-release spellings that Python would
+interpret as a post-release are rejected. The manifest timestamp must
+satisfy RFC 3339 date-time syntax, calendar validity, and timezone ranges.
 
 `README.md` or `docs/assessor-configuration.md` must include a
 `Dependencies` or `Prerequisites` section. For the first release it states that
 SkillSpector is the only supported assessor, must be available on `PATH` or
 through a documented `SKILLSPECTOR_BIN` setting, and must produce its normal
-JSON report for the selected scan mode. The release documentation records the
+JSON report for the selected scan mode. An absent `SKILLSPECTOR_BIN` selects `PATH`; an explicit
+blank value is invalid. The release documentation records the
 exact supported SkillSpector version or source revision; a different version is
 unsupported until compatibility tests approve it.
 `docs/assessor-configuration.md` must document the assessment-kit `--config`
@@ -240,7 +246,13 @@ Selection produces a set of unpacked skill package directories. `--root`
 recursively discovers the outermost directories containing `SKILL.md` and does
 not descend into an identified package, so a package-owned nested `SKILL.md`
 does not become a second package. Discovery does not follow symbolic links.
-The root itself may be selected when it contains `SKILL.md`.
+The root itself may be selected when it contains `SKILL.md`. Relative selections
+such as `--skill .` and `--root .` use the resolved package directory name.
+Unreadable discovery roots or subdirectories fail the whole selection instead
+of silently skipping packages. LF and CRLF frontmatter are accepted without
+altering the bytes used for the content digest. Optional metadata fields may
+be omitted, but explicit null values must satisfy the schema's types and are
+rejected where the schema requires an object, string, or array.
 
 An empty `--root` selection succeeds without writing advice artifacts,
 assessor output, or BOE updates. A non-empty selection fails before scanning if
@@ -351,7 +363,9 @@ For supported native report formats, `## Findings Summary` must preserve the
 actionable fields from each finding when present, including severity, category,
 location, finding text, pattern, confidence, explanation, and remediation. The
 summary may group duplicate findings, but it must not omit distinct actionable
-findings from a successful native report.
+findings from a successful native report. For the supported SkillSpector version,
+the source is its native `issues` array. The summary preserves all fields of
+each issue, including code snippets, evidence, and additional occurrences.
 
 Native report files are the assessor's original output bytes. The kit must not
 replace native output with a SkLC-normalized report and must not modify native
@@ -435,7 +449,14 @@ cross-assessor risk summaries.
 
 - `0`: all requested work completed. An empty `--root` selection is successful and writes no assessor output or BOE updates.
 - `2`: invalid invocation, invalid package, invalid selection, duplicate selected skill names, invalid configuration, unsupported assessor ID or version, unreadable BOE, BOE schema failure, BOE skill identity or content mismatch, missing referenced report, digest mismatch, missing assessor identity, malformed native report, non-retryable assessor execution failure, or filesystem write failure.
-- `10`: one or more retryable assessor failures, including timeout, temporary assessor execution failure, `llm-assisted` LLM rate limiting such as HTTP `429`, or rejected degraded LLM coverage.
+- `10`: one or more retryable assessor failures, including timeout, temporary assessor execution failure (exit `75`), `llm-assisted` LLM rate limiting such as HTTP `429`, or rejected degraded LLM coverage.
+
+When a batch contains both retryable and permanent pair failures, exit `10`
+takes precedence and diagnostics describe every failure. Callers must inspect
+those diagnostics before deciding whether retrying can complete the batch.
+An advice write failure does not override an earlier retryable pair failure.
+Rate-limit classification examines complete redacted diagnostics before
+truncating the displayed text.
 
 Commands report human-readable diagnostics to stderr and do not print secrets. Invalid invocation, invalid selection, invalid package, or invalid configuration fails before assessor execution and before writing generated files. During `advise` or `assess`, a failure for one skill or assessor must not create a native report or BOE entry for that failed pair. Successfully completed independent pairs may remain on disk, but the command exits non-zero when any requested pair fails.
 
@@ -473,6 +494,14 @@ Acceptance requires a clean temporary workspace that:
 This proof must not require a GitLab project, GitLab CI, catalog assembly, site
 build, deployment, commits, pushes, or provider API calls beyond those needed by
 the configured assessor.
+
+The branch CI also runs a release-candidate proof: it builds a real wheel and
+archive, verifies both checksum layers and manifest identity, installs into an
+isolated Python 3.12 environment, and runs all four public commands with the
+pinned SkillSpector in explicit static mode. The installed CLI receives no
+repository Python path, and its outputs are checked against the extracted
+schemas. This catches packaging defects before tagging; the GitHub Release
+download proof above remains required for release acceptance.
 
 ## Exclusions
 

@@ -322,3 +322,97 @@ def test_output_inside_skill_is_rejected(monkeypatch, tmp_path: Path):
         ]
     ) == 2
     assert not (skill / "generated").exists()
+
+
+def test_independent_success_survives_a_failed_pair(monkeypatch, tmp_path):
+    from skill_assessment import cli
+    from skill_assessment.errors import AssessmentError, RetryableAssessmentError
+    from skill_assessment.skillspector import NativeReport
+
+    skills = tmp_path / "skills"
+    for name in ("good", "temporary", "broken"):
+        make_skill(skills, name)
+    report = successful_report()
+    native = NativeReport(content=json.dumps(report).encode(), parsed=report)
+    calls = []
+
+    def assess(path, *args, **kwargs):
+        calls.append(path.name)
+        if path.name == "temporary":
+            raise RetryableAssessmentError("temporary failure")
+        if path.name == "broken":
+            raise AssessmentError("permanent failure")
+        return native
+
+    monkeypatch.setattr(cli, "resolve_binary", lambda: "skillspector")
+    monkeypatch.setattr(cli, "require_supported_version", lambda binary: None)
+    monkeypatch.setattr(cli, "run", assess)
+    monkeypatch.setenv("SKLC_SKILLSPECTOR_SCAN_MODE", "static-only")
+    root = tmp_path / "boe"
+    assert main(["assess", "--root", str(skills), "--assessor", "skillspector", "--boe-root", str(root)]) == 10
+    assert sorted(calls) == ["broken", "good", "temporary"]
+    assert [p.name for p in root.iterdir()] == ["good"]
+    assert main(["verify-boe", "--skill", str(skills / "good"), str(root / "good")]) == 0
+
+
+def test_advice_preserves_every_finding_and_matches_schema(monkeypatch, tmp_path):
+    from jsonschema import Draft202012Validator
+
+    skill = make_skill(tmp_path / "skills")
+    issues = [
+        {"severity": "high", "explanation": "First distinct issue", "occurrences": [{"file": "a.py", "start_line": 3}]},
+        {"severity": "high", "explanation": "Second distinct issue", "code_snippet": "unsafe()"},
+    ]
+    report = successful_report(issues=issues)
+    binary = make_skillspector(tmp_path, report)
+    static_environment(monkeypatch, binary)
+    output = tmp_path / "advice"
+    assert main(["advise", "--skill", str(skill), "--assessor", "skillspector", "--output", str(output)]) == 0
+    manifest = json.loads((output / "advice-manifest.json").read_text())
+    schema_path = Path(__file__).parents[3] / "contracts/assessment-artifacts/v1/advice-manifest.schema.json"
+    Draft202012Validator(json.loads(schema_path.read_text())).validate(manifest)
+    advice = (output / "advice.md").read_bytes()
+    assert manifest["advice_sha256"] == "sha256:" + hashlib.sha256(advice).hexdigest()
+    for text in ("First distinct issue", "Second distinct issue", "a.py", "unsafe()"):
+        assert text in advice.decode()
+    assert not list(output.rglob("boe.json"))
+    entry = manifest["native_reports"][0]
+    raw = (output / entry["path"]).read_bytes()
+    assert raw == json.dumps(report).encode()
+    assert entry["sha256"] == "sha256:" + hashlib.sha256(raw).hexdigest()
+
+
+def test_unresolvable_output_is_a_diagnostic_error(tmp_path, monkeypatch, capsys):
+    skill = make_skill(tmp_path / "skills")
+    loop = tmp_path / "loop"
+    loop.symlink_to(loop)
+    monkeypatch.setenv("SKLC_SKILLSPECTOR_SCAN_MODE", "static-only")
+    assert main(["advise", "--skill", str(skill), "--assessor", "skillspector", "--output", str(loop)]) == 2
+    assert "cannot resolve command output" in capsys.readouterr().err
+
+
+def test_advice_write_failure_preserves_retryable_exit(monkeypatch, tmp_path, capsys):
+    from skill_assessment import cli
+    from skill_assessment.errors import RetryableAssessmentError
+    from skill_assessment.skillspector import NativeReport
+
+    skills = tmp_path / "skills"
+    for name in ("good", "temporary"):
+        make_skill(skills, name)
+    report = successful_report()
+
+    def assess(path, *args, **kwargs):
+        if path.name == "temporary":
+            raise RetryableAssessmentError("temporary failure")
+        return NativeReport(json.dumps(report).encode(), report)
+
+    monkeypatch.setattr(cli, "resolve_binary", lambda: "skillspector")
+    monkeypatch.setattr(cli, "require_supported_version", lambda binary: None)
+    monkeypatch.setattr(cli, "run", assess)
+    monkeypatch.setenv("SKLC_SKILLSPECTOR_SCAN_MODE", "static-only")
+    output = tmp_path / "advice"
+    (output / "advice.md").mkdir(parents=True)
+    assert main(["advise", "--root", str(skills), "--assessor", "skillspector", "--output", str(output)]) == 10
+    diagnostic = capsys.readouterr().err
+    assert "temporary failure" in diagnostic and "cannot write" in diagnostic
+    assert not (output / "advice-manifest.json").exists()

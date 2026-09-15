@@ -72,3 +72,70 @@ def test_select_packages_rejects_duplicate_portable_names(tmp_path: Path):
 
 def test_empty_root_is_a_valid_empty_selection(tmp_path: Path):
     assert select_packages(skill_paths=None, root=tmp_path) == []
+
+
+@pytest.mark.parametrize("selection", [".", "../example-skill"])
+def test_relative_selection_uses_resolved_directory_name(tmp_path, monkeypatch, selection):
+    skill = make_skill(tmp_path)
+    monkeypatch.chdir(skill)
+
+    assert validate_package(Path(selection)).name == "example-skill"
+    assert select_packages(skill_paths=None, root=Path(selection))[0].path == skill
+
+
+@pytest.mark.parametrize("extra", [
+    "metadata: null", "metadata:\n  ai4sdlc.tags: null",
+    "metadata:\n  ai4sdlc.owner: null", "metadata:\n  ai4sdlc.namespace: null",
+    "metadata:\n  ai4sdlc.category: null", "metadata:\n  ai4sdlc.upstream_url: null",
+])
+def test_null_metadata_fails_contract_validation(tmp_path, extra):
+    skill = make_skill(tmp_path)
+    (skill / "SKILL.md").write_text(
+        f"---\nname: example-skill\ndescription: Test\n{extra}\n---\n"
+    )
+    with pytest.raises(AssessmentError, match="metadata"):
+        validate_package(skill)
+
+
+@pytest.mark.parametrize("nested", [False, True])
+def test_unreadable_discovery_fails_instead_of_skipping_packages(tmp_path, nested):
+    root = tmp_path / "selection"
+    root.mkdir()
+    blocked = root / "blocked" if nested else root
+    if nested:
+        blocked.mkdir()
+        make_skill(root)
+    make_skill(blocked, "hidden")
+    blocked.chmod(0)
+    try:
+        if os.access(blocked, os.R_OK):
+            pytest.skip("test requires filesystem permission enforcement")
+        with pytest.raises(AssessmentError, match="cannot read selection"):
+            select_packages(skill_paths=None, root=root)
+    finally:
+        blocked.chmod(0o700)
+
+
+@pytest.mark.parametrize("newline,terminal_newline", [("\r\n", True), ("\n", False)])
+def test_frontmatter_line_endings_preserve_package_bytes(tmp_path, newline, terminal_newline):
+    skill = make_skill(tmp_path)
+    content = newline.join(["---", "name: example-skill", "description: Test", "---"])
+    if terminal_newline:
+        content += newline
+    (skill / "SKILL.md").write_bytes(content.encode())
+    assert validate_package(skill).content_sha256 == expected_digest(skill)
+
+
+@pytest.mark.parametrize("limit", ["file-size", "file-count"])
+def test_package_limits_fail_before_hashing(tmp_path, limit):
+    skill = make_skill(tmp_path)
+    if limit == "file-size":
+        with (skill / "large").open("wb") as handle:
+            handle.truncate(5 * 1024 * 1024 + 1)
+        message = "exceeds 5 MiB"
+    else:
+        for index in range(500):
+            (skill / f"file-{index}").touch()
+        message = "more than 500"
+    with pytest.raises(AssessmentError, match=message):
+        validate_package(skill)

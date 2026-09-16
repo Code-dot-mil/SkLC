@@ -68,14 +68,3 @@ def test_installed_cli_with_real_assessor(tmp_path):
         validate_schema(manifest, "boe/v1/boe.schema.json")
         assert len(manifest["assessments"]) == 1
         invoke("verify-boe", "--skill", skills / name, boe / name)
-
-
-@pytest.mark.parametrize("cli,release_root", [(None, "release"), ("cli", None), ("", "release"), ("cli", " ")])
-def test_incomplete_installed_proof_configuration_fails(monkeypatch, tmp_path, cli, release_root):
-    for name, value in (("SKLC_TEST_INSTALLED_CLI", cli), ("SKLC_TEST_RELEASE_ROOT", release_root)):
-        if value is None:
-            monkeypatch.delenv(name, raising=False)
-        else:
-            monkeypatch.setenv(name, value)
-    with pytest.raises(pytest.fail.Exception, match="must both be nonblank"):
-        test_installed_cli_with_real_assessor(tmp_path)

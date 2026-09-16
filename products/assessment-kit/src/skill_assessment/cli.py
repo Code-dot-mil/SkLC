@@ -8,7 +8,7 @@ from pathlib import Path
 from . import __version__
 from .artifacts import update_boe, verify_boe, write_advice
 from .config import load_skillspector_config, validate_assessors
-from .errors import AssessmentError, RetryableAssessmentError
+from .errors import AssessmentError
 from .packages import reject_output_overlap, select_packages, validate_package
 from .skillspector import require_supported_version, resolve_binary, run
 
@@ -40,32 +40,6 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _run_assessors(packages, assessors, config, output_root: Path):
-    binary = resolve_binary()
-    require_supported_version(binary)
-    successes = []
-    failures: list[AssessmentError] = []
-    for package in packages:
-        for assessor_id in assessors:
-            try:
-                report = run(package.path, config, binary=binary, output_root=output_root)
-                successes.append((package, assessor_id, report))
-                if report.diagnostics:
-                    print(f"{package.name}/{assessor_id}: {report.diagnostics}", file=sys.stderr)
-            except AssessmentError as exc:
-                failures.append(exc)
-                print(f"{package.name}/{assessor_id}: {exc}", file=sys.stderr)
-    return successes, failures
-
-
-def _failure_exit(failures: list[AssessmentError]) -> int:
-    if not failures:
-        return 0
-    if any(isinstance(failure, RetryableAssessmentError) for failure in failures):
-        return RetryableAssessmentError.exit_code
-    return AssessmentError.exit_code
-
-
 def dispatch(args: argparse.Namespace) -> int:
     if args.command == "verify-boe":
         package = validate_package(args.skill)
@@ -88,22 +62,30 @@ def dispatch(args: argparse.Namespace) -> int:
     reject_output_overlap(output, packages)
     if not packages:
         return 0
-    successes, failures = _run_assessors(packages, assessors, config, output)
-    if args.command == "advise":
-        if successes:
+    binary = resolve_binary()
+    require_supported_version(binary)
+    reports = []
+    exit_code = 0
+    for package in packages:
+        for assessor_id in assessors:
             try:
-                write_advice(output, packages, assessors, successes)
+                report = run(package.path, config, binary=binary, output_root=output)
+                if report.diagnostics:
+                    print(f"{package.name}/{assessor_id}: {report.diagnostics}", file=sys.stderr)
+                if args.command == "assess":
+                    update_boe(package, output, assessor_id, report)
+                else:
+                    reports.append((package, assessor_id, report))
             except AssessmentError as exc:
-                failures.append(exc)
-                print(f"advice: {exc}", file=sys.stderr)
-    else:
-        for package, assessor_id, report in successes:
-            try:
-                update_boe(package, output, assessor_id, report)
-            except AssessmentError as exc:
-                failures.append(exc)
+                exit_code = max(exit_code, exc.exit_code)
                 print(f"{package.name}/{assessor_id}: {exc}", file=sys.stderr)
-    return _failure_exit(failures)
+    if reports:
+        try:
+            write_advice(output, packages, assessors, reports)
+        except AssessmentError as exc:
+            exit_code = max(exit_code, exc.exit_code)
+            print(f"advice: {exc}", file=sys.stderr)
+    return exit_code
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -65,17 +65,6 @@ def test_llm_environment_overrides_ambient_native_values():
     assert result["SKILLSPECTOR_MODEL"] == "selected-model"
 
 
-def test_version_check_rejects_other_versions(monkeypatch):
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, "skillspector v2.11.0", ""),
-    )
-
-    with pytest.raises(AssessmentError, match="required 2.10.0"):
-        require_supported_version("skillspector")
-
-
 def test_static_invocation_uses_positional_path_and_no_llm(monkeypatch, tmp_path: Path):
     seen: list[str] = []
 
@@ -127,8 +116,8 @@ def test_static_environment_removes_ambient_llm_configuration():
     assert result == {"UNCHANGED": "value"}
 
 
-@pytest.mark.parametrize("version", ["2.10.0rc1", "2.10.0-dev", "2.10.0.post1"])
-def test_version_check_does_not_accept_unapproved_prerelease(monkeypatch, version):
+@pytest.mark.parametrize("version", ["2.11.0", "2.10.0rc1", "2.10.0-dev", "2.10.0.post1"])
+def test_version_check_rejects_unsupported_versions(monkeypatch, version):
     monkeypatch.setattr(
         subprocess, "run",
         lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, f"SkillSpector v{version}", ""),

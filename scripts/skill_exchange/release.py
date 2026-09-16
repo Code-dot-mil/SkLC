@@ -1,4 +1,4 @@
-"""Assemble the prebuilt site release without building or assessing its inputs."""
+"""Shared release packaging and prebuilt-site assembly."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def _regular_files(root: Path) -> list[Path]:
     return [path for path in _tree_entries(root) if path.is_file()]
 
 
-def _copy_tree(source: Path, destination: Path) -> None:
+def copy_release_tree(source: Path, destination: Path) -> None:
     """Preflight the entire source, then copy into a trusted staging directory."""
     entries = _tree_entries(source)
     destination.mkdir(parents=True, exist_ok=True)
@@ -81,7 +81,7 @@ def _copy_tree(source: Path, destination: Path) -> None:
             shutil.copy2(path, target)
 
 
-def _copy_file(source: Path, destination: Path) -> None:
+def copy_release_file(source: Path, destination: Path) -> None:
     _check_source_path(source)
     if not source.is_file():
         raise ReleaseError(f"required release file is missing or invalid: {source}")
@@ -94,43 +94,9 @@ def _sha256(path: Path) -> str:
         return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
-def _write_metadata(
-    root: Path,
-    files: list[Path],
-    *,
-    product: str,
-    version: str,
-    source_revision: str,
-    created_at: str,
-) -> list[Path]:
-    entries = [
-        {"path": path.relative_to(root).as_posix(), "sha256": f"sha256:{_sha256(path)}"}
-        for path in sorted(files, key=lambda path: path.relative_to(root).as_posix())
-    ]
-    manifest = {
-        "schema_version": RELEASE_MANIFEST_SCHEMA,
-        "product": product,
-        "version": version,
-        "source_revision": source_revision,
-        "created_at": created_at,
-        "produces": {"release_manifest": [RELEASE_MANIFEST_SCHEMA]},
-        "consumes": {},
-        "artifacts": entries,
-    }
-    manifest_path = root / "release-manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
-    checksum_path = root / "SHA256SUMS.txt"
-    checksum_path.write_text(
-        "".join(f"{entry['sha256'].removeprefix('sha256:')}  {entry['path']}\n" for entry in entries),
-        encoding="utf-8",
-        newline="\n",
-    )
-    return [manifest_path, checksum_path]
-
-
 def _stage_deployment_kit(repo_root: Path, site_dir: Path, stage_root: Path) -> None:
     public = stage_root / "public"
-    _copy_tree(site_dir, public)
+    copy_release_tree(site_dir, public)
     (public / ".gitkeep").unlink(missing_ok=True)
     if not (public / "index.html").is_file():
         raise ReleaseError("prebuilt site must contain public/index.html")
@@ -140,13 +106,13 @@ def _stage_deployment_kit(repo_root: Path, site_dir: Path, stage_root: Path) -> 
 
     product = repo_root / "products" / "deployment-kit"
     docs = product / "docs" / "prebuilt"
-    _copy_file(product / "ci" / "gitlab" / "prebuilt" / ".gitlab-ci.yml", stage_root / ".gitlab-ci.yml")
-    _copy_file(docs / "README.md", stage_root / "README.md")
+    copy_release_file(product / "ci" / "gitlab" / "prebuilt" / ".gitlab-ci.yml", stage_root / ".gitlab-ci.yml")
+    copy_release_file(docs / "README.md", stage_root / "README.md")
     for name in ("install.md", "deploy-gitlab-pages.md", "deploy-static-hosting.md"):
-        _copy_file(docs / name, stage_root / "docs" / name)
+        copy_release_file(docs / name, stage_root / "docs" / name)
     schema = Path("contracts/release-manifest/v1/release-manifest.schema.json")
-    _copy_file(repo_root / schema, stage_root / schema)
-    _copy_file(product / "scripts" / "verify_prebuilt.py", stage_root / "scripts" / "verify_prebuilt.py")
+    copy_release_file(repo_root / schema, stage_root / schema)
+    copy_release_file(product / "scripts" / "verify_prebuilt.py", stage_root / "scripts" / "verify_prebuilt.py")
 
 
 def _write_tar_gz(source: Path, destination: Path, *, source_date_epoch: int) -> None:
@@ -156,12 +122,44 @@ def _write_tar_gz(source: Path, destination: Path, *, source_date_epoch: int) ->
         info.uid = info.gid = 0
         info.uname = info.gname = "root"
         info.mtime = source_date_epoch
+        info.mode = 0o755 if info.isdir() or info.mode & 0o111 else 0o644
         return info
 
     with destination.open("wb") as raw_handle:
         with gzip.GzipFile(filename="", mode="wb", fileobj=raw_handle, mtime=source_date_epoch) as gzip_handle:
             with tarfile.open(fileobj=gzip_handle, mode="w") as archive:
                 archive.add(source, arcname=source.name, recursive=True, filter=normalize)
+
+
+def write_release_assets(
+    root: Path, output_dir: Path, manifest: dict, *, source_date_epoch: int = 0,
+) -> list[Path]:
+    """Package a staged product with identical manifests and two checksum scopes."""
+    # Enumerate before writing metadata; nested namesakes are ordinary assets.
+    entries = [
+        {"path": path.relative_to(root).as_posix(), "sha256": f"sha256:{_sha256(path)}"}
+        for path in sorted(_regular_files(root), key=lambda path: path.relative_to(root).as_posix())
+    ]
+    manifest = {**manifest, "schema_version": RELEASE_MANIFEST_SCHEMA, "artifacts": entries}
+    internal_manifest = root / "release-manifest.json"
+    internal_manifest.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n",
+    )
+    (root / "SHA256SUMS.txt").write_text(
+        "".join(f"{entry['sha256'].removeprefix('sha256:')}  {entry['path']}\n" for entry in entries),
+        encoding="utf-8", newline="\n",
+    )
+    archive = output_dir / f"{root.name}.tar.gz"
+    external_manifest = output_dir / f"{root.name}.release-manifest.json"
+    checksums = output_dir / f"{root.name}.SHA256SUMS.txt"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_tar_gz(root, archive, source_date_epoch=source_date_epoch)
+    shutil.copy2(internal_manifest, external_manifest)
+    checksums.write_text(
+        "".join(f"{_sha256(path)}  {path.name}\n" for path in (archive, external_manifest)),
+        encoding="utf-8", newline="\n",
+    )
+    return [archive, external_manifest, checksums]
 
 
 def build_release(
@@ -181,31 +179,17 @@ def build_release(
     epoch = source_date_epoch if source_date_epoch is not None else int(datetime.now(UTC).timestamp())
     timestamp = datetime.fromtimestamp(epoch, UTC).isoformat().replace("+00:00", "Z")
     product = "deployment-kit-prebuilt"
-    archive_path = output_dir / f"{product}-{version}.tar.gz"
-
     with tempfile.TemporaryDirectory(prefix="sklc-prebuilt-") as temporary:
-        package_root = Path(temporary) / f"{product}-{version}"
+        package_root = Path(temporary).resolve() / f"{product}-{version}"
         _stage_deployment_kit(repo_root, site_dir, package_root)
-        # Enumerate before writing root metadata; nested files with the same names
-        # are ordinary assets and must remain covered by the checksums.
-        internal_metadata = _write_metadata(
-            package_root, _regular_files(package_root), product=product, version=version,
-            source_revision=source_revision, created_at=timestamp,
-        )
-        # Invalid sources must fail before any release assets are published here.
-        output_dir.mkdir(parents=True, exist_ok=True)
-        _write_tar_gz(package_root, archive_path, source_date_epoch=epoch)
-        manifest_path = output_dir / f"{product}-{version}.release-manifest.json"
-        shutil.copy2(internal_metadata[0], manifest_path)
-
-    checksum_path = output_dir / f"{product}-{version}.SHA256SUMS.txt"
-    checksum_path.write_text(
-        f"{_sha256(archive_path)}  {archive_path.name}\n"
-        f"{_sha256(manifest_path)}  {manifest_path.name}\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    return [archive_path, manifest_path, checksum_path]
+        return write_release_assets(package_root, output_dir, {
+            "product": product,
+            "version": version,
+            "source_revision": source_revision,
+            "created_at": timestamp,
+            "produces": {"release_manifest": [RELEASE_MANIFEST_SCHEMA]},
+            "consumes": {},
+        }, source_date_epoch=epoch)
 
 
 def extract_release_notes(notes_path: Path, version: str) -> str:

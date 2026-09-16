@@ -16,10 +16,10 @@ import pytest
 import yaml
 from skill_exchange.release import (
     ReleaseError,
-    _copy_file,
-    _copy_tree,
     _regular_files,
     build_release,
+    copy_release_file,
+    copy_release_tree,
     extract_release_notes,
 )
 
@@ -72,7 +72,7 @@ def make_link():
             link.unlink(missing_ok=True)
 
 
-def test_copy_tree_preserves_regular_files_and_empty_directories(tmp_path: Path):
+def testcopy_release_tree_preserves_regular_files_and_empty_directories(tmp_path: Path):
     source = tmp_path / "site"
     expected = {"index.html": b"<html></html>\n", "downloads/skill.zip": b"\x00\xff", ".hidden": b"hidden"}
     for name, content in expected.items():
@@ -80,7 +80,7 @@ def test_copy_tree_preserves_regular_files_and_empty_directories(tmp_path: Path)
     (source / "assets" / "empty").mkdir(parents=True)
     destination = tmp_path / "package" / "public"
 
-    _copy_tree(source, destination)
+    copy_release_tree(source, destination)
 
     actual = {path.relative_to(destination).as_posix(): path.read_bytes() for path in _regular_files(destination)}
     assert actual == expected
@@ -89,7 +89,7 @@ def test_copy_tree_preserves_regular_files_and_empty_directories(tmp_path: Path)
 
 @pytest.mark.parametrize("kind", ["symlink", "junction"])
 @pytest.mark.parametrize("placement", ["root", "nested", "ancestor"])
-def test_copy_tree_rejects_directory_links_before_copying(tmp_path: Path, make_link, kind: str, placement: str):
+def testcopy_release_tree_rejects_directory_links_before_copying(tmp_path: Path, make_link, kind: str, placement: str):
     outside = tmp_path / "outside"
     _write(outside / "site" / "index.html", b"outside site\n")
     _write(outside / "site" / "private.txt", b"must not be packaged\n")
@@ -105,7 +105,7 @@ def test_copy_tree_rejects_directory_links_before_copying(tmp_path: Path, make_l
     destination = tmp_path / "package" / "public"
 
     with pytest.raises(ReleaseError, match="link"):
-        _copy_tree(source, destination)
+        copy_release_tree(source, destination)
 
     assert not destination.exists()
     assert (outside / "site" / "private.txt").read_bytes() == b"must not be packaged\n"
@@ -114,7 +114,7 @@ def test_copy_tree_rejects_directory_links_before_copying(tmp_path: Path, make_l
 
 
 @pytest.mark.parametrize("broken", [False, True])
-def test_copy_tree_rejects_file_links_before_copying(tmp_path: Path, make_link, broken: bool):
+def testcopy_release_tree_rejects_file_links_before_copying(tmp_path: Path, make_link, broken: bool):
     source = tmp_path / "site"
     _write(source / "index.html")
     outside = tmp_path / "outside.txt"
@@ -124,13 +124,13 @@ def test_copy_tree_rejects_file_links_before_copying(tmp_path: Path, make_link, 
     destination = tmp_path / "package" / "public"
 
     with pytest.raises(ReleaseError, match="link"):
-        _copy_tree(source, destination)
+        copy_release_tree(source, destination)
 
     assert not destination.exists()
 
 
 @pytest.mark.parametrize("kind", ["symlink", "junction"])
-def test_copy_file_rejects_linked_parent(tmp_path: Path, make_link, kind: str):
+def testcopy_release_file_rejects_linked_parent(tmp_path: Path, make_link, kind: str):
     outside = tmp_path / "outside"
     _write(outside / "install.md", b"outside file\n")
     linked = tmp_path / "linked"
@@ -138,23 +138,23 @@ def test_copy_file_rejects_linked_parent(tmp_path: Path, make_link, kind: str):
     destination = tmp_path / "package" / "docs" / "install.md"
 
     with pytest.raises(ReleaseError, match="link"):
-        _copy_file(linked / "install.md", destination)
+        copy_release_file(linked / "install.md", destination)
 
     assert not destination.parent.exists()
 
 
-def test_copy_file_preserves_regular_file(tmp_path: Path):
+def testcopy_release_file_preserves_regular_file(tmp_path: Path):
     source = tmp_path / "install.md"
     _write(source, b"installation instructions\n")
     destination = tmp_path / "package" / "docs" / "install.md"
 
-    _copy_file(source, destination)
+    copy_release_file(source, destination)
 
     assert destination.read_bytes() == source.read_bytes()
 
 
 @pytest.mark.parametrize("broken", [False, True])
-def test_copy_file_rejects_symbolic_link(tmp_path: Path, make_link, broken: bool):
+def testcopy_release_file_rejects_symbolic_link(tmp_path: Path, make_link, broken: bool):
     outside = tmp_path / "outside.md"
     if not broken:
         _write(outside)
@@ -163,23 +163,23 @@ def test_copy_file_rejects_symbolic_link(tmp_path: Path, make_link, broken: bool
     destination = tmp_path / "package" / "docs" / "install.md"
 
     with pytest.raises(ReleaseError, match="link"):
-        _copy_file(source, destination)
+        copy_release_file(source, destination)
 
     assert not destination.parent.exists()
 
 
-def test_copy_tree_rejects_broken_source_link(tmp_path: Path, make_link):
+def testcopy_release_tree_rejects_broken_source_link(tmp_path: Path, make_link):
     source = tmp_path / "site"
     make_link(source, tmp_path / "missing")
     destination = tmp_path / "package" / "public"
 
     with pytest.raises(ReleaseError, match="link"):
-        _copy_tree(source, destination)
+        copy_release_tree(source, destination)
 
     assert not destination.parent.exists()
 
 
-@pytest.mark.parametrize("copy", [_copy_file, _copy_tree])
+@pytest.mark.parametrize("copy", [copy_release_file, copy_release_tree])
 def test_copy_rejects_missing_source(tmp_path: Path, copy):
     destination = tmp_path / "package" / "missing"
 
@@ -509,7 +509,7 @@ def test_delivered_verification_accepts_renamed_git_checkout(tmp_path: Path):
     package = _extracted_package(tmp_path)
     customer = tmp_path / "customer-pages"
     # Copy real package files into a separately named checkout, without moving or deleting originals.
-    _copy_tree(package, customer)
+    copy_release_tree(package, customer)
     _write(customer / ".git/config", b"[core]\nrepositoryformatversion = 0\n")
 
     _assert_customer_checks(customer)

@@ -236,13 +236,19 @@ source revision, creation timestamp, wheel path, and output directory are all
 explicit inputs. The builder vendors the four consumed or produced v1 contract
 directories, emits byte-identical internal and external manifests, creates
 separate extracted-file and download checksum scopes, and normalizes archive
-metadata for deterministic output.
+metadata for deterministic output. Both product builders use the same
+maintainer-side staging, SemVer validation, archive, manifest, and checksum
+helpers in `scripts/skill_exchange/release.py`; this sharing adds no dependency
+to the installed assessment CLI. Archive permissions normalize to 0755 for
+directories and executable files and 0644 for other files.
 
 Assessment-kit validation fails on unreadable discovery paths and schema-invalid
 null metadata. Relative selections use the resolved directory identity; LF and
 CRLF frontmatter preserve original hash bytes. Advice preserves every native
 SkillSpector issue field, including additional occurrences and code snippets.
-Retryable pair failures take exit-code precedence in mixed batches, including
+Each successful formal assessment is persisted before the next pair runs;
+advice collects successful reports for its summary. Retryable pair failures take
+exit-code precedence in mixed batches, including
 when advice cannot be written. Rate-limit classification examines the complete
 redacted diagnostics before truncating their display. Existing BOE must pass
 the same verification as `verify-boe` before any update writes evidence. Release

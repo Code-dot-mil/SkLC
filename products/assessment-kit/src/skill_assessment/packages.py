@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import re
 import stat
 from dataclasses import dataclass
@@ -21,7 +20,6 @@ SKILL_NAME_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62})$")
 class SkillPackage:
     name: str
     path: Path
-    metadata: dict[str, Any]
     content_sha256: str
 
 
@@ -97,15 +95,9 @@ def package_files(skill_dir: Path) -> list[Path]:
     def record_walk_error(error: OSError) -> None:
         raise AssessmentError(f"cannot read skill package {skill_dir}: {error}") from error
 
-    for current, dir_names, file_names in os.walk(
-        skill_dir, topdown=True, followlinks=False, onerror=record_walk_error
-    ):
-        dir_names.sort()
-        file_names.sort()
-        current_path = Path(current)
-        directories = set(dir_names)
+    for current, dir_names, file_names in skill_dir.walk(on_error=record_walk_error):
         for name in [*dir_names, *file_names]:
-            path = current_path / name
+            path = current / name
             try:
                 entry_stat = path.lstat()
             except OSError as exc:
@@ -117,9 +109,7 @@ def package_files(skill_dir: Path) -> list[Path]:
                 path.resolve().relative_to(root)
             except (OSError, ValueError) as exc:
                 raise AssessmentError(f"skill package path escapes package directory: {relative}") from exc
-            if name in directories:
-                if not stat.S_ISDIR(entry_stat.st_mode):
-                    raise AssessmentError(f"unsupported package filesystem object: {relative}")
+            if stat.S_ISDIR(entry_stat.st_mode):
                 continue
             if not stat.S_ISREG(entry_stat.st_mode):
                 raise AssessmentError(f"unsupported package filesystem object: {relative}")
@@ -131,9 +121,9 @@ def package_files(skill_dir: Path) -> list[Path]:
     return sorted(files, key=lambda path: path.relative_to(skill_dir).as_posix())
 
 
-def hash_package(skill_dir: Path, files: list[Path] | None = None) -> str:
+def hash_package(skill_dir: Path, files: list[Path]) -> str:
     digest = hashlib.sha256()
-    for path in files if files is not None else package_files(skill_dir):
+    for path in files:
         digest.update(path.relative_to(skill_dir).as_posix().encode("utf-8"))
         digest.update(b"\0")
         try:
@@ -158,7 +148,7 @@ def validate_package(path: Path) -> SkillPackage:
     except OSError as exc:
         raise AssessmentError(f"cannot read {skill_file}: {exc}") from exc
     _validate_metadata(metadata, name)
-    return SkillPackage(name=name, path=path.resolve(), metadata=metadata, content_sha256=hash_package(path, files))
+    return SkillPackage(name=name, path=path.resolve(), content_sha256=hash_package(path, files))
 
 
 def discover_packages(root: Path) -> list[Path]:
@@ -174,10 +164,10 @@ def discover_packages(root: Path) -> list[Path]:
         raise AssessmentError(f"cannot read selection root {root}: {error}") from error
 
     selected: list[Path] = []
-    for current, dir_names, file_names in os.walk(root, topdown=True, followlinks=False, onerror=record_walk_error):
-        dir_names[:] = sorted(name for name in dir_names if not (Path(current) / name).is_symlink())
+    for current, dir_names, file_names in root.walk(on_error=record_walk_error):
+        dir_names.sort()
         if "SKILL.md" in file_names:
-            selected.append(Path(current))
+            selected.append(current)
             dir_names.clear()
     return selected
 
@@ -185,7 +175,7 @@ def discover_packages(root: Path) -> list[Path]:
 def select_packages(*, skill_paths: list[Path] | None, root: Path | None) -> list[SkillPackage]:
     if bool(skill_paths) == (root is not None):
         raise AssessmentError("select exactly one mode: one or more --skill arguments, or --root")
-    paths = skill_paths if skill_paths else discover_packages(root)  # type: ignore[arg-type]
+    paths = discover_packages(root) if root is not None else skill_paths
     packages = [validate_package(path) for path in paths]
     seen: set[str] = set()
     duplicates: set[str] = set()
@@ -201,8 +191,5 @@ def select_packages(*, skill_paths: list[Path] | None, root: Path | None) -> lis
 def reject_output_overlap(output: Path, packages: list[SkillPackage]) -> None:
     resolved = output.expanduser().resolve()
     for package in packages:
-        try:
-            resolved.relative_to(package.path)
-        except ValueError:
-            continue
-        raise AssessmentError(f"output directory must not be inside skill package {package.name}: {output}")
+        if resolved.is_relative_to(package.path):
+            raise AssessmentError(f"output directory must not be inside skill package {package.name}: {output}")

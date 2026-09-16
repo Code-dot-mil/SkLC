@@ -14,10 +14,8 @@ from skill_assessment.skillspector import NativeReport
 
 
 @pytest.fixture
-def evidence(tmp_path):
-    skill = tmp_path / "skill"
-    skill.mkdir()
-    (skill / "SKILL.md").write_text("---\nname: skill\ndescription: Test\n---\n")
+def evidence(tmp_path, make_skill):
+    skill = make_skill(tmp_path, "skill")
     package = validate_package(skill)
     native = b'{"metadata": {"skillspector_version": "unknown-future-version"}}\n'
     report = NativeReport(content=native, parsed=json.loads(native))

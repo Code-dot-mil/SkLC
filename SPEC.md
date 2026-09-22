@@ -648,9 +648,12 @@ inputs fail the build; the builder does not generate substitute documentation.
 
 The package's manifest and checksums cover the same installation files, excluding
 only their own two root metadata files. Nested assets with either metadata filename
-are included. External `release-manifest.json` records only the prebuilt archive;
-external `SHA256SUMS.txt` covers that archive and the external manifest. No catalog
-archive or release-notes asset is produced by this builder.
+are included. External `release-manifest.json` records the prebuilt archive;
+optional `--catalog-archive` includes an existing `skill-catalog-<version>.tar.gz`
+and its `.sha256` file. Both must be regular, unlinked files in `--output-dir`
+with the release version in their names. Missing or invalid inputs fail before
+building. External `SHA256SUMS.txt` covers these assets and the external manifest.
+No catalog archive or release-notes asset is produced by this builder.
 
 The builder also vendors `products/deployment-kit/scripts/verify_prebuilt.py`
 as `scripts/verify_prebuilt.py` and includes it in the manifest and checksums.
@@ -857,10 +860,12 @@ site-content checks, and external checksum verification before publication. Buil
 metadata records the tag's commit, with `SOURCE_DATE_EPOCH` from that commit.
 
 Use a fresh directory under `RUNNER_TEMP`. Publish exactly
-`deployment-kit-prebuilt-<version>.tar.gz`, its `release-manifest.json` and
+`deployment-kit-prebuilt-<version>.tar.gz`, the shared `release-manifest.json` and
 `SHA256SUMS.txt`, plus `skill-catalog-<version>.tar.gz` and its `.tar.gz.sha256`
 file via `gh release create --verify-tag --notes-file ...`. Catalog packaging
-uses the same Bash script as CI; the prebuilt metadata remains unchanged.
+uses the same Bash script as CI and runs before the prebuilt builder receives
+`--catalog-archive`. Shared metadata covers both archives and the catalog checksum;
+metadata inside the prebuilt archive remains unchanged.
 Release notes are not uploaded as an asset. Existing releases must not be
 overwritten. SemVer prereleases are marked as GitHub prereleases. Keep the release
 token scoped to the publishing step, disable persisted checkout credentials, and

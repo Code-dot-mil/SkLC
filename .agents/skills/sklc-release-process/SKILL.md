@@ -116,16 +116,17 @@ recovery plan.
    `--reuse-boe-only`, or alter tracked BOE to make a release pass. Python
    produces exchange data; the Node build only consumes it.
 
+   First package the four committed skill folders with `bash scripts/package-skill-catalog.sh
+   <temporary-assets-directory>/skill-catalog-<version>.tar.gz`. This produces the
+   archive and its adjacent `.sha256` file without running assessments or site tooling.
+
    Package the built `site/dist` using `uv run python -m skill_exchange.release
    build --repo-root . --site-dir site/dist --version <version>
-   --source-revision <candidate-commit> --output-dir <temporary-assets-directory>`.
+   --source-revision <candidate-commit> --output-dir <temporary-assets-directory>
+   --catalog-archive <temporary-assets-directory>/skill-catalog-<version>.tar.gz`.
    Replace every template value with the approved value before execution. Set
    `SOURCE_DATE_EPOCH` to the candidate's commit timestamp, as the workflow does.
    Keep derived data, caches, previews, and artifacts out of the source worktree.
-
-   Package the four committed skill folders with `bash scripts/package-skill-catalog.sh
-   <temporary-assets-directory>/skill-catalog-<version>.tar.gz`. This produces the
-   archive and its adjacent `.sha256` file without running assessments or site tooling.
 
 9. **Verify the extracted artifacts.** Ask before checking external
    `SHA256SUMS.txt`, extracting into a new directory, and running the shipped
@@ -142,6 +143,8 @@ recovery plan.
    Check the catalog's `.tar.gz.sha256`, extract it, and follow its README to copy
    the four complete skill folders into a clean workspace. Confirm discovery in
    a fresh agent session. The catalog has no separate manifest or verifier.
+   Confirm the shared release manifest lists both archives and the catalog checksum,
+   and that `SHA256SUMS.txt` verifies those assets and the shared manifest.
 
 10. **Prove candidate deployment.** Ask before using a clean GitLab project,
     changing its configuration, or committing/pushing the extracted package.

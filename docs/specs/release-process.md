@@ -49,7 +49,7 @@ The basic release flow is manual tag creation plus a GitHub Actions workflow:
 5. Codex drafts a concise release-notes section titled with the accepted version.
 6. A maintainer reviews the release notes, commits them, and pushes them before creating the tag.
 7. A maintainer creates the release tag on the commit that contains the accepted release notes.
-8. GitHub Actions builds the releasable artifacts, creates the GitHub Release with that version's release-notes snippet as the release description, and uploads each archive and its documented verification files. The prebuilt site retains `release-manifest.json` and `SHA256SUMS.txt`; the four-skill download uses only an adjacent `.tar.gz.sha256` file.
+8. GitHub Actions builds the releasable artifacts, creates shared `release-manifest.json` and `SHA256SUMS.txt`, creates the GitHub Release with that version's release-notes snippet as the release description, and uploads the archives and verification files. The manifest lists both archives and the catalog's adjacent `.tar.gz.sha256` file; `SHA256SUMS.txt` also covers the manifest.
 
 `SHA256SUMS.txt` uses the standard checksum-file format:
 
@@ -77,7 +77,7 @@ Before tagging, the maintainer works through this checklist in order:
 14. Confirm no secrets, local paths, generated cache state, maintainer-only workflow details, or unpublished artifacts are included.
 15. Create the release tag only after all checklist items above pass.
 16. Confirm the GitHub Release description uses the accepted release-notes snippet for that version.
-17. Confirm the uploaded assets match the product archives and verification files listed above. Release notes are not uploaded as a separate asset.
+17. Confirm the uploaded assets match the product archives and verification files listed above, and that the shared manifest and checksums cover both products. Release notes are not uploaded as a separate asset.
 
 ## Codex release skill
 

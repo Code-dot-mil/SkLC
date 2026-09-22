@@ -357,6 +357,28 @@ def test_build_cli_uses_existing_site_layout(tmp_path: Path):
     ]
 
 
+@pytest.mark.parametrize("broken", ["missing-archive", "missing-checksum", "wrong-version", "outside-output"])
+def test_build_cli_rejects_invalid_catalog_inputs_before_building(tmp_path: Path, broken: str):
+    repo, _ = _release_fixture(tmp_path)
+    output = tmp_path / "release"
+    catalog = output / f"skill-catalog-{VERSION}.tar.gz"
+    if broken == "wrong-version":
+        catalog = output / "skill-catalog-9.9.9.tar.gz"
+    elif broken == "outside-output":
+        catalog = tmp_path / catalog.name
+    if broken != "missing-archive":
+        _write(catalog)
+    if broken != "missing-checksum":
+        _write(Path(f"{catalog}.sha256"))
+
+    result = _run_build_cli(repo, output, "--catalog-archive", str(catalog))
+
+    assert result.returncode != 0
+    assert "catalog" in result.stderr
+    assert not (output / f"deployment-kit-prebuilt-{VERSION}.tar.gz").exists()
+    assert not (output / "release-manifest.json").exists()
+
+
 @pytest.mark.parametrize("kind", ["symlink", "junction"])
 @pytest.mark.parametrize("absolute", [False, True])
 def test_build_cli_does_not_resolve_away_source_links(tmp_path: Path, make_link, kind: str, absolute: bool):
@@ -1037,6 +1059,13 @@ Path(os.environ['SKLC_RECORDED_RELEASE']).write_text(
         'python3() { "$SKLC_TEST_PYTHON" "$@"; }\n'
         'gh() { python "$SKLC_RELEASE_RECORDER" "$@"; }\n'
     )
+    catalog_change = {
+        "missing-catalog-archive": 'rm -- "$2"',
+        "missing-catalog-checksum": 'rm -- "$2.sha256"',
+        "corrupt-catalog": 'printf corrupt >> "$2"',
+    }.get(broken)
+    if catalog_change:
+        prefix += f'bash() {{ command bash "$@" && {catalog_change}; }}\n'
     if os.name == "nt":
         prefix += 'export RUNNER_TEMP="$(cygpath -u "$RUNNER_TEMP")"\n'
     results = []
@@ -1084,8 +1113,13 @@ def test_release_workflow_verifies_prebuilt_and_publishes_only_accepted_assets(
     manifest = json.loads(assets[1].read_text(encoding="utf-8"))
     assert manifest["source_revision"] == revision
     assert manifest["version"] == version
+    release_files = [assets[0], *assets[3:]]
+    assert manifest["artifacts"] == [
+        {"path": path.name, "sha256": f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"}
+        for path in sorted(release_files)
+    ]
     assert _checksums(assets[2]) == {
-        path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in assets[:2]
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in [*release_files, assets[1]]
     }
     customer = tmp_path / "customer"
     with tarfile.open(assets[0]) as archive:
@@ -1116,6 +1150,9 @@ def test_release_workflow_verifies_prebuilt_and_publishes_only_accepted_assets(
     ("wrong-commit", None), ("invalid-tag", "version must be a SemVer value"),
     ("missing-download", "missing referenced download"),
     ("missing-catalog-skill", None),
+    ("missing-catalog-archive", "required catalog release file"),
+    ("missing-catalog-checksum", "required catalog release file"),
+    ("corrupt-catalog", "FAILED"),
 ])
 def test_release_workflow_stops_before_publishing_invalid_inputs(tmp_path: Path, broken: str, error: str | None):
     repo, _site = _release_fixture(tmp_path)
@@ -1123,7 +1160,7 @@ def test_release_workflow_stops_before_publishing_invalid_inputs(tmp_path: Path,
     results, record, _revision = _run_release_workflow(repo, tmp_path, broken=broken)
 
     assert results[-1].returncode != 0
-    assert len(results) == (2 if broken in {"missing-download", "missing-catalog-skill"} else 1)
+    assert len(results) == (2 if broken == "missing-download" or "catalog" in broken else 1)
     assert record is None, "an invalid release must never reach the publish command"
     if error is not None:
         assert error in results[-1].stdout + results[-1].stderr

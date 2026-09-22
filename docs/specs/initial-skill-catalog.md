@@ -35,7 +35,9 @@ No new Python code or dependency is needed for packaging.
 CI independently uploads `skill-catalog.tar.gz` and its checksum as the
 `skill-catalog` artifact. The existing tag-release workflow publishes the
 versioned pair alongside the prebuilt site after its normal release checks.
-The catalog does not use the prebuilt product's manifest or checksum file.
+The shared release manifest lists both product archives and the catalog checksum;
+the shared `SHA256SUMS.txt` covers those assets and the manifest. This metadata
+stays outside the catalog archive, which retains its individual checksum.
 
 ## Acceptance
 

@@ -79,11 +79,12 @@ jobs:
         id: release-assets
         shell: bash
         run: |
+          bash scripts/package-skill-catalog.sh "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz"
           python -m skill_exchange.release build \
             --repo-root . --site-dir site/dist \
             --version "$RELEASE_VERSION" --source-revision "$SOURCE_REVISION" \
-            --output-dir "$RELEASE_DIR/assets"
-          bash scripts/package-skill-catalog.sh "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz"
+            --output-dir "$RELEASE_DIR/assets" \
+            --catalog-archive "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz"
           mkdir "$RELEASE_DIR/extracted"
           tar -xzf "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.tar.gz" \
             -C "$RELEASE_DIR/extracted"

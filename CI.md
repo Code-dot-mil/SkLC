@@ -92,11 +92,12 @@ It extracts and verifies the package and checks the external checksum file befor
 publishing. Temporary output stays under `RUNNER_TEMP`; source revision and
 repeatable archive timestamps come from the tagged commit.
 
-The GitHub Release contains the prebuilt `.tar.gz`, its external
+The GitHub Release contains the prebuilt `.tar.gz`, the shared
 `release-manifest.json` and `SHA256SUMS.txt`, plus `skill-catalog-<version>.tar.gz`
-and `skill-catalog-<version>.tar.gz.sha256`. The existing manifest and
-`SHA256SUMS.txt` continue to describe only the prebuilt product; the catalog has
-its own archive checksum. `gh release create --verify-tag`
+and `skill-catalog-<version>.tar.gz.sha256`. The workflow packages the catalog
+first, then passes `--catalog-archive` to the prebuilt builder. The shared manifest
+lists both archives and the catalog checksum; `SHA256SUMS.txt` also covers the
+manifest. The catalog retains its individual archive checksum. `gh release create --verify-tag`
 requires the tag to exist and does not overwrite an existing release. SemVer
 prereleases are marked as GitHub prereleases. Checkout does not persist Git
 credentials, and `GH_TOKEN` is exposed only to the publishing step. The job uses

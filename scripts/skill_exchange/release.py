@@ -176,12 +176,25 @@ def build_release(
     version: str,
     source_revision: str,
     source_date_epoch: int | None = None,
+    catalog_archive: Path | None = None,
 ) -> list[Path]:
-    """Build only the prebuilt archive and its external manifest/checksum files."""
+    """Build the prebuilt archive and metadata, optionally including existing catalog assets."""
     validate_version(version)
     if not source_revision.strip():
         raise ReleaseError("source revision must not be empty")
     _check_source_path(repo_root)
+    output_dir = output_dir.absolute()
+    catalog_files = []
+    if catalog_archive is not None:
+        catalog_archive = catalog_archive.absolute()
+        if (catalog_archive.parent != output_dir
+                or catalog_archive.name != f"skill-catalog-{version}.tar.gz"):
+            raise ReleaseError("catalog archive must use the release version and be in the output directory")
+        catalog_files = [catalog_archive, Path(f"{catalog_archive}.sha256")]
+        for path in catalog_files:
+            _check_source_path(path)
+            if not path.is_file():
+                raise ReleaseError(f"required catalog release file is missing or invalid: {path}")
     epoch = source_date_epoch if source_date_epoch is not None else int(datetime.now(UTC).timestamp())
     timestamp = datetime.fromtimestamp(epoch, UTC).isoformat().replace("+00:00", "Z")
     product = "deployment-kit-prebuilt"
@@ -201,10 +214,10 @@ def build_release(
         _write_tar_gz(package_root, archive_path, source_date_epoch=epoch)
 
     metadata_paths = _write_metadata(
-        output_dir, [archive_path], product="sklc", version=version,
+        output_dir, [archive_path, *catalog_files], product="sklc", version=version,
         source_revision=source_revision, created_at=timestamp, checksum_manifest=True,
     )
-    return [archive_path, *metadata_paths]
+    return [archive_path, *metadata_paths, *catalog_files]
 
 
 def extract_release_notes(notes_path: Path, version: str) -> str:
@@ -247,6 +260,7 @@ def main() -> None:
     build.add_argument("--repo-root", type=Path, default=Path.cwd())
     build.add_argument("--site-dir", type=Path, default=Path("site/dist"))
     build.add_argument("--output-dir", type=Path, default=Path("release"))
+    build.add_argument("--catalog-archive", type=Path, help="include an existing catalog archive and its .sha256 file")
     validate = commands.add_parser("validate-version", help="validate a SemVer release version without a leading v")
     validate.add_argument("--version", required=True)
     notes = commands.add_parser("release-notes", help="extract one accepted version section")
@@ -273,6 +287,7 @@ def main() -> None:
         version=args.version,
         source_revision=args.source_revision,
         source_date_epoch=source_date_epoch,
+        catalog_archive=args.catalog_archive,
     )
     print(json.dumps({"artifacts": [str(path) for path in built]}, indent=2))
 

@@ -35,32 +35,23 @@ jobs:
         run: ${{ matrix.command }}
 
   skill-catalog:
-    name: Skill catalog and BOE artifact
+    name: Four-skill download
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Assemble skill catalog and BOE
+      - name: Package the four skills
         run: |
-          test -z "$(find skills/ai4sdlc .exchange/generated/boe/ai4sdlc -type l -print -quit)"
-          mkdir -p skill-catalog/skills
-          mkdir -p skill-catalog/.exchange/generated/boe
-          cp -R skills/ai4sdlc/. skill-catalog/skills/
-          cp -R .exchange/generated/boe/ai4sdlc/. skill-catalog/.exchange/generated/boe/
-          test -n "$(find skill-catalog/skills -mindepth 2 -maxdepth 2 -name SKILL.md -print -quit)"
-          test -n "$(find skill-catalog/.exchange/generated/boe -name boe.json -print -quit)"
-          test -z "$(find skill-catalog/.exchange -mindepth 1 -maxdepth 1 ! -name generated -print -quit)"
-          test -z "$(find skill-catalog/.exchange/generated -mindepth 1 -maxdepth 1 ! -name boe -print -quit)"
-          test ! -e skill-catalog/skills/ai4sdlc
-          test ! -e skill-catalog/.exchange/generated/boe/ai4sdlc
-      - name: Upload skill catalog and BOE
+          bash scripts/package-skill-catalog.sh "$RUNNER_TEMP/catalog/skill-catalog.tar.gz"
+          cd "$RUNNER_TEMP/catalog"
+          sha256sum --check skill-catalog.tar.gz.sha256
+      - name: Upload four-skill download
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: skill-catalog-and-boe
-          path: skill-catalog/
+          name: skill-catalog
+          path: ${{ runner.temp }}/catalog/skill-catalog.tar.gz*
           if-no-files-found: error
-          include-hidden-files: true
 
   site:
     name: "Site ${{ matrix.check }}"

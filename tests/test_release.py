@@ -26,6 +26,10 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_SCHEMA_PATH = Path("contracts/release-manifest/v1/release-manifest.schema.json")
 VERSION = "1.2.3"
 SOURCE_REVISION = "a" * 40
+CATALOG_SKILLS = {
+    "python-secure-code-review", "unit-test-generation",
+    "inline-documentation", "code-change-description",
+}
 
 
 def _write(path: Path, content: bytes = b"release input\n") -> None:
@@ -952,6 +956,13 @@ def _run_release_workflow(repo: Path, tmp_path: Path, *, version: str = VERSION,
     for filename in ("__init__.py", "release.py"):
         _write(repo / "scripts/skill_exchange" / filename,
                (REPOSITORY_ROOT / "scripts/skill_exchange" / filename).read_bytes())
+    _write(repo / "scripts/package-skill-catalog.sh",
+           (REPOSITORY_ROOT / "scripts/package-skill-catalog.sh").read_bytes())
+    for relative in ("skills", "products/skill-catalog"):
+        shutil.copytree(REPOSITORY_ROOT / relative, repo / relative)
+    _write(repo / "skills/ai4sdlc/unit-test-generation/references/example file.bin", b"\x00\xffsupporting bytes\r\n")
+    if broken == "missing-catalog-skill":
+        (repo / "skills/ai4sdlc/unit-test-generation/SKILL.md").unlink()
     notes = f"## {version}\n\n- Ready-to-deploy site.\n"
     if broken == "missing-notes":
         notes = "## 0.1.0\n\nEarlier release.\n"
@@ -996,6 +1007,7 @@ Path(os.environ['SKLC_RECORDED_RELEASE']).write_text(
 
     # These commits/tags exist only in this disposable, remote-free test repo.
     git("init", "-q")
+    git("add", "skills", "products/skill-catalog")
     if broken == "untracked-notes":
         _write(repo / "fixture.txt")
         git("add", "fixture.txt")
@@ -1003,6 +1015,7 @@ Path(os.environ['SKLC_RECORDED_RELEASE']).write_text(
         git("add", "RELEASE_NOTES.md")
     git("commit", "-q", "-m", "Accepted fixture notes")
     revision = git("rev-parse", "HEAD")
+    _write(repo / "skills/ai4sdlc/unit-test-generation/local-only.txt", b"must not ship")
     if annotated:
         git("tag", "-a", f"v{version}", "-m", "Fixture release")
         assert git("rev-parse", f"v{version}") != revision
@@ -1058,15 +1071,16 @@ def test_release_workflow_verifies_prebuilt_and_publishes_only_accepted_assets(
     assert record is not None
     args = record["args"]
     assert args[:3] == ["release", "create", f"v{version}"]
-    assets = [Path(value) for value in args[3:6]]
+    assets = [Path(value) for value in args[3:8]]
     assert [path.name for path in assets] == [
         f"deployment-kit-prebuilt-{version}.tar.gz", "release-manifest.json", "SHA256SUMS.txt",
+        f"skill-catalog-{version}.tar.gz", f"skill-catalog-{version}.tar.gz.sha256",
     ]
     assert set(assets[0].parent.iterdir()) == set(assets)
-    assert args[6:10] == ["--verify-tag", "--title", f"v{version}", "--notes-file"]
-    assert args[11:] == (["--prerelease"] if prerelease else [])
+    assert args[8:12] == ["--verify-tag", "--title", f"v{version}", "--notes-file"]
+    assert args[13:] == (["--prerelease"] if prerelease else [])
     assert record["body"] == f"## {version}\n\n- Ready-to-deploy site.\n"
-    assert Path(args[10]).parent != assets[0].parent
+    assert Path(args[12]).parent != assets[0].parent
     manifest = json.loads(assets[1].read_text(encoding="utf-8"))
     assert manifest["source_revision"] == revision
     assert manifest["version"] == version
@@ -1077,6 +1091,22 @@ def test_release_workflow_verifies_prebuilt_and_publishes_only_accepted_assets(
     with tarfile.open(assets[0]) as archive:
         archive.extractall(customer, filter="data")
     _assert_customer_checks(customer / f"deployment-kit-prebuilt-{version}")
+    digest, filename = assets[4].read_text().split()
+    assert digest == hashlib.sha256(assets[3].read_bytes()).hexdigest()
+    assert filename.lstrip("*") == assets[3].name
+    with tarfile.open(assets[3]) as archive:
+        assert all(member.isfile() or member.isdir() for member in archive.getmembers())
+        archive.extractall(customer, filter="data")
+    catalog = customer / "skill-catalog"
+    assert {p.name for p in catalog.iterdir()} == {"README.md", "skills"}
+    assert {p.name for p in (catalog / "skills").iterdir()} == CATALOG_SKILLS
+    assert (catalog / "README.md").read_bytes() == (repo / "products/skill-catalog/README.md").read_bytes()
+    for name in CATALOG_SKILLS:
+        source = repo / "skills/ai4sdlc" / name
+        expected = {p.relative_to(source): p.read_bytes() for p in source.rglob("*")
+                    if p.is_file() and p.name != "local-only.txt"}
+        packaged = catalog / "skills" / name
+        assert {p.relative_to(packaged): p.read_bytes() for p in packaged.rglob("*") if p.is_file()} == expected
 
 
 @pytest.mark.parametrize("broken,error", [
@@ -1085,6 +1115,7 @@ def test_release_workflow_verifies_prebuilt_and_publishes_only_accepted_assets(
     ("untracked-notes", "did not match any file"),
     ("wrong-commit", None), ("invalid-tag", "version must be a SemVer value"),
     ("missing-download", "missing referenced download"),
+    ("missing-catalog-skill", None),
 ])
 def test_release_workflow_stops_before_publishing_invalid_inputs(tmp_path: Path, broken: str, error: str | None):
     repo, _site = _release_fixture(tmp_path)
@@ -1092,7 +1123,7 @@ def test_release_workflow_stops_before_publishing_invalid_inputs(tmp_path: Path,
     results, record, _revision = _run_release_workflow(repo, tmp_path, broken=broken)
 
     assert results[-1].returncode != 0
-    assert len(results) == (2 if broken == "missing-download" else 1)
+    assert len(results) == (2 if broken in {"missing-download", "missing-catalog-skill"} else 1)
     assert record is None, "an invalid release must never reach the publish command"
     if error is not None:
         assert error in results[-1].stdout + results[-1].stderr

@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   release:
-    name: Build and publish prebuilt release
+    name: Build and publish release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -83,6 +83,7 @@ jobs:
             --repo-root . --site-dir site/dist \
             --version "$RELEASE_VERSION" --source-revision "$SOURCE_REVISION" \
             --output-dir "$RELEASE_DIR/assets"
+          bash scripts/package-skill-catalog.sh "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz"
           mkdir "$RELEASE_DIR/extracted"
           tar -xzf "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.tar.gz" \
             -C "$RELEASE_DIR/extracted"
@@ -94,6 +95,7 @@ jobs:
           test ! -e public/.gitkeep
           cd "$RELEASE_DIR/assets"
           sha256sum --strict --check SHA256SUMS.txt
+          sha256sum --strict --check "skill-catalog-$RELEASE_VERSION.tar.gz.sha256"
       - name: Create GitHub Release
         id: publish-release
         shell: bash
@@ -108,6 +110,8 @@ jobs:
             "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.tar.gz" \
             "$RELEASE_DIR/assets/release-manifest.json" \
             "$RELEASE_DIR/assets/SHA256SUMS.txt" \
+            "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz" \
+            "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz.sha256" \
             --verify-tag --title "$GITHUB_REF_NAME" \
             --notes-file "$RELEASE_DIR/release-body.md" \
             "${prerelease_args[@]}"

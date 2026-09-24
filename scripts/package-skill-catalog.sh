@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Package committed files only; run from the repository root.
-archive=$(realpath -m -- "${1:?Usage: bash scripts/package-skill-catalog.sh <archive.tar.gz>}")
+archive=${1:?Usage: bash scripts/package-skill-catalog.sh <archive.tar.gz>}
+[[ "$archive" = /* ]] || archive="$PWD/$archive"
 test ! -e "$archive"
 test ! -e "$archive.sha256"
 output=$(dirname -- "$archive")
@@ -22,4 +23,6 @@ for skill in "${skills[@]}"; do
 done
 
 tar -czf "$archive" -C "$stage" skill-catalog
-(cd "$output" && sha256sum "$(basename -- "$archive")" > "$(basename -- "$archive").sha256")
+checksum=(sha256sum)
+command -v sha256sum >/dev/null 2>&1 || checksum=(shasum -a 256)
+(cd "$output" && "${checksum[@]}" "$(basename -- "$archive")" > "$(basename -- "$archive").sha256")

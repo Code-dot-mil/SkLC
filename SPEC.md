@@ -648,9 +648,12 @@ inputs fail the build; the builder does not generate substitute documentation.
 
 The package's manifest and checksums cover the same installation files, excluding
 only their own two root metadata files. Nested assets with either metadata filename
-are included. External `release-manifest.json` records only the prebuilt archive;
-external `SHA256SUMS.txt` covers that archive and the external manifest. No catalog
-archive or release-notes asset is produced by this builder.
+are included. External `release-manifest.json` records the prebuilt archive;
+optional `--catalog-archive` includes an existing `skill-catalog-<version>.tar.gz`
+and its `.sha256` file. Both must be regular, unlinked files in `--output-dir`
+with the release version in their names. Missing or invalid inputs fail before
+building. External `SHA256SUMS.txt` covers these assets and the external manifest.
+No catalog archive or release-notes asset is produced by this builder.
 
 The builder also vendors `products/deployment-kit/scripts/verify_prebuilt.py`
 as `scripts/verify_prebuilt.py` and includes it in the manifest and checksums.
@@ -814,10 +817,30 @@ The repository also owns `.github/workflows/skillspector.yml`:
 
 GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_API_KEY_HEADER`, `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`, `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS`, `SKILL_EXCHANGE_SCAN_MAX_SECONDS`, and `RUNNER_CA_BUNDLE_PATH`. The provider variable must equal `openai_compatible`. The API-key header variable names the gateway-defined HTTP header and is not a credential. The request-rate variable controls the shared rate limiter across analyzer clients, the output-token variable caps each request, and the scanner-workflow variable allows paced calls to finish within a per-skill budget. All four values participate in scanner cache hashing. `RUNNER_CA_BUNDLE_PATH` must resolve, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain. The SkillSpector jobs pass it to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`, and fail closed when it is missing or unreadable. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
 
+## Skill Catalog Download
+
+`scripts/package-skill-catalog.sh` creates a simple archive from committed
+`skills/ai4sdlc/` content: `python-secure-code-review`, `unit-test-generation`,
+`inline-documentation`, and `code-change-description`. The archive root is
+`skill-catalog/`, containing only `README.md` and `skills/<name>/` with each
+complete package. Missing SKILL.md files and symbolic links fail packaging;
+untracked files are excluded by using `git archive HEAD`.
+
+The script writes an adjacent `.tar.gz.sha256` file for the archive. It adds no
+Python dependency, catalog-selection policy, BOE handling, shipped schema,
+manifest, or custom verification command. Existing assessed-site rules and
+shared contracts are unchanged. The detailed download/install scope is in
+`docs/specs/initial-skill-catalog.md`.
+
+The independent `skill-catalog` CI job uploads the archive and checksum. The
+tag-release job also publishes a versioned copy alongside the prebuilt assets,
+after the existing site checks pass. Consumers check the checksum, extract the
+archive, and copy the complete skill folders into workspace `.agents/skills/`.
+
 ## GitHub Release Automation
 
 `.github/workflows/release.yml` implements the manual-tag path from
-`docs/specs/release-process.md` for `deployment-kit-prebuilt` only. It runs on
+`docs/specs/release-process.md` for the prebuilt site and skill catalog download. It runs on
 `v*.*.*` tag pushes, validates the version as SemVer without its leading `v`, and
 requires the checkout to match the tag's commit. It neither chooses a release
 version nor creates a tag. Maintainers must complete the release checklist first.
@@ -837,9 +860,13 @@ site-content checks, and external checksum verification before publication. Buil
 metadata records the tag's commit, with `SOURCE_DATE_EPOCH` from that commit.
 
 Use a fresh directory under `RUNNER_TEMP`. Publish exactly
-`deployment-kit-prebuilt-<version>.tar.gz`, `release-manifest.json`, and
-`SHA256SUMS.txt` via `gh release create --verify-tag --notes-file ...`. No catalog
-archive or release-notes asset is uploaded. Existing releases must not be
+`deployment-kit-prebuilt-<version>.tar.gz`, the shared `release-manifest.json` and
+`SHA256SUMS.txt`, plus `skill-catalog-<version>.tar.gz` and its `.tar.gz.sha256`
+file via `gh release create --verify-tag --notes-file ...`. Catalog packaging
+uses the same Bash script as CI and runs before the prebuilt builder receives
+`--catalog-archive`. Shared metadata covers both archives and the catalog checksum;
+metadata inside the prebuilt archive remains unchanged.
+Release notes are not uploaded as an asset. Existing releases must not be
 overwritten. SemVer prereleases are marked as GitHub prereleases. Keep the release
 token scoped to the publishing step, disable persisted checkout credentials, and
 use a 30-minute GitHub-hosted job with non-cancelling per-tag concurrency.

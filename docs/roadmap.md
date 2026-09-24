@@ -12,20 +12,20 @@ The Q3 priority is the smallest release path that proves this model: GitHub publ
 
 - **Skill lifecycle guidance:** a parallel guidance and research track that will become a versioned guidance bundle published from the Code-dot-mil AI4SDLC GitHub after the team agrees on the minimum useful lifecycle guidance. It does not gate the assessment kit, initial catalog, or deployment kit.
 - **Assessment kit:** standalone CLI with commands and reference CI for validating and assessing skills, producing native assessor output, and maintaining BOE manifests.
-- **Initial skill catalog:** four developer-centered skills: Secure Code Review, Unit Test Generation, Inline Documentation, and Commit Message and PR Description. The released artifact includes any available BOE manifests with their assessor reports; the maintainer's publication policy is internal release governance.
+- **Initial skill catalog:** a download of four complete developer skill folders: Secure Code Review, Unit Test Generation, Inline Documentation, and Commit Message and PR Description, with a short README and archive checksum.
 - **Deployment kit:** provides the reference implementation for the skill exchange site. It has two modes:
   - **Prebuilt:** a ready-to-deploy static site with deployment CI and documentation.
   - **Operator:** site source, build tooling, and reference CI for configuring, building, and deploying a skill exchange from released components.
 
 ### 2.2 How the products fit together
 
-Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Product file formats and commands are defined as contracts, so the products can work together without sharing code. Shared schemas and examples live under `contracts/`. Each release includes the contracts it uses.
+Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Product file formats and commands are defined as contracts, so the products can work together without sharing code. Shared schemas and examples live under `contracts/`. Products include the contracts they use; the simple skill catalog download needs none.
 
 | Product | Release artifact | Uses another product? | Primary use-case |
 |---|---|---|---|
 | Skill lifecycle guidance | Code-dot-mil AI4SDLC GitHub guidance | No | Help users understand and apply the skill lifecycle. |
 | Assessment kit | CLI package, contracts, docs, and optional GitLab CI profile | No | Validate skills, run assessments, and produce BOE. |
-| Skill catalog | Four skills, manifest, checksums, and optional BOE | Optional assessment-kit outputs | Seed a skill exchange or distribute skills. |
+| Skill catalog | Skill folders, README, and archive checksum | No | Download and install the skills. |
 | Deployment kit - prebuilt | `deployment-kit-prebuilt` with deployment-only GitLab CI | Released catalog artifacts and optional assessment-kit artifacts | Deploy GitLab Pages or a static hosted site from released static site artifacts. |
 | Deployment kit - operator | `deployment-kit-operator` with reference GitLab CI | Compatible SkLC release artifacts for skill catalog, assessment kit, and assessment artifacts | Build and deploy GitLab Pages or a static hosted site from released catalog and assessment-kit inputs. |
 
@@ -43,13 +43,12 @@ flowchart LR
   lifecycle -. "informs" .-> assessment
   lifecycle -. "informs" .-> catalog
   lifecycle -. "informs" .-> deployment
-  assessment -->|"adds BOE to"| catalog
   catalog -->|"feeds"| prebuilt
   catalog -->|"supplies"| operator
   assessment -->|"supplies"| operator
 ```
 
-Solid arrows show how released products are used together. Dotted arrows show where lifecycle guidance may later inform the products. The guidance track is parallel and non-gating until its minimum useful shape is accepted. Each product still stands alone. The assessment kit produces BOE that a catalog can include. Internal catalog policy governs which skills are released.
+Solid arrows show how released products are used together. Dotted arrows show where lifecycle guidance may later inform the products. The guidance track is parallel and non-gating until its minimum useful shape is accepted. Each product still stands alone. The initial catalog distributes exactly the four named skills without BOE or selection-policy machinery.
 
 The source tree follows the same product boundaries:
 
@@ -68,7 +67,7 @@ maintainer/
 
 ## 3. Release strategy
 
-Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with manifests, `SHA256SUMS.txt`, and installation documentation. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process follows `docs/specs/release-process.md` (Status: Approved) and is assisted by the local Codex skill `.agents/skills/sklc-release-process`.
+Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with product-specific integrity checks and installation documentation. The skill catalog download needs only its README and an archive checksum. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process follows `docs/specs/release-process.md` (Status: Approved) and is assisted by the local Codex skill `.agents/skills/sklc-release-process`.
 
 Some products include reference GitLab CI after their core behavior exists. That CI is customer-facing packaging: it shows how to run the released product in GitLab. It is not a separate product, and it does not reuse maintainer GitHub workflows.
 
@@ -170,32 +169,25 @@ A customer can obtain the initial skill catalog for use in a GitLab-hosted skill
 
 #### 3.3.2 Scope
 
-Included:
+- Exactly the four named skill folders and their committed supporting files.
+- A short README explaining download, extraction, and workspace installation.
+- One archive checksum.
 
-- Published skill packages.
-- A source-controlled internal catalog policy owned by the initial catalog. It records human governance's publication decisions using exact skill names and one mode:
-  - `include-list` publishes only listed valid skills.
-  - `exclude-list` publishes every valid skill except listed skills.
-- Optional BOE manifests and their referenced native assessor reports when produced by a released assessment kit.
-- A README explaining the catalog's purpose and how to use its skills either to seed a customer catalog or provide them directly to developers and users.
-
-Excluded:
-
-- Assessment execution or required BOE production.
-- Using BOE presence or content to change which skills are published.
-- Site source, generated site data, or static-site output.
+Assessment, BOE packaging, selection policies, shipped schemas, custom verifiers,
+and site generation are outside this download's scope.
 
 #### 3.3.3 Team delivery tasks
 
-1. Assemble the initial catalog as an independently downloadable release artifact.
-2. Finalize the contracts required by the release and validate the catalog against the skill-package and release-manifest contracts. Validate BOE only when included. Use the internal catalog-policy contract only during release assembly.
-3. During release assembly, verify the published skill set from the internal `include-list` or `exclude-list` policy.
-4. Write the catalog README, including its purpose, artifact layout, verification steps, direct local agent install workflow, and both supported use cases.
+1. Archive the four folders and README from the selected Git commit.
+2. Generate the archive checksum and publish both files through CI and releases.
+3. Check the downloaded file set and installation instructions.
 
 #### 3.3.4 Acceptance evidence
 
-- The GitHub Release contains the catalog skills, manifest, checksums, README, and any available BOE files.
-- A developer verifies the checksums in a clean temporary workspace, installs the released skills under `<workspace>/.agents/skills/*`, starts a supported agent session from that workspace, and confirms the session discovers the released workspace skills rather than any global `.agents` or `.codex` skill source. If BOE is included, each BOE entry matches its referenced assessor report.
+- The download contains exactly the four complete skill folders and README.
+- Its checksum matches; untracked files and unrelated repository content are absent.
+- A developer copies the folders into a clean workspace's `.agents/skills/` and
+  confirms a fresh agent session discovers those workspace skills.
 
 ### 3.4 Release milestone — Assessment kit foundation
 

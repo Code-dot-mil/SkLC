@@ -49,7 +49,7 @@ The basic release flow is manual tag creation plus a GitHub Actions workflow:
 5. Codex drafts a concise release-notes section titled with the accepted version.
 6. A maintainer reviews the release notes, commits them, and pushes them before creating the tag.
 7. A maintainer creates the release tag on the commit that contains the accepted release notes.
-8. GitHub Actions builds every releasable product artifact, creates `release-manifest.json`, creates `SHA256SUMS.txt`, creates the GitHub Release with that version's release-notes snippet as the release description, and uploads all release assets.
+8. GitHub Actions builds the releasable artifacts, creates shared `release-manifest.json` and `SHA256SUMS.txt`, creates the GitHub Release with that version's release-notes snippet as the release description, and uploads the archives and verification files. The manifest lists both archives and the catalog's adjacent `.tar.gz.sha256` file; `SHA256SUMS.txt` also covers the manifest.
 
 `SHA256SUMS.txt` uses the standard checksum-file format:
 
@@ -70,14 +70,14 @@ Before tagging, the maintainer works through this checklist in order:
 7. Append the accepted release notes to the repository's release notes or changelog document, using a heading that contains the accepted version.
 8. Commit and push the release notes before creating the release tag.
 9. Build each releasable product artifact from the tag candidate.
-10. Confirm each releasable product artifact includes `README.md`, `release-manifest.json`, `SHA256SUMS.txt`, required contracts, and product-specific install or use documentation.
+10. Confirm each product includes its documented contents and installation README. The prebuilt site includes its manifest, checksums, and required contracts. The skill catalog archive contains only its README and complete skill folders, with an adjacent archive checksum.
 11. Run each releasable product's product-specific tests and acceptance proof.
 12. For `deployment-kit-prebuilt`, confirm the artifact deploys unchanged to GitLab Pages from a clean GitLab project.
-13. For `skill-catalog`, confirm the artifact contains exactly the intended skills, validates its catalog policy, and verifies any included BOE.
+13. For `skill-catalog`, check its archive checksum and confirm the complete skill folders can be copied into workspace `.agents/skills/` and discovered in a fresh agent session.
 14. Confirm no secrets, local paths, generated cache state, maintainer-only workflow details, or unpublished artifacts are included.
 15. Create the release tag only after all checklist items above pass.
 16. Confirm the GitHub Release description uses the accepted release-notes snippet for that version.
-17. Confirm the uploaded release assets are the releasable product artifacts, `release-manifest.json`, and `SHA256SUMS.txt`. Release notes are not uploaded as a separate release asset.
+17. Confirm the uploaded assets match the product archives and verification files listed above, and that the shared manifest and checksums cover both products. Release notes are not uploaded as a separate asset.
 
 ## Codex release skill
 

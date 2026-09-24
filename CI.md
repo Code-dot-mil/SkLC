@@ -51,14 +51,33 @@ The self-hosted workflow passes `RUNNER_CA_BUNDLE_PATH` to Node as `NODE_EXTRA_C
 
 The repository or organization Actions policy must allow `GITHUB_TOKEN` write access, and the `main` branch ruleset must allow the GitHub Actions publication identity to push the generated-evidence commit. The review job requests `pull-requests: write` only to add its generated review comment for same-repository pull requests; the publication job requests only `contents: write`. If branch policy forbids direct bot pushes, configure an equivalent ruleset bypass for the publication workflow before running it. Do not replace `GITHUB_TOKEN` with the LLM gateway credential or reuse the gateway credential for repository access.
 
-## Prebuilt Releases
+## Skill Catalog Download
+
+The independent `skill-catalog` job runs `scripts/package-skill-catalog.sh`.
+It archives the selected skill folders and installation README from the
+checked-out Git commit, then uploads `skill-catalog.tar.gz` and its `.sha256`
+file. It requires Git, Bash, tar, and sha256sum; no Python, Node, site build,
+policy evaluation, or assessment runs in this job. Untracked files are excluded.
+
+From the repository root, build a committed candidate with:
+
+```sh
+bash scripts/package-skill-catalog.sh /tmp/catalog/skill-catalog.tar.gz
+```
+
+The existing release-workflow tests check exact folder membership, unchanged
+supporting files, checksum integrity, untracked-file exclusion, and failure
+before publication when a required skill is missing.
+
+## Releases
 
 `.github/workflows/release.yml` runs when a maintainer pushes a `v<version>` tag.
 Tag creation is the release approval action: complete the human-reviewed checklist
 in `docs/specs/release-process.md`, including clean GitLab Pages acceptance proof,
 before tagging. This workflow does not create tags or approve release readiness.
-Only `deployment-kit-prebuilt` is packaged in this first release implementation;
-standalone catalog packaging belongs to its follow-up PR.
+The workflow publishes the prebuilt site plus the skill catalog download under
+the same version. Publication still requires the existing site release checks;
+the independent CI catalog download does not depend on the site build.
 
 The tagged commit must contain exactly one nonempty `## <version>` section in
 `RELEASE_NOTES.md`. The workflow rejects invalid versions, missing/duplicate/empty
@@ -73,8 +92,12 @@ It extracts and verifies the package and checks the external checksum file befor
 publishing. Temporary output stays under `RUNNER_TEMP`; source revision and
 repeatable archive timestamps come from the tagged commit.
 
-The GitHub Release contains exactly the prebuilt `.tar.gz`, the external
-`release-manifest.json`, and `SHA256SUMS.txt`. `gh release create --verify-tag`
+The GitHub Release contains the prebuilt `.tar.gz`, the shared
+`release-manifest.json` and `SHA256SUMS.txt`, plus `skill-catalog-<version>.tar.gz`
+and `skill-catalog-<version>.tar.gz.sha256`. The workflow packages the catalog
+first, then passes `--catalog-archive` to the prebuilt builder. The shared manifest
+lists both archives and the catalog checksum; `SHA256SUMS.txt` also covers the
+manifest. The catalog retains its individual archive checksum. `gh release create --verify-tag`
 requires the tag to exist and does not overwrite an existing release. SemVer
 prereleases are marked as GitHub prereleases. Checkout does not persist Git
 credentials, and `GH_TOKEN` is exposed only to the publishing step. The job uses

@@ -52,9 +52,9 @@ recovery plan.
    product-selection menu. Once a product is releasable it remains in subsequent
    releases. Confirm this skill exists and required tooling/access is available.
 
-   The current workflow supports only `deployment-kit-prebuilt`. Standalone
-   `skill-catalog`, `assessment-kit`, and `deployment-kit-operator` packaging is
-   outside this implementation. If another product is now releasable, stop for
+   The current workflow supports `deployment-kit-prebuilt` and the
+   `skill-catalog` download. `assessment-kit` and `deployment-kit-operator`
+   remain outside this implementation. If another product is now releasable, stop for
    the necessary release-tooling update; do not silently omit it or assemble it
    ad hoc. Missing acceptance proof is still a release blocker, not evidence
    that the prebuilt product is ready.
@@ -116,9 +116,14 @@ recovery plan.
    `--reuse-boe-only`, or alter tracked BOE to make a release pass. Python
    produces exchange data; the Node build only consumes it.
 
+   First package the four committed skill folders with `bash scripts/package-skill-catalog.sh
+   <temporary-assets-directory>/skill-catalog-<version>.tar.gz`. This produces the
+   archive and its adjacent `.sha256` file without running assessments or site tooling.
+
    Package the built `site/dist` using `uv run python -m skill_exchange.release
    build --repo-root . --site-dir site/dist --version <version>
-   --source-revision <candidate-commit> --output-dir <temporary-assets-directory>`.
+   --source-revision <candidate-commit> --output-dir <temporary-assets-directory>
+   --catalog-archive <temporary-assets-directory>/skill-catalog-<version>.tar.gz`.
    Replace every template value with the approved value before execution. Set
    `SOURCE_DATE_EPOCH` to the candidate's commit timestamp, as the workflow does.
    Keep derived data, caches, previews, and artifacts out of the source worktree.
@@ -134,6 +139,12 @@ recovery plan.
    manifest/checksums, and every referenced download. Review for secrets, local
    paths, generated caches, maintainer-only files, and unpublished artifacts.
    Verification failures block tagging; never edit checksums to conceal them.
+
+   Check the catalog's `.tar.gz.sha256`, extract it, and follow its README to copy
+   the complete skill folders into a clean workspace. Confirm discovery in
+   a fresh agent session. The catalog has no separate manifest or verifier.
+   Confirm the shared release manifest lists both archives and the catalog checksum,
+   and that `SHA256SUMS.txt` verifies those assets and the shared manifest.
 
 10. **Prove candidate deployment.** Ask before using a clean GitLab project,
     changing its configuration, or committing/pushing the extracted package.
@@ -169,8 +180,10 @@ recovery plan.
     - `deployment-kit-prebuilt-<version>.tar.gz`
     - `release-manifest.json`
     - `SHA256SUMS.txt`
+    - `skill-catalog-<version>.tar.gz`
+    - `skill-catalog-<version>.tar.gz.sha256`
 
-    Release notes are the description, never a fourth uploaded asset. Obtain
+    Release notes are the description, never a separate uploaded asset. Obtain
     explicit approval for these automatic effects before the tag push; do not
     run `gh release create` or upload assets manually alongside the workflow.
 

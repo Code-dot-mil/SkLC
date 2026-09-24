@@ -35,18 +35,18 @@ jobs:
         run: ${{ matrix.command }}
 
   skill-catalog:
-    name: Four-skill download
+    name: Skill catalog
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Package the four skills
+      - name: Package the skill catalog
         run: |
           bash scripts/package-skill-catalog.sh "$RUNNER_TEMP/catalog/skill-catalog.tar.gz"
           cd "$RUNNER_TEMP/catalog"
           sha256sum --check skill-catalog.tar.gz.sha256
-      - name: Upload four-skill download
+      - name: Upload skill catalog download
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: skill-catalog

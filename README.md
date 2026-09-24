@@ -42,11 +42,11 @@ Stop if verification fails. Once it passes, follow the included README or choose
 
 The developer setup below is for working on the source, not deploying this package.
 
-## Download the four skills
+## Download the skill catalog
 
 Download `skill-catalog-<version>.tar.gz` and its matching `.tar.gz.sha256` file
 from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), when published.
-The archive contains the four developer skill folders, their supporting files,
+The archive contains the developer skill folders, their supporting files,
 and a [short installation README](products/skill-catalog/README.md). Extract it
 and copy the folders into your workspace's `.agents/skills/`.
 For PR testing, the `skill-catalog` CI artifact contains the same layout.

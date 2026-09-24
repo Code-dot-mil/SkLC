@@ -817,7 +817,7 @@ The repository also owns `.github/workflows/skillspector.yml`:
 
 GitHub repository configuration requires secret `SKILL_EXCHANGE_LLM_API_KEY` and variables `SKILL_EXCHANGE_LLM_PROVIDER`, `SKILL_EXCHANGE_LLM_BASE_URL`, `SKILL_EXCHANGE_LLM_MODEL`, `SKILL_EXCHANGE_LLM_API_KEY_HEADER`, `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND`, `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS`, `SKILL_EXCHANGE_SCAN_MAX_SECONDS`, and `RUNNER_CA_BUNDLE_PATH`. The provider variable must equal `openai_compatible`. The API-key header variable names the gateway-defined HTTP header and is not a credential. The request-rate variable controls the shared rate limiter across analyzer clients, the output-token variable caps each request, and the scanner-workflow variable allows paced calls to finish within a per-skill budget. All four values participate in scanner cache hashing. `RUNNER_CA_BUNDLE_PATH` must resolve, on each self-hosted runner, to a readable PEM bundle containing the enterprise TLS CA chain. The SkillSpector jobs pass it to Node as `NODE_EXTRA_CA_CERTS` before `actions/setup-python` starts and to Python as `SSL_CERT_FILE`, and fail closed when it is missing or unreadable. Actions policy and the default-branch ruleset must permit the protected publication job's `GITHUB_TOKEN` to push generated BOE commits.
 
-## Four-skill Download
+## Skill Catalog Download
 
 `scripts/package-skill-catalog.sh` creates a simple archive from committed
 `skills/ai4sdlc/` content: `python-secure-code-review`, `unit-test-generation`,
@@ -835,12 +835,12 @@ shared contracts are unchanged. The detailed download/install scope is in
 The independent `skill-catalog` CI job uploads the archive and checksum. The
 tag-release job also publishes a versioned copy alongside the prebuilt assets,
 after the existing site checks pass. Consumers check the checksum, extract the
-archive, and copy the four complete folders into workspace `.agents/skills/`.
+archive, and copy the complete skill folders into workspace `.agents/skills/`.
 
 ## GitHub Release Automation
 
 `.github/workflows/release.yml` implements the manual-tag path from
-`docs/specs/release-process.md` for the prebuilt site and four-skill download. It runs on
+`docs/specs/release-process.md` for the prebuilt site and skill catalog download. It runs on
 `v*.*.*` tag pushes, validates the version as SemVer without its leading `v`, and
 requires the checkout to match the tag's commit. It neither chooses a release
 version nor creates a tag. Maintainers must complete the release checklist first.

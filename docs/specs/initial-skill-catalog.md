@@ -1,4 +1,4 @@
-# Four-skill Download Spec
+# Skill Catalog Download Spec
 
 ## Outcome
 

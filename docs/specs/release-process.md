@@ -70,10 +70,10 @@ Before tagging, the maintainer works through this checklist in order:
 7. Append the accepted release notes to the repository's release notes or changelog document, using a heading that contains the accepted version.
 8. Commit and push the release notes before creating the release tag.
 9. Build each releasable product artifact from the tag candidate.
-10. Confirm each product includes its documented contents and installation README. The prebuilt site includes its manifest, checksums, and required contracts. The four-skill archive contains only its README and four complete skill folders, with an adjacent archive checksum.
+10. Confirm each product includes its documented contents and installation README. The prebuilt site includes its manifest, checksums, and required contracts. The skill catalog archive contains only its README and complete skill folders, with an adjacent archive checksum.
 11. Run each releasable product's product-specific tests and acceptance proof.
 12. For `deployment-kit-prebuilt`, confirm the artifact deploys unchanged to GitLab Pages from a clean GitLab project.
-13. For `skill-catalog`, check its archive checksum and confirm the four complete skill folders can be copied into workspace `.agents/skills/` and discovered in a fresh agent session.
+13. For `skill-catalog`, check its archive checksum and confirm the complete skill folders can be copied into workspace `.agents/skills/` and discovered in a fresh agent session.
 14. Confirm no secrets, local paths, generated cache state, maintainer-only workflow details, or unpublished artifacts are included.
 15. Create the release tag only after all checklist items above pass.
 16. Confirm the GitHub Release description uses the accepted release-notes snippet for that version.

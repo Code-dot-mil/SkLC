@@ -52,7 +52,7 @@ recovery plan.
    product-selection menu. Once a product is releasable it remains in subsequent
    releases. Confirm this skill exists and required tooling/access is available.
 
-   The current workflow supports `deployment-kit-prebuilt` and the four-skill
+   The current workflow supports `deployment-kit-prebuilt` and the
    `skill-catalog` download. `assessment-kit` and `deployment-kit-operator`
    remain outside this implementation. If another product is now releasable, stop for
    the necessary release-tooling update; do not silently omit it or assemble it
@@ -141,7 +141,7 @@ recovery plan.
    Verification failures block tagging; never edit checksums to conceal them.
 
    Check the catalog's `.tar.gz.sha256`, extract it, and follow its README to copy
-   the four complete skill folders into a clean workspace. Confirm discovery in
+   the complete skill folders into a clean workspace. Confirm discovery in
    a fresh agent session. The catalog has no separate manifest or verifier.
    Confirm the shared release manifest lists both archives and the catalog checksum,
    and that `SHA256SUMS.txt` verifies those assets and the shared manifest.

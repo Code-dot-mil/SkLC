@@ -19,13 +19,13 @@ The Q3 priority is the smallest release path that proves this model: GitHub publ
 
 ### 2.2 How the products fit together
 
-Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Product file formats and commands are defined as contracts, so the products can work together without sharing code. Shared schemas and examples live under `contracts/`. Products include the contracts they use; the simple four-skill download needs none.
+Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Product file formats and commands are defined as contracts, so the products can work together without sharing code. Shared schemas and examples live under `contracts/`. Products include the contracts they use; the simple skill catalog download needs none.
 
 | Product | Release artifact | Uses another product? | Primary use-case |
 |---|---|---|---|
 | Skill lifecycle guidance | Code-dot-mil AI4SDLC GitHub guidance | No | Help users understand and apply the skill lifecycle. |
 | Assessment kit | CLI package, contracts, docs, and optional GitLab CI profile | No | Validate skills, run assessments, and produce BOE. |
-| Skill catalog | Four skill folders, README, and archive checksum | No | Download and install the skills. |
+| Skill catalog | Skill folders, README, and archive checksum | No | Download and install the skills. |
 | Deployment kit - prebuilt | `deployment-kit-prebuilt` with deployment-only GitLab CI | Released catalog artifacts and optional assessment-kit artifacts | Deploy GitLab Pages or a static hosted site from released static site artifacts. |
 | Deployment kit - operator | `deployment-kit-operator` with reference GitLab CI | Compatible SkLC release artifacts for skill catalog, assessment kit, and assessment artifacts | Build and deploy GitLab Pages or a static hosted site from released catalog and assessment-kit inputs. |
 
@@ -67,7 +67,7 @@ maintainer/
 
 ## 3. Release strategy
 
-Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with product-specific integrity checks and installation documentation. The four-skill download needs only its README and an archive checksum. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process follows `docs/specs/release-process.md` (Status: Approved) and is assisted by the local Codex skill `.agents/skills/sklc-release-process`.
+Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with product-specific integrity checks and installation documentation. The skill catalog download needs only its README and an archive checksum. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process follows `docs/specs/release-process.md` (Status: Approved) and is assisted by the local Codex skill `.agents/skills/sklc-release-process`.
 
 Some products include reference GitLab CI after their core behavior exists. That CI is customer-facing packaging: it shows how to run the released product in GitLab. It is not a separate product, and it does not reuse maintainer GitHub workflows.
 

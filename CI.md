@@ -51,10 +51,10 @@ The self-hosted workflow passes `RUNNER_CA_BUNDLE_PATH` to Node as `NODE_EXTRA_C
 
 The repository or organization Actions policy must allow `GITHUB_TOKEN` write access, and the `main` branch ruleset must allow the GitHub Actions publication identity to push the generated-evidence commit. The review job requests `pull-requests: write` only to add its generated review comment for same-repository pull requests; the publication job requests only `contents: write`. If branch policy forbids direct bot pushes, configure an equivalent ruleset bypass for the publication workflow before running it. Do not replace `GITHUB_TOKEN` with the LLM gateway credential or reuse the gateway credential for repository access.
 
-## Four-skill Download
+## Skill Catalog Download
 
 The independent `skill-catalog` job runs `scripts/package-skill-catalog.sh`.
-It archives the four named skill folders and installation README from the
+It archives the selected skill folders and installation README from the
 checked-out Git commit, then uploads `skill-catalog.tar.gz` and its `.sha256`
 file. It requires Git, Bash, tar, and sha256sum; no Python, Node, site build,
 policy evaluation, or assessment runs in this job. Untracked files are excluded.
@@ -75,7 +75,7 @@ before publication when a required skill is missing.
 Tag creation is the release approval action: complete the human-reviewed checklist
 in `docs/specs/release-process.md`, including clean GitLab Pages acceptance proof,
 before tagging. This workflow does not create tags or approve release readiness.
-The workflow publishes the prebuilt site plus the four-skill download under
+The workflow publishes the prebuilt site plus the skill catalog download under
 the same version. Publication still requires the existing site release checks;
 the independent CI catalog download does not depend on the site build.
 

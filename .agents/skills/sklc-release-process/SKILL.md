@@ -108,11 +108,10 @@ recovery plan.
 
    Set `PYTHONPATH=scripts`, `SKILL_EXCHANGE_SOURCE_REPOSITORY_URL` to the
    confirmed GitHub repository URL, and `SKILL_EXCHANGE_SOURCE_BRANCH` to the
-   candidate commit. Run `publish-local` with `--scan-mode static-only
-   --reuse-boe-only`: this reuses successful exact-content tracked BOE and must
-   fail if evidence is missing. Do not invoke Skillspector or an LLM, remove
-   `--reuse-boe-only`, or alter tracked BOE to make a release pass. Python
-   produces exchange data; the Node build only consumes it.
+   candidate commit. Run `publish-local` with `--scan-mode static-only`: this
+   reuses successful exact-content tracked BOE and must fail if evidence is
+   missing. Do not invoke SkillSpector or an LLM, or alter tracked BOE to make a
+   release pass. Python produces exchange data; the Node build only consumes it.
 
    First package the four committed skill folders with `bash scripts/package-skill-catalog.sh
    <temporary-assets-directory>/skill-catalog-<version>.tar.gz`. This produces the

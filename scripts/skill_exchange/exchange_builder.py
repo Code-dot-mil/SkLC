@@ -10,17 +10,9 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-from .boe import write_boe
 from .policy import load_exchange_policy
-from .risk import assess_report
+from .risk import assess_report, skillspector_execution_failure
 from .skills import discover_skills
-from .skillspector import (
-    SkillSpectorExecutionError,
-    run_skillspector,
-    skillspector_execution_failure,
-    skillspector_llm_config,
-    skillspector_version,
-)
 from .validation import validate_skill
 from .zipper import write_skill_zip
 
@@ -47,8 +39,9 @@ def build_exchange(
     exchange_dir: Path,
     generated_dir: Path,
     scan_modes: tuple[str, ...],
-    reuse_boe_only: bool = False,
+    boe_dir: Path | None = None,
 ) -> dict[str, Any]:
+    boe_dir = boe_dir if boe_dir is not None else generated_dir / "boe"
     generated_dir.mkdir(parents=True, exist_ok=True)
     zip_dir = generated_dir / "zips"
     if zip_dir.exists():
@@ -59,22 +52,8 @@ def build_exchange(
     records: list[dict[str, Any]] = []
     skill_rows: list[dict[str, Any]] = []
     scanner_run_rows: list[dict[str, Any]] = []
-    if not reuse_boe_only:
-        scanner_run_rows = [
-            row for row in existing_table_rows(generated_dir, "scanner_runs") if row.get("scan_cache_key")
-        ]
-    historical_run_ids = {row["id"] for row in scanner_run_rows}
-    scanner_artifact_rows: list[dict[str, Any]] = [
-        row
-        for row in existing_table_rows(generated_dir, "scanner_artifacts")
-        if row.get("scanner_run_id") in historical_run_ids
-    ]
-    scanner_finding_rows: list[dict[str, Any]] = [
-        row
-        for row in existing_table_rows(generated_dir, "scanner_findings")
-        if row.get("scanner_run_id") in historical_run_ids
-    ]
-    cached_scanner_runs = latest_scanner_runs_by_cache_key(scanner_run_rows)
+    scanner_artifact_rows: list[dict[str, Any]] = []
+    scanner_finding_rows: list[dict[str, Any]] = []
     reused_scans = 0
     invalid_skills: list[str] = []
     valid_skills = []
@@ -88,16 +67,15 @@ def build_exchange(
             continue
         valid_skills.append((skill, validation))
 
-    if reuse_boe_only:
-        for skill, _validation in valid_skills:
-            for mode in scan_modes:
-                cached_boe = read_latest_tracked_boe(generated_dir=generated_dir, skill=skill, mode=mode)
-                if cached_boe is None:
-                    missing_boes.append(f"{skill.metadata.display_id} ({mode})")
-                    continue
-                reusable_boes[(skill.metadata.display_id, mode)] = cached_boe
-        if missing_boes:
-            raise RuntimeError("missing tracked BOE for exact skill content: " + ", ".join(missing_boes))
+    for skill, _validation in valid_skills:
+        for mode in scan_modes:
+            cached_boe = read_latest_tracked_boe(boe_dir=boe_dir, skill=skill, mode=mode)
+            if cached_boe is None:
+                missing_boes.append(f"{skill.metadata.display_id} ({mode})")
+                continue
+            reusable_boes[(skill.metadata.display_id, mode)] = cached_boe
+    if missing_boes:
+        raise RuntimeError("missing tracked BOE for exact skill content: " + ", ".join(missing_boes))
 
     for skill, validation in valid_skills:
         skill_scanner_runs: list[dict[str, Any]] = []
@@ -105,116 +83,19 @@ def build_exchange(
         first_observed = skill_first_observed(skill)
         latest_source_commit_sha = skill_latest_source_commit_sha(skill)
         for mode in scan_modes:
-            if reuse_boe_only:
-                cached_boe = reusable_boes[(skill.metadata.display_id, mode)]
-                scanner_version = cached_boe["scanner_version"]
-                scanner_config = cached_boe["scanner_config"]
-                scan_key = cached_boe["scan_key"]
-            else:
-                scanner_version = skillspector_version()
-                scanner_config = scanner_cache_config(mode)
-                scan_key = make_scan_key(
-                    namespace=skill.metadata.namespace,
-                    skill_id=skill.metadata.skill_id,
-                    content_hash=skill.content_hash,
-                    scanner_version=scanner_version,
-                    mode=mode,
-                    scanner_config=scanner_config,
-                )
-                cached_scanner_run = cached_scanner_runs.get(scan_key)
-                cached_report = read_cached_report(cached_scanner_run) if cached_scanner_run else None
-                if cached_scanner_run and cached_report:
-                    reused_scans += 1
-                    skill_scanner_runs.append(cached_scanner_run)
-                    continue
-                cached_boe = read_cached_boe(
-                    generated_dir=generated_dir,
-                    skill=skill,
-                    scan_key=scan_key,
-                    mode=mode,
-                )
-            if cached_boe:
-                report = cached_boe["report"]
-                assessment = assess_report(report)
-                last_scanned = cached_boe["scan_timestamp"]
-                run_id = make_run_id(scan_key, last_scanned)
-                run_artifacts = write_run_artifacts(
-                    generated_dir=generated_dir,
-                    run_id=run_id,
-                    report_path=cached_boe["report_path"],
-                    boe_path=cached_boe["boe_path"],
-                    assessment=assessment,
-                )
-                scanner_run = scanner_run_row(
-                    skill=skill,
-                    report=report,
-                    assessment=assessment,
-                    run_id=run_id,
-                    scan_key=scan_key,
-                    boe_path=run_artifacts["boe_path"],
-                    native_report_path=run_artifacts["native_report_path"],
-                    summary_path=run_artifacts["summary_path"],
-                    last_scanned=last_scanned,
-                    scanner_version=scanner_version,
-                    scanner_config=scanner_config,
-                    status="completed",
-                    canonical_boe_path=cached_boe["boe_path"],
-                )
-                reused_scans += 1
-                skill_scanner_runs.append(scanner_run)
-                scanner_run_rows.append(scanner_run)
-                cached_scanner_runs[scan_key] = scanner_run
-                scanner_artifact_rows.extend(scanner_artifact_rows_for(scanner_run))
-                scanner_finding_rows.extend(scanner_finding_rows_for(scanner_run["id"], report))
-                continue
-
-            no_llm = mode == "static-only"
-            report_source = (
-                generated_dir
-                / "tmp"
-                / skill.metadata.namespace
-                / skill.metadata.skill_id
-                / mode
-                / "report.json"
-            )
-            scan_status = "completed"
-            scanner_error = None
-            try:
-                report = run_skillspector(skill.path, report_source, no_llm=no_llm)
-            except Exception as exc:
-                scan_status = "failed"
-                scanner_error = str(exc)
-                if isinstance(exc, SkillSpectorExecutionError):
-                    report = exc.report
-                else:
-                    report = scanner_failure_report(mode=mode, scanner_version=scanner_version, error=exc)
-                    report_source.parent.mkdir(parents=True, exist_ok=True)
-                    report_source.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-            last_scanned = datetime.now(UTC).isoformat()
-
+            cached_boe = reusable_boes[(skill.metadata.display_id, mode)]
+            scanner_version = cached_boe["scanner_version"]
+            scanner_config = cached_boe["scanner_config"]
+            scan_key = cached_boe["scan_key"]
+            report = cached_boe["report"]
+            assessment = assess_report(report)
+            last_scanned = cached_boe["scan_timestamp"]
             run_id = make_run_id(scan_key, last_scanned)
-            assessment = (
-                scanner_failure_assessment(scanner_error)
-                if scanner_error is not None
-                else assess_report(report)
-            )
-            boe_path = write_boe(
-                root=generated_dir,
-                skill=skill,
-                scan_key=scan_key,
-                report=report,
-                assessment=assessment,
-                validation=validation,
-                report_path=report_source,
-                source_commit_sha=latest_source_commit_sha,
-                scan_timestamp=last_scanned,
-                scanner_config=scanner_config,
-            )
             run_artifacts = write_run_artifacts(
                 generated_dir=generated_dir,
                 run_id=run_id,
-                report_path=report_source,
-                boe_path=boe_path,
+                report_path=cached_boe["report_path"],
+                boe_path=cached_boe["boe_path"],
                 assessment=assessment,
             )
             scanner_run = scanner_run_row(
@@ -229,14 +110,15 @@ def build_exchange(
                 last_scanned=last_scanned,
                 scanner_version=scanner_version,
                 scanner_config=scanner_config,
-                status=scan_status,
-                canonical_boe_path=boe_path,
+                status="completed",
+                canonical_boe_path=cached_boe["boe_path"],
             )
+            reused_scans += 1
             skill_scanner_runs.append(scanner_run)
             scanner_run_rows.append(scanner_run)
-            cached_scanner_runs[scan_key] = scanner_run
             scanner_artifact_rows.extend(scanner_artifact_rows_for(scanner_run))
             scanner_finding_rows.extend(scanner_finding_rows_for(scanner_run["id"], report))
+
         zip_path = write_skill_zip(skill, zip_dir)
         detail_path = generated_dir / "skills" / f"{skill.metadata.namespace}--{skill.metadata.skill_id}.json"
         detail_path.parent.mkdir(parents=True, exist_ok=True)
@@ -295,25 +177,6 @@ def build_exchange(
     return {"skills_written": len(records), "reused_scans": reused_scans, "invalid_skills": invalid_skills}
 
 
-def scanner_failure_report(*, mode: str, scanner_version: str, error: Exception) -> dict[str, Any]:
-    return {
-        "metadata": {
-            "llm_requested": mode != "static-only",
-            "skillspector_version": scanner_version,
-            "scan_error": str(error),
-        },
-        "scanner_error": str(error),
-    }
-
-
-def scanner_failure_assessment(error: str) -> dict[str, Any]:
-    return {
-        "risk": "Unknown",
-        "reason": f"scanner_failed: {error}",
-        "confidence_flags": [],
-    }
-
-
 def make_scan_key(
     *,
     namespace: str,
@@ -346,32 +209,6 @@ def safe_key_part(value: Any) -> str:
 def scanner_config_hash(scanner_config: dict[str, Any]) -> str:
     encoded = json.dumps(scanner_config, sort_keys=True, separators=(",", ":"))
     return sha256(encoded.encode()).hexdigest()[:16]
-
-
-def scanner_cache_config(mode: str) -> dict[str, Any]:
-    config: dict[str, Any] = {
-        "native_output_format": "skillspector-json-v2",
-        "scan_mode": mode,
-    }
-    if mode == "llm-assisted":
-        llm_config = skillspector_llm_config()
-        config["llm_provider"] = llm_config["provider"]
-        config["llm_model"] = llm_config["model"]
-        if llm_config.get("deployment"):
-            config["llm_deployment"] = llm_config["deployment"]
-        if llm_config.get("api_version"):
-            config["llm_api_version"] = llm_config["api_version"]
-        if llm_config.get("api_key_header"):
-            config["llm_api_key_header"] = llm_config["api_key_header"]
-        if llm_config.get("requests_per_second"):
-            config["llm_requests_per_second"] = llm_config["requests_per_second"]
-        if llm_config.get("max_output_tokens"):
-            config["llm_max_output_tokens"] = llm_config["max_output_tokens"]
-        if llm_config.get("scan_max_seconds"):
-            config["scan_max_seconds"] = llm_config["scan_max_seconds"]
-        if llm_config.get("endpoint_hash"):
-            config["llm_endpoint_hash"] = llm_config["endpoint_hash"]
-    return config
 
 
 def make_run_id(scan_key: str, last_scanned: str) -> str:
@@ -514,66 +351,9 @@ def write_table(generated_dir: Path, name: str, rows: list[dict[str, Any]]) -> N
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
-def existing_table_rows(generated_dir: Path, name: str) -> list[dict[str, Any]]:
-    path = generated_dir / "tables" / f"{name}.json"
-    if not path.exists():
-        return []
-    payload = json.loads(path.read_text())
-    rows = payload.get("rows")
-    return rows if isinstance(rows, list) else []
-
-
-def latest_scanner_runs_by_cache_key(scanner_runs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    cached: dict[str, dict[str, Any]] = {}
-    for row in scanner_runs:
-        cache_key = row.get("scan_cache_key")
-        if not cache_key or row.get("status") != "completed":
-            continue
-        existing = cached.get(cache_key)
-        if not existing or str(row.get("last_scanned") or "") > str(existing.get("last_scanned") or ""):
-            cached[cache_key] = row
-    return cached
-
-
-def read_cached_report(scanner_run: dict[str, Any] | None) -> dict[str, Any] | None:
-    if not scanner_run or scanner_run.get("status") != "completed":
-        return None
-    path_value = scanner_run.get("native_report_path")
-    if not path_value:
-        return None
-    path = Path(path_value)
-    if not path.exists():
-        return None
-    try:
-        report = json.loads(path.read_text())
-    except (OSError, ValueError, json.JSONDecodeError):
-        return None
-    return report if isinstance(report, dict) and is_successful_skillspector_report(report) else None
-
-
-def read_cached_boe(*, generated_dir: Path, skill, scan_key: str, mode: str) -> dict[str, Any] | None:
-    for candidate_key in equivalent_scan_keys(scan_key):
-        boe_path = boe_path_for(generated_dir, skill, candidate_key)
-        if not boe_path.exists():
-            continue
-        try:
-            bundle = read_verified_boe_bundle(
-                generated_dir=generated_dir,
-                boe_path=boe_path,
-                skill=skill,
-                mode=mode,
-            )
-        except (OSError, ValueError, json.JSONDecodeError):
-            continue
-        if bundle is not None and bundle["scan_key"] == candidate_key:
-            return bundle
-    return None
-
-
-def read_latest_tracked_boe(*, generated_dir: Path, skill, mode: str) -> dict[str, Any] | None:
+def read_latest_tracked_boe(*, boe_dir: Path, skill, mode: str) -> dict[str, Any] | None:
     skill_boe_root = (
-        generated_dir
-        / "boe"
+        boe_dir
         / skill.metadata.namespace
         / skill.metadata.skill_id
         / skill.content_hash
@@ -582,7 +362,7 @@ def read_latest_tracked_boe(*, generated_dir: Path, skill, mode: str) -> dict[st
     for boe_path in sorted(skill_boe_root.glob("*/boe.json")):
         try:
             bundle = read_verified_boe_bundle(
-                generated_dir=generated_dir,
+                boe_dir=boe_dir,
                 boe_path=boe_path,
                 skill=skill,
                 mode=mode,
@@ -602,12 +382,12 @@ def read_latest_tracked_boe(*, generated_dir: Path, skill, mode: str) -> dict[st
 
 
 def read_verified_boe_bundle(
-    *, generated_dir: Path, boe_path: Path, skill, mode: str
+    *, boe_dir: Path, boe_path: Path, skill, mode: str
 ) -> dict[str, Any] | None:
     bundle_dir = boe_path.parent
     required_paths = {filename: bundle_dir / filename for filename in TRACKED_BOE_FILES}
     if any(
-        not path.is_file() or path_has_symlink_within(path=path, scope=generated_dir)
+        not path.is_file() or path_has_symlink_within(path=path, scope=boe_dir)
         for path in required_paths.values()
     ):
         return None
@@ -902,15 +682,3 @@ def skill_first_observed(skill) -> str:
 
     oldest_mtime = min(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
     return datetime.fromtimestamp(oldest_mtime, tz=UTC).isoformat()
-
-
-def boe_path_for(generated_dir: Path, skill, scan_key: str) -> Path:
-    return (
-        generated_dir
-        / "boe"
-        / skill.metadata.namespace
-        / skill.metadata.skill_id
-        / skill.content_hash
-        / scan_key
-        / "boe.json"
-    )

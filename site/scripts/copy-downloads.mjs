@@ -4,7 +4,7 @@ import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 const siteRoot = process.cwd();
 const repositoryRoot = resolve(siteRoot, "..");
 const target = resolve(siteRoot, "public", "downloads");
-const generatedRoot = resolve(repositoryRoot, ".exchange", "generated");
+const generatedRoot = resolve(process.env.SKILL_EXCHANGE_GENERATED_ROOT || resolve(repositoryRoot, ".exchange", "generated"));
 const scannerRunsRoot = resolve(generatedRoot, "scanner-runs");
 const zipSource = resolve(generatedRoot, "zips");
 const artifactsTable = resolve(generatedRoot, "tables", "scanner_artifacts.json");

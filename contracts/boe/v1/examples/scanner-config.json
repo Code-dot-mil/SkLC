@@ -1,5 +1,0 @@
-{
-  "scan_mode": "llm-assisted",
-  "llm_provider": "example-provider",
-  "llm_model": "example-model"
-}

@@ -4,7 +4,7 @@ These instructions apply to this repository.
 
 ## Project Shape
 
-- This repository is a static skill exchange: Python builds exchange evidence and generated data, and Astro builds the static site.
+- This repository is a static skill exchange: Python reads tracked evidence and builds generated data, and Astro builds the static site.
 - Skill packages live under `skills/<namespace>/<skill-id>/`.
 - Exchange policy lives under `.exchange/`.
 - Generated exchange data lives under `.exchange/generated/` and should be produced by the local publish command or CI, not hand-authored.
@@ -13,7 +13,7 @@ These instructions apply to this repository.
 ## Configuration Rules
 
 - Keep environment-specific settings configurable through environment variables or GitHub Actions secrets and variables.
-- Do not add organization-specific or provider-specific environment variable names. Prefer generic names such as `SKILL_EXCHANGE_LLM_*`, image registry variables, and runner tag variables.
+- Do not add organization-specific or provider-specific environment variable names. Prefer generic image registry variables and runner tag variables.
 - Do not add silent fallbacks anywhere in the codebase. Hidden substitution masks defects. If fallback behavior is truly required, make it explicit in code, document the precedence, test the intended behavior, and fail closed when no valid value is available.
 - Do not commit secrets, tokens, endpoint credentials, or generated bot credentials.
 - Docker image references must remain configurable. Use the existing image registry, repository, tag, and full-image override variables instead of hardcoding a network-specific registry.
@@ -23,10 +23,8 @@ These instructions apply to this repository.
 
 - Keep the GitHub Actions workflows self-contained under `.github/workflows/`.
 - `lint` and `test` should cover site, tooling, tests, policy, lockfile, or CI changes.
-- Skill review should run only for pull requests that change `skills/**/*`.
-- Scheduled publication and default-branch skill-change workflows produce official exchange evidence and commit only BOE bundles.
+- Site generation reads verified exact-content tracked BOE; it must not run assessments or write new evidence.
 - Node jobs must not generate exchange data; they consume artifacts produced by Python jobs.
-- Exact scan cache key matches must be reused from tracked BOE bundles. Do not depend on workflow caches as the authoritative scanner-output cache.
 
 ## Local Development
 
@@ -38,7 +36,6 @@ These instructions apply to this repository.
 
 ## Boundaries
 
-- Use `scripts/skill_exchange/ci.py` for review and publish behavior. Keep local CLI commands focused on local publication.
 - Do not leave red-green scaffolding or placeholder tests in the repository. Tests must prove real behavior, not merely lock package script strings, command spelling, or implementation trivia.
 - Python tests must not invoke Node or npm. Node-dependent behavior belongs in `site/tests/` and must run through `npm --prefix site run test`.
 - Do not hide Python generation in npm scripts or Node builds in Python tooling. Use `just` when local developer convenience needs to orchestrate both stacks.

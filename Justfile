@@ -9,10 +9,10 @@ generate scan_mode="static-only":
     uv run python -m skill_exchange.cli publish-local --generated-dir {{local_generated}} --scan-mode {{scan_mode}}
 
 python-lint:
-    uv run --extra test ruff check scripts tests
+    uv run --extra test ruff check scripts tests products/assessment-kit
 
 python-lint-fix:
-    uv run --extra test ruff check --fix scripts tests
+    uv run --extra test ruff check --fix scripts tests products/assessment-kit
 
 python-test:
     uv run --extra test pytest

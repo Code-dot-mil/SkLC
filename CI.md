@@ -73,7 +73,7 @@ before publication when a required skill is missing.
 
 `.github/workflows/release.yml` runs when a maintainer pushes a `v<version>` tag.
 Tag creation is the release approval action: complete the human-reviewed checklist
-in `docs/specs/release-process.md`, including clean GitLab Pages acceptance proof,
+in `.agents/skills/sklc-release-process/SKILL.md`, including clean GitLab Pages acceptance proof,
 before tagging. This workflow does not create tags or approve release readiness.
 The workflow publishes the prebuilt site plus the skill catalog download under
 the same version. Publication still requires the existing site release checks;

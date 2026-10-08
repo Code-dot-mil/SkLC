@@ -1,0 +1,1 @@
+"""Standalone skill package validation."""

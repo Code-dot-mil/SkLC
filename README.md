@@ -51,6 +51,12 @@ and a [short installation README](products/skill-catalog/README.md). Extract it
 and copy the folders into your workspace's `.agents/skills/`.
 For PR testing, the `skill-catalog` CI artifact contains the same layout.
 
+## Validate a local skill
+
+The [assessment kit](products/assessment-kit/README.md) provides a standalone
+`skill-assessment validate --skill <path>` command. Its wheel can be installed
+without the site or exchange tooling.
+
 ## Direction and current operation
 
 The [roadmap](docs/roadmap.md) describes the intended assessment, catalog, and deployment products.

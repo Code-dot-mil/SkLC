@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - check: lint
-            command: uv run --extra test ruff check scripts tests
+            command: uv run --extra test ruff check scripts tests products/assessment-kit
           - check: test
             command: uv run --extra test pytest
     steps:

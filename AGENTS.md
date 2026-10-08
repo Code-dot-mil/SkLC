@@ -5,6 +5,8 @@ These instructions apply to this repository.
 ## Project Shape
 
 - This repository is a static skill exchange: Python reads tracked evidence and builds generated data, and Astro builds the static site.
+- The standalone assessment CLI lives under `products/assessment-kit/` and must not depend on site or exchange tooling.
+- Define assessment commands in `skill_assessment/commands/<command>.py`. Each module owns its command name, option flags, argument parsing, and execution through `register(subparsers)` and `run(args)`; `cli.py` only registers and dispatches commands.
 - Skill packages live under `skills/<namespace>/<skill-id>/`.
 - Exchange policy lives under `.exchange/`.
 - Generated exchange data lives under `.exchange/generated/` and should be produced by the local publish command or CI, not hand-authored.

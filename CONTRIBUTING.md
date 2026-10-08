@@ -57,7 +57,7 @@ The default evidence mode is `static-only`. `just generate llm-assisted` and `ju
 Python code must pass:
 
 ```sh
-uv run --extra test ruff check scripts tests
+uv run --extra test ruff check scripts tests products/assessment-kit
 uv run --extra test pytest
 uv run python -m compileall scripts tests
 ```

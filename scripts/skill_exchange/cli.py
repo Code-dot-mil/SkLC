@@ -16,7 +16,7 @@ def main() -> None:
     publish = subcommands.add_parser("publish-local")
     publish.add_argument("--generated-dir", type=Path, default=Path(".exchange/generated"))
     publish.add_argument("--scan-mode", choices=SCAN_MODES, action="append")
-    publish.add_argument("--reuse-boe-only", action="store_true")
+    publish.add_argument("--boe-dir", type=Path, default=Path(".exchange/generated/boe"))
 
     args = parser.parse_args()
     if args.command == "publish-local":
@@ -24,10 +24,10 @@ def main() -> None:
             skills_root=Path("skills"),
             exchange_dir=Path(".exchange"),
             generated_dir=args.generated_dir,
-            scan_modes=tuple(args.scan_mode or SCAN_MODES),
-            reuse_boe_only=args.reuse_boe_only,
+            scan_modes=tuple(args.scan_mode or ("static-only",)),
+            boe_dir=args.boe_dir,
         )
-        if args.reuse_boe_only and result["skills_written"] == 0:
+        if result["skills_written"] == 0:
             raise RuntimeError("tracked BOE generation produced an empty catalog")
         print(json.dumps(result, indent=2, sort_keys=True))
 

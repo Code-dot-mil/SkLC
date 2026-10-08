@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from .skillspector import skillspector_execution_failure
-
 
 def assess_report(report: dict[str, Any]) -> dict[str, Any]:
     issues = report.get("issues")
@@ -47,3 +45,25 @@ def assess_report(report: dict[str, Any]) -> dict[str, Any]:
         "reason": "No medium, high, or critical findings detected.",
         "confidence_flags": confidence_flags,
     }
+
+
+def skillspector_execution_failure(report: dict[str, Any]) -> str | None:
+    if report.get("execution_successful") is False:
+        return "skillspector reported execution_successful=false"
+    metadata = report.get("metadata")
+    if not isinstance(metadata, dict) or metadata.get("llm_requested") is not True:
+        return None
+    attempted = metadata.get("llm_calls_attempted")
+    succeeded = metadata.get("llm_calls_succeeded")
+    incomplete_calls = (
+        isinstance(attempted, int)
+        and not isinstance(attempted, bool)
+        and isinstance(succeeded, int)
+        and not isinstance(succeeded, bool)
+        and attempted > succeeded
+    )
+    if metadata.get("llm_degraded") is True or incomplete_calls:
+        detail = str(metadata.get("llm_error") or "").strip()
+        message = "skillspector reported degraded LLM execution"
+        return f"{message}: {detail}" if detail else message
+    return None

@@ -2,7 +2,7 @@
 
 After the maintainer accepts a version and its notes, append a section headed
 `## <version>` here. Commit and push that section before creating the matching
-`v<version>` tag. Follow [the release process](docs/specs/release-process.md).
+`v<version>` tag. Follow [the release process](CI.md#releases).
 
 The workflow uses only that version's nonempty section as the GitHub Release
 description. Release notes are not uploaded as a separate asset. No release

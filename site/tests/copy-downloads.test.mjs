@@ -61,39 +61,44 @@ test("copy-downloads rejects destinations outside public downloads", () => {
   assert.match(completed.stderr, /outside public\/downloads/);
 });
 
-test("copy-downloads rebases generated artifact paths from another checkout", () => {
-  const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-copy-downloads-"));
-  const siteDir = resolve(root, "site");
-  const scannerRun = resolve(root, ".exchange", "generated", "scanner-runs", "run-1");
-  const generatedTables = resolve(root, ".exchange", "generated", "tables");
-  mkdirSync(siteDir, { recursive: true });
-  mkdirSync(scannerRun, { recursive: true });
-  mkdirSync(generatedTables, { recursive: true });
-  writeFileSync(resolve(scannerRun, "skillspector.json"), "{\"risk\":\"low\"}\n");
-  writeFileSync(
-    resolve(generatedTables, "scanner_artifacts.json"),
-    JSON.stringify({
-      rows: [
-        {
-          path: "/previous/checkout/.exchange/generated/scanner-runs/run-1/skillspector.json",
-          download_path: "/downloads/scanner-runs/run-1/skillspector.json",
-        },
-      ],
-    }),
-  );
+for (const generatedName of ["generated", "local-generated"]) {
+  test(`copy-downloads reads downloads from ${generatedName}`, () => {
+    const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-copy-downloads-"));
+    const siteDir = resolve(root, "site");
+    const scannerRun = resolve(root, ".exchange", generatedName, "scanner-runs", "run-1");
+    const generatedTables = resolve(root, ".exchange", generatedName, "tables");
+    mkdirSync(siteDir, { recursive: true });
+    mkdirSync(scannerRun, { recursive: true });
+    mkdirSync(generatedTables, { recursive: true });
+    writeFileSync(resolve(scannerRun, "skillspector.json"), "{\"risk\":\"low\"}\n");
+    writeFileSync(
+      resolve(generatedTables, "scanner_artifacts.json"),
+      JSON.stringify({
+        rows: [
+          {
+            path: generatedName === "generated"
+              ? "/previous/checkout/.exchange/generated/scanner-runs/run-1/skillspector.json"
+              : `.exchange/${generatedName}/scanner-runs/run-1/skillspector.json`,
+            download_path: "/downloads/scanner-runs/run-1/skillspector.json",
+          },
+        ],
+      }),
+    );
 
-  const completed = runCopyDownloads(siteDir);
+    const completed = runCopyDownloads(siteDir, { SKILL_EXCHANGE_GENERATED_ROOT: resolve(root, ".exchange", generatedName) });
 
-  assert.equal(completed.status, 0, completed.stderr);
-  assert.equal(
-    readFileSync(resolve(siteDir, "public", "downloads", "scanner-runs", "run-1", "skillspector.json"), "utf-8"),
-    "{\"risk\":\"low\"}\n",
-  );
-});
+    assert.equal(completed.status, 0, completed.stderr);
+    assert.equal(
+      readFileSync(resolve(siteDir, "public", "downloads", "scanner-runs", "run-1", "skillspector.json"), "utf-8"),
+      "{\"risk\":\"low\"}\n",
+    );
+  });
+}
 
-function runCopyDownloads(siteDir) {
+function runCopyDownloads(siteDir, env = {}) {
   return spawnSync("node", [script], {
     cwd: siteDir,
+    env: { ...process.env, ...env },
     encoding: "utf-8",
   });
 }

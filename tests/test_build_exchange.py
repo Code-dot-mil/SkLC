@@ -12,6 +12,7 @@ from skill_exchange.exchange_builder import (
     make_scan_key,
     scanner_finding_rows_for,
 )
+from skill_exchange.skills import discover_skills
 
 
 def _fake_clean_report(*, llm_requested: bool = False, recommendation: str = "SAFE") -> dict:
@@ -22,34 +23,37 @@ def _fake_clean_report(*, llm_requested: bool = False, recommendation: str = "SA
     }
 
 
-def _tracked_boe_fixture(monkeypatch, tmp_path: Path, *, mode: str = "static-only"):
-    source_generated = tmp_path / "source-generated"
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        report = _fake_clean_report(llm_requested=not no_llm)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
-    monkeypatch.setattr(
-        exchange_builder,
-        "skillspector_llm_config",
-        lambda: {"provider": "openai", "model": "gpt-5"},
+def _tracked_boe_fixture(tmp_path: Path, *, mode: str = "static-only"):
+    skill = discover_skills(Path("tests/fixtures/skills"))[0]
+    report = _fake_clean_report(llm_requested=mode == "llm-assisted")
+    config = {"native_output_format": "skillspector-json-v2", "scan_mode": mode}
+    if mode == "llm-assisted":
+        config.update(llm_provider="openai", llm_model="gpt-5")
+    scan_key = make_scan_key(
+        namespace=skill.metadata.namespace, skill_id=skill.metadata.skill_id,
+        content_hash=skill.content_hash, scanner_version="2.1.5", mode=mode, scanner_config=config,
     )
-    build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=source_generated,
-        scan_modes=(mode,),
-    )
-
     generated = tmp_path / "generated"
-    shutil.copytree(source_generated / "boe", generated / "boe")
-    boe_paths = list((generated / "boe").glob("*/*/*/*/boe.json"))
-    assert len(boe_paths) == 1
-    return generated, boe_paths[0].parent
+    bundle = generated / "boe" / "ai4sdlc" / "sample-skill" / skill.content_hash / scan_key
+    bundle.mkdir(parents=True, exist_ok=True)
+    summary = {
+        "risk": "Low", "risk_reason": "No medium, high, or critical findings detected.",
+        "confidence_flags": ["Low confidence"] if mode == "static-only" else [],
+    }
+    boe = {
+        "schema_version": "skill-exchange-boe/v0", "namespace": "ai4sdlc", "skill_id": "sample-skill",
+        "display_id": "ai4sdlc/sample-skill", "skill_content_hash": skill.content_hash,
+        "scan_cache_key": scan_key, "scanner": {"name": "skillspector", "version": "2.1.5"},
+        "scan_mode": mode, "provider": config.get("llm_provider"), "model": config.get("llm_model"),
+        "scan_timestamp": "2026-09-01T00:00:00+00:00", **summary,
+    }
+    files = {"boe.json": boe, "summary.json": summary, "scanner-config.json": config, "skillspector.json": report}
+    for name, value in files.items():
+        (bundle / name).write_text(json.dumps(value))
+    (bundle / "hashes.json").write_text(json.dumps({
+        name: sha256((bundle / name).read_bytes()).hexdigest() for name in files
+    }))
+    return generated, bundle
 
 
 def _write_bundle_json(bundle_dir: Path, filename: str, payload: dict) -> None:
@@ -63,29 +67,20 @@ def _write_bundle_json(bundle_dir: Path, filename: str, payload: dict) -> None:
     hashes_path.write_text(json.dumps(hashes, indent=2, sort_keys=True) + "\n")
 
 
-def _assert_reuse_only_rejects(generated: Path, *, mode: str = "static-only") -> None:
+def _assert_evidence_rejected(generated: Path, *, mode: str = "static-only") -> None:
     with pytest.raises(RuntimeError) as error:
         build_exchange(
             skills_root=Path("tests/fixtures/skills"),
             exchange_dir=Path(".exchange"),
             generated_dir=generated,
             scan_modes=(mode,),
-            reuse_boe_only=True,
         )
     assert str(error.value) == f"missing tracked BOE for exact skill content: ai4sdlc/sample-skill ({mode})"
 
 
-def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
-    generated = tmp_path / "generated"
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        report = _fake_clean_report(llm_requested=not no_llm)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
+def test_build_exchange_writes_site_data_without_changing_evidence(tmp_path: Path):
+    generated, bundle = _tracked_boe_fixture(tmp_path)
+    original = {p.name: p.read_bytes() for p in bundle.iterdir()}
 
     result = build_exchange(
         skills_root=Path("tests/fixtures/skills"),
@@ -162,20 +157,13 @@ def test_build_exchange_writes_index_boe_and_zip(monkeypatch, tmp_path: Path):
     assert index["skills"][0]["scanner_run_ids"][0] == scanner_runs["rows"][0]["id"]
 
 
-def test_build_exchange_removes_stale_skill_zips(monkeypatch, tmp_path: Path):
-    generated = tmp_path / "generated"
+    assert {p.name: p.read_bytes() for p in bundle.iterdir()} == original
+
+def test_build_exchange_removes_stale_skill_zips(tmp_path: Path):
+    generated, _bundle = _tracked_boe_fixture(tmp_path)
     zip_dir = generated / "zips"
     zip_dir.mkdir(parents=True)
     (zip_dir / "ai4sdlc--removed-skill.zip").write_bytes(b"stale")
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        report = _fake_clean_report(llm_requested=not no_llm)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
 
     build_exchange(
         skills_root=Path("tests/fixtures/skills"),
@@ -187,240 +175,7 @@ def test_build_exchange_removes_stale_skill_zips(monkeypatch, tmp_path: Path):
     assert sorted(path.name for path in zip_dir.iterdir()) == ["ai4sdlc--sample-skill.zip"]
 
 
-def test_scanner_cache_config_includes_azure_deployment_api_version_and_hashed_endpoint(monkeypatch):
-    monkeypatch.setattr(
-        exchange_builder,
-        "skillspector_llm_config",
-        lambda: {
-            "provider": "azure_openai",
-            "model": "gpt-5",
-            "deployment": "production-gpt-5",
-            "api_version": "2025-04-01-preview",
-            "api_key_header": None,
-            "requests_per_second": None,
-            "max_output_tokens": None,
-            "scan_max_seconds": None,
-            "endpoint_hash": "endpoint-sha256",
-        },
-    )
-
-    assert exchange_builder.scanner_cache_config("llm-assisted") == {
-        "native_output_format": "skillspector-json-v2",
-        "scan_mode": "llm-assisted",
-        "llm_provider": "azure_openai",
-        "llm_model": "gpt-5",
-        "llm_deployment": "production-gpt-5",
-        "llm_api_version": "2025-04-01-preview",
-        "llm_endpoint_hash": "endpoint-sha256",
-    }
-
-
-def test_scanner_cache_config_includes_openai_compatible_api_key_header(monkeypatch):
-    monkeypatch.setattr(
-        exchange_builder,
-        "skillspector_llm_config",
-        lambda: {
-            "provider": "openai_compatible",
-            "model": "gpt-5.5",
-            "deployment": None,
-            "api_version": None,
-            "api_key_header": "api-key",
-            "requests_per_second": "0.1",
-            "max_output_tokens": "2048",
-            "scan_max_seconds": "600",
-            "endpoint_hash": "endpoint-sha256",
-        },
-    )
-
-    assert exchange_builder.scanner_cache_config("llm-assisted") == {
-        "native_output_format": "skillspector-json-v2",
-        "scan_mode": "llm-assisted",
-        "llm_provider": "openai_compatible",
-        "llm_model": "gpt-5.5",
-        "llm_api_key_header": "api-key",
-        "llm_requests_per_second": "0.1",
-        "llm_max_output_tokens": "2048",
-        "scan_max_seconds": "600",
-        "llm_endpoint_hash": "endpoint-sha256",
-    }
-
-
-def test_build_exchange_reuses_tracked_boe_when_derived_outputs_are_absent(monkeypatch, tmp_path: Path):
-    generated = tmp_path / "generated"
-    calls = 0
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        nonlocal calls
-        calls += 1
-        report = _fake_clean_report(llm_requested=not no_llm)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "v2.1.5")
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
-
-    first = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=generated,
-        scan_modes=("static-only",),
-    )
-    assert first["reused_scans"] == 0
-    assert calls == 1
-
-    boe_only = tmp_path / "boe-only-generated"
-    shutil.copytree(generated / "boe", boe_only / "boe")
-    shutil.rmtree(generated)
-
-    second_calls = 0
-
-    def fail_if_scanner_runs(skill_path, output_path, *, no_llm):
-        nonlocal second_calls
-        second_calls += 1
-        raise AssertionError("matching BOE should prevent another SkillSpector scan")
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fail_if_scanner_runs)
-
-    second = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=boe_only,
-        scan_modes=("static-only",),
-    )
-
-    assert second["reused_scans"] == 1
-    assert second_calls == 0
-    index = json.loads((boe_only / "index.json").read_text())
-    scanner_runs = json.loads((boe_only / "tables" / "scanner_runs.json").read_text())
-    scanner_artifacts = json.loads((boe_only / "tables" / "scanner_artifacts.json").read_text())
-    assert index["skills"][0]["display_id"] == "ai4sdlc/sample-skill"
-    assert index["skills"][0]["scanner_run_ids"] == [scanner_runs["rows"][0]["id"]]
-    assert Path(index["skills"][0]["boe_path"]).is_relative_to(boe_only / "boe")
-    assert Path(scanner_runs["rows"][0]["native_report_path"]).exists()
-    assert {row["artifact_kind"] for row in scanner_artifacts["rows"]} == {
-        "boe",
-        "native_report",
-        "summary",
-    }
-
-
-def test_build_exchange_regenerates_boe_when_report_hash_does_not_match(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
-    tampered_report = _fake_clean_report(recommendation="BLOCK")
-    tampered_report["risk_assessment"] = {
-        "score": 100,
-        "severity": "CRITICAL",
-        "recommendation": "BLOCK",
-    }
-    (bundle_dir / "skillspector.json").write_text(json.dumps(tampered_report))
-    calls = 0
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        nonlocal calls
-        calls += 1
-        report = _fake_clean_report()
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
-
-    result = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=generated,
-        scan_modes=("static-only",),
-    )
-
-    index = json.loads((generated / "index.json").read_text())
-    assert result["reused_scans"] == 0
-    assert calls == 1
-    assert index["skills"][0]["risk"] == "Low"
-
-
-def test_build_exchange_reuse_boe_only_never_calls_scanner_paths(monkeypatch, tmp_path: Path):
-    source_generated = tmp_path / "source-generated"
-    scanner_version = ["2.1.5"]
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        report = _fake_clean_report(llm_requested=not no_llm)
-        report["metadata"]["skillspector_version"] = scanner_version[0]
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: scanner_version[0])
-    monkeypatch.setattr(
-        exchange_builder,
-        "skillspector_llm_config",
-        lambda: {"provider": "openai", "model": "gpt-5"},
-    )
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
-    build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=source_generated,
-        scan_modes=("static-only", "llm-assisted"),
-    )
-    scanner_version[0] = "2.1.6"
-    build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=source_generated,
-        scan_modes=("static-only",),
-    )
-
-    generated = tmp_path / "generated"
-    shutil.copytree(source_generated / "boe", generated / "boe")
-
-    def forbidden(*args, **kwargs):
-        raise AssertionError("reuse-BOE-only generation must not enter a scanner or scanner-config path")
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", forbidden)
-    monkeypatch.setattr(exchange_builder, "scanner_cache_config", forbidden)
-    monkeypatch.setattr(exchange_builder, "skillspector_llm_config", forbidden)
-    monkeypatch.setattr(exchange_builder, "run_skillspector", forbidden)
-    monkeypatch.setattr(exchange_builder, "write_boe", forbidden)
-
-    result = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=generated,
-        scan_modes=("static-only", "llm-assisted"),
-        reuse_boe_only=True,
-    )
-
-    index = json.loads((generated / "index.json").read_text())
-    scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())["rows"]
-    assert result == {"skills_written": 1, "reused_scans": 2, "invalid_skills": []}
-    assert index["skills"][0]["display_id"] == "ai4sdlc/sample-skill"
-    assert index["skills"][0]["scanner_provenance"] == {
-        "name": "skillspector",
-        "version": "2.1.6",
-        "scan_mode": "static-only",
-        "provider": None,
-        "model": None,
-    }
-    assert len(scanner_runs) == 2
-    llm_run = next(row for row in scanner_runs if row["scan_mode"] == "llm-assisted")
-    assert llm_run["llm_provider"] == "openai"
-    assert llm_run["llm_model"] == "gpt-5"
-    assert (generated / "skills" / "ai4sdlc--sample-skill.json").exists()
-    assert (generated / "zips" / "ai4sdlc--sample-skill.zip").exists()
-
-
-def test_build_exchange_reuse_boe_only_fails_for_missing_exact_content(monkeypatch, tmp_path: Path):
-    def forbidden(*args, **kwargs):
-        raise AssertionError("missing BOE must fail before any scanner path")
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", forbidden)
-    monkeypatch.setattr(exchange_builder, "scanner_cache_config", forbidden)
-    monkeypatch.setattr(exchange_builder, "skillspector_llm_config", forbidden)
-    monkeypatch.setattr(exchange_builder, "run_skillspector", forbidden)
-    monkeypatch.setattr(exchange_builder, "write_boe", forbidden)
-
+def test_build_exchange_fails_for_missing_exact_content(tmp_path: Path):
     generated = tmp_path / "generated"
     with pytest.raises(RuntimeError) as error:
         build_exchange(
@@ -428,7 +183,6 @@ def test_build_exchange_reuse_boe_only_fails_for_missing_exact_content(monkeypat
             exchange_dir=Path(".exchange"),
             generated_dir=generated,
             scan_modes=("static-only",),
-            reuse_boe_only=True,
         )
 
     assert str(error.value) == (
@@ -441,62 +195,58 @@ def test_build_exchange_reuse_boe_only_fails_for_missing_exact_content(monkeypat
     ("metadata_field", "tampered_value"),
     (("skillspector_version", "9.9.9"), ("llm_requested", True)),
 )
-def test_build_exchange_reuse_boe_only_rejects_hash_valid_report_tampering(
-    monkeypatch, tmp_path: Path, metadata_field: str, tampered_value
+def test_build_exchange_rejects_hash_valid_report_tampering(
+    tmp_path: Path, metadata_field: str, tampered_value
 ):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
     report = json.loads((bundle_dir / "skillspector.json").read_text())
     report["metadata"][metadata_field] = tampered_value
     _write_bundle_json(bundle_dir, "skillspector.json", report)
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_reuse_boe_only_rejects_hash_valid_config_tampering(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+def test_build_exchange_rejects_hash_valid_config_tampering(tmp_path: Path):
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
     scanner_config = json.loads((bundle_dir / "scanner-config.json").read_text())
     scanner_config["native_output_format"] = "tampered"
     _write_bundle_json(bundle_dir, "scanner-config.json", scanner_config)
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_reuse_boe_only_rejects_hash_manifest_tampering(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+def test_build_exchange_rejects_hash_manifest_tampering(tmp_path: Path):
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
     hashes = json.loads((bundle_dir / "hashes.json").read_text())
     hashes["summary.json"] = "0" * 64
     _write_bundle_json(bundle_dir, "hashes.json", hashes)
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_reuse_boe_only_rejects_hash_valid_scan_key_tampering(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+def test_build_exchange_rejects_hash_valid_scan_key_tampering(tmp_path: Path):
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
     boe = json.loads((bundle_dir / "boe.json").read_text())
     tampered_key = f"{boe['scan_cache_key']}-tampered"
     boe["scan_cache_key"] = tampered_key
     _write_bundle_json(bundle_dir, "boe.json", boe)
     bundle_dir.rename(bundle_dir.with_name(tampered_key))
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_reuse_boe_only_rejects_hash_valid_provider_tampering(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path, mode="llm-assisted")
+def test_build_exchange_rejects_hash_valid_provider_tampering(tmp_path: Path):
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path, mode="llm-assisted")
     boe = json.loads((bundle_dir / "boe.json").read_text())
     boe["provider"] = "tampered"
     _write_bundle_json(bundle_dir, "boe.json", boe)
 
-    _assert_reuse_only_rejects(generated, mode="llm-assisted")
+    _assert_evidence_rejected(generated, mode="llm-assisted")
 
 
-def test_build_exchange_reuse_boe_only_rejects_hash_valid_failed_scan(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
-    report = exchange_builder.scanner_failure_report(
-        mode="static-only",
-        scanner_version="2.1.5",
-        error=RuntimeError("scanner unavailable"),
-    )
+def test_build_exchange_rejects_hash_valid_failed_scan(tmp_path: Path):
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
+    report = {"metadata": {"scan_error": "scanner unavailable"}, "execution_successful": False}
     assessment = exchange_builder.assess_report(report)
     summary = {
         "risk": assessment["risk"],
@@ -511,22 +261,22 @@ def test_build_exchange_reuse_boe_only_rejects_hash_valid_failed_scan(monkeypatc
     _write_bundle_json(bundle_dir, "summary.json", summary)
     _write_bundle_json(bundle_dir, "boe.json", boe)
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_reuse_boe_only_rejects_hash_valid_summary_tampering(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+def test_build_exchange_rejects_hash_valid_summary_tampering(tmp_path: Path):
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
     summary = json.loads((bundle_dir / "summary.json").read_text())
     summary["risk"] = "High"
     _write_bundle_json(bundle_dir, "summary.json", summary)
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_reuse_boe_only_rejects_hash_valid_incomplete_assessment(
-    monkeypatch, tmp_path: Path
+def test_build_exchange_rejects_hash_valid_incomplete_assessment(
+    tmp_path: Path
 ):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
     report = json.loads((bundle_dir / "skillspector.json").read_text())
     report["risk_assessment"] = {}
     assessment = exchange_builder.assess_report(report)
@@ -543,11 +293,11 @@ def test_build_exchange_reuse_boe_only_rejects_hash_valid_incomplete_assessment(
     _write_bundle_json(bundle_dir, "summary.json", summary)
     _write_bundle_json(bundle_dir, "boe.json", boe)
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_reuse_boe_only_rejects_symlinked_bundle_file(monkeypatch, tmp_path: Path):
-    generated, bundle_dir = _tracked_boe_fixture(monkeypatch, tmp_path)
+def test_build_exchange_rejects_symlinked_bundle_file(tmp_path: Path):
+    generated, bundle_dir = _tracked_boe_fixture(tmp_path)
     summary_path = bundle_dir / "summary.json"
     summary_copy = bundle_dir.parent / "summary-copy.json"
     shutil.copyfile(summary_path, summary_copy)
@@ -557,10 +307,10 @@ def test_build_exchange_reuse_boe_only_rejects_symlinked_bundle_file(monkeypatch
     except OSError:
         pytest.skip("creating symlinks requires an unavailable Windows privilege")
 
-    _assert_reuse_only_rejects(generated)
+    _assert_evidence_rejected(generated)
 
 
-def test_build_exchange_blocks_invalid_required_metadata(monkeypatch, tmp_path: Path):
+def test_build_exchange_blocks_invalid_required_metadata(tmp_path: Path):
     skill_dir = tmp_path / "skills" / "team" / "broken-skill"
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
@@ -575,15 +325,6 @@ metadata:
 """
     )
     generated = tmp_path / "generated"
-    calls = 0
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        nonlocal calls
-        calls += 1
-        return _fake_clean_report()
-
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
-
     result = build_exchange(
         skills_root=tmp_path / "skills",
         exchange_dir=Path(".exchange"),
@@ -593,144 +334,8 @@ metadata:
 
     assert result["skills_written"] == 0
     assert result["invalid_skills"] == ["team/broken-skill"]
-    assert calls == 0
     assert json.loads((generated / "index.json").read_text())["skills"] == []
     assert not (generated / "zips" / "team--broken-skill.zip").exists()
-
-
-def test_build_exchange_records_unknown_when_scanner_fails(monkeypatch, tmp_path: Path):
-    exchange_dir = tmp_path / "exchange"
-    exchange_dir.mkdir()
-    (exchange_dir / "categories.yaml").write_text("categories:\n  - id: testing\n    label: Testing\n")
-    (exchange_dir / "tags.yaml").write_text("tags:\n  - tests\n  - example\n")
-    (exchange_dir / "display-policy.yaml").write_text(
-        "show_unknown_risk: true\nshow_confidence_flags: true\ndefault_sort: name\n"
-    )
-    generated = tmp_path / "generated"
-
-    def failing_run_skillspector(skill_path, output_path, *, no_llm):
-        raise RuntimeError("scanner unavailable")
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
-    monkeypatch.setattr(exchange_builder, "run_skillspector", failing_run_skillspector)
-
-    result = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=exchange_dir,
-        generated_dir=generated,
-        scan_modes=("static-only",),
-    )
-
-    index = json.loads((generated / "index.json").read_text())
-    scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())["rows"]
-    assert result["skills_written"] == 1
-    assert index["skills"][0]["risk"] == "Unknown"
-    assert index["skills"][0]["recommendation"] == "Unknown"
-    assert index["skills"][0]["recommendation_label"] == "Unknown"
-    assert "scanner_failed" in index["skills"][0]["risk_reason"]
-    assert scanner_runs[0]["status"] == "failed"
-    assert scanner_runs[0]["display_risk"] == "Unknown"
-
-
-def test_build_exchange_preserves_failed_report_and_retries_instead_of_reusing(
-    monkeypatch, tmp_path: Path
-):
-    generated = tmp_path / "generated"
-    failed_report = {
-        "execution_successful": False,
-        "metadata": {"llm_requested": True, "skillspector_version": "2.1.5"},
-        "risk_assessment": {"score": 100, "severity": "CRITICAL", "recommendation": "BLOCK"},
-        "issues": [{"id": "E2", "severity": "HIGH"}],
-    }
-    calls = 0
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        nonlocal calls
-        calls += 1
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        if calls == 1:
-            output_path.write_text(json.dumps(failed_report))
-            raise exchange_builder.SkillSpectorExecutionError(
-                "skillspector reported execution_successful=false",
-                report=failed_report,
-            )
-        report = _fake_clean_report(llm_requested=True)
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
-    monkeypatch.setattr(
-        exchange_builder,
-        "skillspector_llm_config",
-        lambda: {"provider": "openai", "model": "gpt-5"},
-    )
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
-
-    first = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=generated,
-        scan_modes=("llm-assisted",),
-    )
-    first_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())["rows"]
-    failed_native_report = Path(first_runs[0]["native_report_path"])
-
-    assert first["reused_scans"] == 0
-    assert first_runs[0]["status"] == "failed"
-    assert first_runs[0]["display_risk"] == "Unknown"
-    assert json.loads(failed_native_report.read_text()) == failed_report
-
-    second = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=generated,
-        scan_modes=("llm-assisted",),
-    )
-    second_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())["rows"]
-
-    assert second["reused_scans"] == 0
-    assert calls == 2
-    assert [row["status"] for row in second_runs] == ["failed", "completed"]
-    assert json.loads(failed_native_report.read_text()) == failed_report
-
-
-def test_build_exchange_reuses_cached_scan_without_running_skillspector(monkeypatch, tmp_path: Path):
-    generated = tmp_path / "generated"
-    calls = 0
-
-    def fake_run_skillspector(skill_path, output_path, *, no_llm):
-        nonlocal calls
-        calls += 1
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        report = {
-            "metadata": {"llm_requested": False, "skillspector_version": "2.1.5"},
-            "risk_assessment": {"score": 0, "severity": "LOW", "recommendation": "SAFE"},
-            "issues": [],
-        }
-        output_path.write_text(json.dumps(report))
-        return report
-
-    monkeypatch.setattr(exchange_builder, "skillspector_version", lambda: "2.1.5")
-    monkeypatch.setattr(exchange_builder, "run_skillspector", fake_run_skillspector)
-
-    first = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=generated,
-        scan_modes=("static-only",),
-    )
-    second = build_exchange(
-        skills_root=Path("tests/fixtures/skills"),
-        exchange_dir=Path(".exchange"),
-        generated_dir=generated,
-        scan_modes=("static-only",),
-    )
-
-    scanner_runs = json.loads((generated / "tables" / "scanner_runs.json").read_text())["rows"]
-    assert first["reused_scans"] == 0
-    assert second["reused_scans"] == 1
-    assert calls == 1
-    assert len(scanner_runs) == 1
 
 
 def test_scan_cache_key_includes_skill_identity_model_and_config_hash():
@@ -871,3 +476,17 @@ def test_recommendation_labels_are_plain_language():
     assert exchange_builder.recommendation_label("CAUTION") == "Use caution"
     assert exchange_builder.recommendation_label("DO_NOT_INSTALL") == "Avoid installing"
     assert exchange_builder.recommendation_label("Unknown") == "Unknown"
+
+
+def test_build_exchange_reads_separate_evidence_directory(tmp_path: Path):
+    source, bundle = _tracked_boe_fixture(tmp_path)
+    before = {p.name: p.read_bytes() for p in bundle.iterdir()}
+    output = tmp_path / "local-generated"
+    result = build_exchange(
+        skills_root=Path("tests/fixtures/skills"), exchange_dir=Path(".exchange"),
+        generated_dir=output, boe_dir=source / "boe", scan_modes=("static-only",),
+    )
+    assert result["skills_written"] == 1
+    assert (output / "index.json").is_file()
+    assert not (output / "boe").exists()
+    assert {p.name: p.read_bytes() for p in bundle.iterdir()} == before

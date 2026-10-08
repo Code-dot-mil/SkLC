@@ -97,7 +97,7 @@ jobs:
         run: python -m pip install --no-cache-dir uv
       - name: Generate preview exchange data
         run: >-
-          uv run --extra scan python -m skill_exchange.cli publish-local
+          uv run python -m skill_exchange.cli publish-local
           --generated-dir .exchange/generated
           --scan-mode static-only
       - name: Verify exchange data

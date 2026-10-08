@@ -7,9 +7,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-scan = [
-  "skillspector @ git+https://github.com/NVIDIA/SkillSpector.git@e29b16d305b0e738e3d4b952ba102f5522a6f084",
-]
 test = [
   "pytest>=8.2",
   "ruff>=0.16.9",

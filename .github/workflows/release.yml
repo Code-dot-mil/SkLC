@@ -72,7 +72,6 @@ jobs:
           uv run python -m skill_exchange.cli publish-local
           --generated-dir .exchange/generated
           --scan-mode static-only
-          --reuse-boe-only
       - name: Build static site
         run: npm --prefix site run build
       - name: Build and verify release assets

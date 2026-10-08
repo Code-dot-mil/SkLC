@@ -19,7 +19,7 @@ Skill packages under `skills/` are exchange content. Treat changes there as skil
 
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22, `npm`, and `just`. Install the repository's pinned [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) dependency with `uv sync --extra scan`; an independently installed binary can instead be placed on `PATH` or configured with `SKILLSPECTOR_BIN`.
+Install Python 3.12, `uv`, Node.js 22, `npm`, and `just`.
 
 Install project dependencies:
 
@@ -28,7 +28,7 @@ uv sync --extra test
 npm ci --prefix site
 ```
 
-Python-only and Node-only checks do not require SkillSpector. Generation and deploy-equivalent local builds do, because they compute scanner cache keys and produce scanner-backed exchange data before the site build.
+Site generation reads existing tracked BOE. No scanner installation or credentials are required.
 
 ## Local Checks
 
@@ -50,7 +50,7 @@ Use `uv` directly for Python-only commands and `npm --prefix site` for site-only
 
 `just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds do not rewrite tracked CI-produced BOE bundles.
 
-The default scan mode is `static-only`. Use `just generate llm-assisted` or `just build llm-assisted` only after setting the generic `SKILL_EXCHANGE_LLM_*` environment variables.
+The default evidence mode is `static-only`. `just generate llm-assisted` and `just build llm-assisted` select existing LLM-assisted evidence. Generation fails when matching evidence is missing or invalid; it does not produce new evidence.
 
 ## Python Tooling
 
@@ -62,7 +62,7 @@ uv run --extra test pytest
 uv run python -m compileall scripts tests
 ```
 
-Keep Python code focused on exchange validation, scanner orchestration, BOE generation, generated index creation, CI helpers, and packaging. Do not put frontend build behavior in Python unless it is part of generated exchange data.
+Keep Python code focused on exchange validation, evidence verification, generated index creation, and packaging. Do not put frontend build behavior in Python unless it is part of generated exchange data.
 
 ## Site Tooling
 
@@ -86,9 +86,9 @@ When changing CI:
 
 - Keep self-hosted runner settings configurable.
 - Keep customer deployment image registry, repository, tag, and full-image override variables configurable.
-- Keep environment-specific credentials, endpoints, scanner install commands, and bot settings in CI variables.
+- Keep environment-specific deployment settings in CI variables.
 - Do not introduce organization-specific variable names.
-- Preserve the path rules: validation covers site/tooling/test/policy/lockfile/CI changes; skill review runs only for `skills/**/*` changes; official publication runs for default-branch skill changes and schedules.
+- Keep Python and site checks on pull requests and pushes to `main`. Catalog and site builds must not run assessments.
 - Keep dependency-vulnerability triage in GitHub Security; do not add a scheduled CI job that duplicates the Dependabot backlog.
 - Validate changed workflow YAML and run the relevant local checks before pushing.
 

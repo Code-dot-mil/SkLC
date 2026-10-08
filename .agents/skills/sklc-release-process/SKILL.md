@@ -5,8 +5,7 @@ description: Guide a maintainer through an SkLC release, including readiness che
 
 # SkLC release process
 
-Follow the approved `docs/specs/release-process.md`. GitHub is the release
-origin; customers receive standalone artifacts, not the maintainer source tree.
+GitHub is the release origin; customers receive standalone artifacts, not the maintainer source tree.
 All repository paths below are relative to the SkLC repository root.
 
 ## Confirmation rule
@@ -28,7 +27,7 @@ explicit approval for its entire automatic sequence: build, verify, create the
 GitHub Release, and upload assets. Do not promise interactive pauses inside
 Actions or independently run its publishing command.
 
-On a failed check, missing prerequisite, changed candidate, conflicting spec,
+On a failed check, missing prerequisite, changed candidate, conflicting requirement,
 or unavailable approval, stop the release and explain the next decision needed.
 Do not bypass verification, generate replacement evidence, force-push, move a
 tag, overwrite a release, or retry publication without a separately approved
@@ -39,14 +38,13 @@ recovery plan.
 1. **Inspect the release context and readiness.** After confirmation, locate the
    repository with `git rev-parse --show-toplevel`, confirm the remote targets
    `Code-dot-mil/SkLC`, and inspect the branch, commit, and worktree status. Read
-   `AGENTS.md`, the approved `docs/specs/release-process.md` from GitHub `main`,
-   `docs/roadmap.md`, the relevant product specs, `CI.md`, and
-   `.github/workflows/release.yml`. Compare the candidate's release spec with
-   approved `main` without switching or changing the worktree. Report unavailable
+   `AGENTS.md`, `docs/roadmap.md`, the product installation guides, `CI.md`, and
+   `.github/workflows/release.yml`. Compare the candidate's release behavior with
+   `main` without switching or changing the worktree. Report unavailable
    remote information as unverified, not as approval. Preserve existing changes;
    require a clean, identified candidate before building or tagging.
 
-   Identify **every currently releasable product**, its approved spec, build and
+   Identify **every currently releasable product**, its agreed scope, build and
    verification path, acceptance evidence, and unresolved blockers. There is one
    SkLC version for all included artifacts, no per-product versioning, and no
    product-selection menu. Once a product is releasable it remains in subsequent
@@ -64,7 +62,7 @@ recovery plan.
    its commit, then compare it with the candidate, including customer-facing
    content, artifact layout, contracts, dependencies, and installation behavior.
    If no previous release exists, say this is the first release and assess the
-   candidate against its approved specs; do not invent a prior version.
+   candidate against its agreed release requirements; do not invent a prior version.
 
 3. **Recommend and agree on the version.** Ask before preparing the recommendation.
    Propose a SemVer bump with customer-facing justification: patch for compatible
@@ -110,11 +108,10 @@ recovery plan.
 
    Set `PYTHONPATH=scripts`, `SKILL_EXCHANGE_SOURCE_REPOSITORY_URL` to the
    confirmed GitHub repository URL, and `SKILL_EXCHANGE_SOURCE_BRANCH` to the
-   candidate commit. Run `publish-local` with `--scan-mode static-only
-   --reuse-boe-only`: this reuses successful exact-content tracked BOE and must
-   fail if evidence is missing. Do not invoke Skillspector or an LLM, remove
-   `--reuse-boe-only`, or alter tracked BOE to make a release pass. Python
-   produces exchange data; the Node build only consumes it.
+   candidate commit. Run `publish-local` with `--scan-mode static-only`: this
+   reuses successful exact-content tracked BOE and must fail if evidence is
+   missing. Do not invoke SkillSpector or an LLM, or alter tracked BOE to make a
+   release pass. Python produces exchange data; the Node build only consumes it.
 
    First package the four committed skill folders with `bash scripts/package-skill-catalog.sh
    <temporary-assets-directory>/skill-catalog-<version>.tar.gz`. This produces the
@@ -160,7 +157,7 @@ recovery plan.
     deployment guide. Local verification does not prove GitLab deployment.
 
 11. **Confirm the final release gate.** Ask to review every applicable item in
-    the release-process spec's checklist with the maintainer. Confirm accepted
+    this checklist with the maintainer. Confirm accepted
     notes are on the pushed candidate, required CI and artifact checks passed,
     deployment evidence is present, and no blocker remains. Verify that the
     candidate still matches the tested commit and that the intended tag/release
@@ -200,7 +197,7 @@ recovery plan.
     downloaded GitHub Release package in a clean GitLab project using the shipped
     instructions, with separate approvals for external changes. Record the
     release tag, archive filename, passing `pages` pipeline/job evidence and
-    served Pages URL, as required by `docs/specs/prebuilt-reference-site.md`.
+    served Pages URL.
     Candidate deployment proof alone does not complete this published-artifact
     acceptance check. Report publication and customer deployment as separate
     outcomes, with any outstanding blockers. Ask before removing only identified

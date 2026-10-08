@@ -60,7 +60,7 @@ jobs:
           npm ci --prefix site
       - name: Run repository checks
         run: |
-          uv run --extra test ruff check scripts tests products/deployment-kit/scripts/verify_prebuilt.py
+          uv run --extra test ruff check scripts tests products/assessment-kit products/deployment-kit/scripts/verify_prebuilt.py
           uv run --extra test pytest
           npm --prefix site run lint
           npm --prefix site run test

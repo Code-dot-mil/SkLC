@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 from skill_assessment.cli import main
-from skill_assessment.commands.advise import (
+from skill_assessment.commands.advise import advise_skill
+from skill_assessment.errors import (
     IncompleteScanError,
     InvalidOutputDirectoryError,
+    MissingFrontmatterError,
     ScanError,
-    advise_skill,
 )
-from skill_assessment.commands.validate import MissingFrontmatterError
 
 
 @pytest.fixture

@@ -5,28 +5,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-from .validate import SkillValidationError, validate_skill
+from ..errors import IncompleteScanError, InvalidOutputDirectoryError, ScanError, SkillValidationError
+from .validate import validate_skill
 
 COMMAND_ARG_NAME = "advise"
 SKILL_OPTION_FLAG = "--skill"
 OUTPUT_OPTION_FLAG = "--output-dir"
 SCAN_MODE_OPTION_FLAG = "--scan-mode"
-
-
-class ScanError(RuntimeError):
-    """Scanning failed; any available artifacts remain in report_dir."""
-
-    def __init__(self, message: str, report_dir: Path):
-        self.report_dir = report_dir
-        super().__init__(f"{message}; artifacts: {report_dir}")
-
-
-class IncompleteScanError(ScanError):
-    """The requested analysis did not complete without degradation."""
-
-
-class InvalidOutputDirectoryError(ValueError):
-    """Reports must be stored outside the scanned skill."""
 
 
 def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False) -> Path:

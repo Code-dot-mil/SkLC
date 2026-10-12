@@ -4,40 +4,19 @@ from pathlib import Path
 
 import yaml
 
+from ..errors import (
+    InvalidSkillDirectoryError,
+    InvalidSkillFrontmatterKeyError,
+    MalformedFrontmatterError,
+    MissingFrontmatterError,
+    NonMappingFrontmatterError,
+    SkillNameMismatchError,
+    SkillValidationError,
+    UnclosedFrontmatterError,
+)
+
 COMMAND_ARG_NAME = "validate"
 SKILL_OPTION_FLAG = "--skill"
-
-
-class SkillValidationError(ValueError):
-    """A skill package does not meet validation requirements."""
-
-
-class InvalidSkillDirectoryError(SkillValidationError):
-    """The selected path is not a skill directory."""
-
-
-class MissingFrontmatterError(SkillValidationError):
-    """SKILL.md does not start with frontmatter."""
-
-
-class UnclosedFrontmatterError(SkillValidationError):
-    """The frontmatter closing marker is missing."""
-
-
-class MalformedFrontmatterError(SkillValidationError):
-    """The frontmatter is not valid YAML."""
-
-
-class NonMappingFrontmatterError(SkillValidationError):
-    """The frontmatter is not a mapping."""
-
-
-class InvalidSkillFrontmatterKeyError(SkillValidationError):
-    """A required frontmatter key is missing or is not a nonempty string."""
-
-
-class SkillNameMismatchError(SkillValidationError):
-    """The name does not match the skill directory."""
 
 
 def validate_skill(skill: Path) -> None:

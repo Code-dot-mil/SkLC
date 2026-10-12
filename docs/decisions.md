@@ -20,3 +20,7 @@ The team shall deliver 4 standalone products:
 ## 4. SkillSpector
 
 NVIDIA SkillSpector will be the baseline skill assessor in `llm-assisted` scan mode. `static-only` has a high false positive rate, must be explicitly requested, and must not be used as a fallback when `llm-assisted` is configured but unavailable.
+
+## 5. Assessment errors
+
+Define all assessment-kit exception types in `skill_assessment/errors.py`. Commands and callers import these shared types; command modules own parsing and execution, not exception definitions.

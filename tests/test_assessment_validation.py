@@ -4,7 +4,8 @@ import pytest
 from skill_assessment.cli import main
 from skill_assessment.commands.validate import COMMAND_ARG_NAME as VALIDATE_COMMAND
 from skill_assessment.commands.validate import SKILL_OPTION_FLAG as SKILL_OPTION
-from skill_assessment.commands.validate import (
+from skill_assessment.commands.validate import validate_skill
+from skill_assessment.errors import (
     InvalidSkillDirectoryError,
     InvalidSkillFrontmatterKeyError,
     MalformedFrontmatterError,
@@ -12,7 +13,6 @@ from skill_assessment.commands.validate import (
     NonMappingFrontmatterError,
     SkillNameMismatchError,
     UnclosedFrontmatterError,
-    validate_skill,
 )
 
 

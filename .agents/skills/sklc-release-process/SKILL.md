@@ -6,15 +6,16 @@ description: Use when asked whether SkLC is ready for a release, to prepare a re
 # SkLC release process
 
 GitHub is the release origin. The tag workflow owns packaging and draft creation;
-the maintainer publishes that existing draft. Every release includes two
-independent product ZIPs under one SemVer version:
+the maintainer publishes that existing draft. Every release includes three
+independent products under one SemVer version:
 
 - `deployment-kit-prebuilt-<version>.zip`
 - `skill-catalog-<version>.zip`
+- `skill_assessment-<normalized-version>-py3-none-any.whl`
 
-GitHub computes and displays each asset's SHA-256 digest. A consumer chooses one
-ZIP, compares its SHA-256 with that asset's GitHub digest, unzips once, and uses
-it. All paths below are relative to the repository root.
+GitHub computes and displays each asset's SHA-256 digest. A consumer chooses a
+product, compares its SHA-256 with that asset's GitHub digest, then unzips the ZIP
+or installs the wheel. All paths below are relative to the repository root.
 
 ## Check readiness
 
@@ -26,7 +27,10 @@ Compare the candidate with the previous release and recommend a SemVer version
 based on consumer impact. Agree on the version and release notes with the
 maintainer. Use the version without `v` in filenames and the exact heading
 `## <version>` in `RELEASE_NOTES.md`; the tag is `v<version>`. Keep notes focused
-on changes consumers need to understand.
+on changes consumers need to understand. Set the assessment-kit version in
+`products/assessment-kit/pyproject.toml` to match the release under Python packaging
+normalization before selecting the candidate. The workflow verifies wheel identity,
+metadata, installed version, and all three commands using an external scanner.
 
 Select the intended release commit from GitHub and record its full SHA. Run the
 readiness command from the candidate checkout, supplying the SHA selected from
@@ -58,7 +62,7 @@ checks proportional to the request; do not invent an acceptance process.
 
 For a draft request, use the successful `check-ready` result. Explain that creating
 the draft pushes a public version tag and starts the workflow, which checks the
-repository, builds the site, packages both products, and creates an unpublished
+repository, builds the site, packages all three products, and creates an unpublished
 draft. Obtain authorization for the tag push unless already covered by the request.
 Follow the repository's PR and branch protection rules.
 
@@ -84,7 +88,7 @@ uv run --group release python -m skill_exchange.release check-draft \
   --version <version> --expected-commit <expected-commit-sha>
 ```
 
-This checks the existing tag, committed notes, draft status, two complete assets
+This checks the existing tag, committed notes, draft status, three complete assets
 with GitHub digests, and the successful release workflow for that tag and commit.
 Trust its result rather than repeating its checks manually. A failed gate blocks
 publication; describe the failure and resolve it before proceeding.
@@ -101,8 +105,8 @@ second preparation workflow. A request to publish a new release can authorize
 both stages, but always wait for preparation and run `check-draft` first.
 
 After publication, inspect the release: confirm its commit, version, notes,
-prerelease status, and two assets. Download the needed product,
-compare its SHA-256 with GitHub's digest once, unzip once, and follow its guide.
+prerelease status, and three assets. Download the needed product,
+compare its SHA-256 with GitHub's digest once, then unzip or install it and follow its guide.
 Report publication and any deployment results. On failure, describe the blocker
 and agree on recovery before moving tags or replacing a published release.
 

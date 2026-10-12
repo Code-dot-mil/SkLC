@@ -8,6 +8,8 @@ import os
 import re
 import shutil
 import tempfile
+import zipfile
+from email.parser import Parser
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -167,11 +169,48 @@ def check_ready(*, version: str, expected_commit: str) -> dict[str, str]:
         raise ReleaseError("GitHub request failed; readiness is unverified") from error
 
 
+def validate_wheel_name(name: str, version: str) -> None:
+    """Require the assessment product and a Python-normalized release version."""
+    from packaging.utils import parse_wheel_filename
+    from packaging.version import Version
+
+    try:
+        distribution, wheel_version, _build, _tags = parse_wheel_filename(name)
+        if distribution != "skill-assessment" or wheel_version != Version(version):
+            raise ValueError("assessment package and release versions must correspond")
+    except ValueError as error:
+        raise ReleaseError("invalid assessment wheel name or release version") from error
+
+
+def check_wheel(wheel: Path, version: str) -> None:
+    """Check a built wheel's filename and packaged distribution metadata."""
+    from packaging.utils import canonicalize_name
+    from packaging.version import Version
+
+    validate_version(version)
+    validate_wheel_name(wheel.name, version)
+    if wheel.is_symlink() or not wheel.is_file():
+        raise ReleaseError("assessment wheel must be a regular file")
+    try:
+        with zipfile.ZipFile(wheel) as archive:
+            metadata_paths = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
+            if len(metadata_paths) != 1:
+                raise ValueError("expected one distribution metadata file")
+            metadata = Parser().parsestr(archive.read(metadata_paths[0]).decode("utf-8"))
+        if (canonicalize_name(metadata["Name"] or "") != "skill-assessment"
+                or Version(metadata["Version"] or "") != Version(version)):
+            raise ValueError("packaged assessment version does not match the release")
+    except (OSError, ValueError, zipfile.BadZipFile) as error:
+        raise ReleaseError("assessment wheel metadata does not match the release") from error
+
+
 def _draft_asset_digests(assets: list[GitReleaseAsset], version: str) -> dict[str, str]:
-    """Require both complete product ZIPs and return their GitHub digests."""
+    """Require two product ZIPs and the assessment wheel with GitHub digests."""
     expected_assets = {f"deployment-kit-prebuilt-{version}.zip", f"skill-catalog-{version}.zip"}
-    if len(assets) != 2 or {asset.name for asset in assets} != expected_assets:
-        raise ReleaseError("draft must contain exactly the two versioned product ZIPs")
+    wheels = [asset.name for asset in assets if asset.name.endswith(".whl")]
+    if len(assets) != 3 or len(wheels) != 1 or {asset.name for asset in assets} != expected_assets | set(wheels):
+        raise ReleaseError("draft must contain exactly two versioned product ZIPs and the assessment wheel")
+    validate_wheel_name(wheels[0], version)
     for asset in assets:
         if asset.state != "uploaded" or asset.size <= 0:
             raise ReleaseError(f"draft asset is incomplete: {asset.name}")
@@ -239,6 +278,9 @@ def main() -> None:
         package.add_argument("--output-dir", type=Path, required=True)
     validate = commands.add_parser("validate-version", help="validate a SemVer release version without a leading v")
     validate.add_argument("--version", required=True)
+    wheel = commands.add_parser("check-wheel", help="verify assessment wheel identity and release version")
+    wheel.add_argument("--wheel", type=Path, required=True)
+    wheel.add_argument("--version", required=True)
     notes = commands.add_parser("release-notes", help="extract one accepted version section")
     notes.add_argument("--version", required=True)
     notes.add_argument("--notes-file", type=Path, default=Path("RELEASE_NOTES.md"))
@@ -258,6 +300,12 @@ def main() -> None:
         except ReleaseError as error:
             parser.exit(1, f"Release blocked: {error}\n")
         print(json.dumps(result, indent=2))
+        return
+    if args.command == "check-wheel":
+        try:
+            check_wheel(args.wheel, args.version)
+        except ReleaseError as error:
+            parser.exit(1, f"Release blocked: {error}\n")
         return
     if args.command == "validate-version":
         validate_version(args.version)

@@ -38,11 +38,13 @@ contains the developer skill folders, their supporting files, and a
 into your workspace's `.agents/skills/`. For PR testing, the `skill-catalog.zip` CI
 artifact contains the same layout.
 
-## Validate a local skill
+## Assess a local skill
 
 The [assessment kit](products/assessment-kit/README.md) provides a standalone
-`skill-assessment validate --skill <path>` command. Its wheel can be installed
-without the site or exchange tooling.
+`skill-assessment` CLI with `validate`, `advise`, and `assess` commands.
+Install its wheel from an SkLC release without the checkout or site tooling;
+compare its SHA-256 with the GitHub asset digest, then follow the assessment kit
+installation and usage guide.
 
 ## Direction and current operation
 

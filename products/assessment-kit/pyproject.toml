@@ -5,10 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "skill-assessment"
 version = "0.1.0"
-description = "Validate an explicitly selected agent skill package."
+description = "Validate and advise on an explicitly selected agent skill package."
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = ["PyYAML>=6.0.2"]
+requires-python = ">=3.12,<3.15"
+dependencies = [
+  "PyYAML>=6.0.2",
+  "skillspector @ git+https://github.com/NVIDIA/SkillSpector.git@e29b16d305b0e738e3d4b952ba102f5522a6f084",
+]
 
 [project.scripts]
 skill-assessment = "skill_assessment.cli:main"

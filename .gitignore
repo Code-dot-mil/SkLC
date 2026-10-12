@@ -4,6 +4,7 @@
 !.exchange/generated/boe/**
 .exchange/local-generated/
 /release/
+/assessment-reports/
 site/dist/
 site/.astro/
 site/public/downloads/

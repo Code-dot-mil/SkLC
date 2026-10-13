@@ -3,7 +3,6 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import RecommendationBadge from "../../../components/RecommendationBadge.astro";
 import ScannerFindings from "../../../components/ScannerFindings";
 import { showSourceLinks } from "../../../lib/build-options.mjs";
-import { formatDate } from "../../../lib/format-date.mjs";
 import { sanitizeSkillHtml } from "../../../lib/sanitize-skill-html.mjs";
 import { sanitizeSkillMarkdown } from "../../../lib/sanitize-skill-markdown.mjs";
 import { createMarkdownProcessor, parseFrontmatter } from "@astrojs/markdown-remark";
@@ -45,6 +44,16 @@ const parsedSkillMarkdown = parseFrontmatter(skill.skill_md_content);
 const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmatter);
 const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
 const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
+
+function formatDate(value) {
+  if (!value) {
+    return "Unknown";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
 
 function formatRecommendation(value) {
   if (value === "DO_NOT_INSTALL" || value === "BLOCK") {

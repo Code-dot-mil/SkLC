@@ -23,6 +23,8 @@ catalog of developer skills.
   secure Python code review, unit test generation, inline documentation, and
   commit message and pull request description generation.
 - Serve the static site at a domain root or beneath a URL path prefix.
+- Read scan and update timestamps consistently in UTC across the catalog and
+  skill pages, regardless of browser locale or timezone.
 
 Prebuilt verification requires Python 3.12 or newer. GitLab Pages deployment
 requires a Linux runner that supports job images and can pull the configured

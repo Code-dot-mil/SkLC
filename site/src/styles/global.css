@@ -450,6 +450,7 @@ a:focus-visible {
 
 .tabs {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -482,6 +483,7 @@ a:focus-visible {
 
 .tab-panel {
   display: none;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 #tab-files:checked ~ .tab-list label[for="tab-files"],

@@ -20,7 +20,7 @@ test("built site links and assets work unchanged at root and nested hosting path
     rmSync(root, { recursive: true, force: true });
   });
   mkdirSync(fixtureSite);
-  for (const name of ["src", "scripts", "astro.config.mjs", "package.json", "tsconfig.json"]) {
+  for (const name of ["src", "scripts", "public", "astro.config.mjs", "package.json", "tsconfig.json"]) {
     cpSync(resolve(siteRoot, name), resolve(fixtureSite, name), { recursive: true });
   }
   symlinkSync(resolve(siteRoot, "node_modules"), dependencies, process.platform === "win32" ? "junction" : "dir");

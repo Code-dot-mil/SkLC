@@ -27,11 +27,28 @@ for incorrect command usage. Diagnostics go to standard error on failure.
 
 ## Advice
 
-SkillSpector is an external prerequisite for `advise` and must already be
-available as `skillspector` on `PATH`. Its installation and dependency management
-are outside this repository's scope; the assessment-kit wheel does not install it.
-Validation does not require SkillSpector. The advice integration was tested with
-SkillSpector 2.10.0. Configure its
+SkillSpector is an external prerequisite for `advise`. The compatibility target
+is SkillSpector `>=2.10,<3`, using its public CLI and JSON report format. Integration
+has been tested with 2.10.0; compatibility with later v2 releases is expected,
+not individually verified.
+
+The `skillspector` executable must be available on `PATH` in the environment that
+runs assessment-kit. Follow [SkillSpector's installation guidance](https://github.com/NVIDIA/SkillSpector#installation).
+Its installation and dependency management are outside this repository's scope;
+the assessment-kit wheel does not install it. Validation does not require it.
+
+`uv tool install` exposes the executable through uv's tool executable directory.
+That directory must be on `PATH`; if uv warns that it is missing, run
+`uv tool update-shell` and restart the shell. A `uv pip install` or source install
+instead requires the installation environment's executable directory on `PATH`,
+usually by activating that environment. See [uv's tool executable documentation](https://docs.astral.sh/uv/concepts/tools/#tool-executables).
+Verify availability from the shell used to run assessment-kit:
+
+```sh
+skillspector --version
+```
+
+Configure SkillSpector's
 [provider environment](https://github.com/NVIDIA/SkillSpector/tree/v2.10.0#configuration)
 for default LLM-assisted scans; skill contents are sent to that provider.
 

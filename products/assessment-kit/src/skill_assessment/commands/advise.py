@@ -23,13 +23,18 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False) ->
     output_dir.mkdir(parents=True, exist_ok=True)
     report_dir = Path(tempfile.mkdtemp(prefix=f"{skill.name}-", dir=output_dir))
     report_path = report_dir / "skillspector.json"
-    command = [sys.executable, "-m", "skillspector.cli", "scan", str(skill),
+    command = ["skillspector", "scan", str(skill),
                "--format", "json", "--output", str(report_path)]
     if static_only:
         command.append("--no-llm")
     try:
         with (report_dir / "scanner.log").open("w", encoding="utf-8") as log:
-            result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=300, check=False)
+            try:
+                result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=300, check=False)
+            except FileNotFoundError as exc:
+                message = "SkillSpector is required: install it separately and ensure 'skillspector' is on PATH."
+                log.write(message + "\n")
+                raise ScanError(message, report_dir) from exc
         if result.returncode not in (0, 1):  # SkillSpector uses 1 for risk findings.
             raise ScanError(f"SkillSpector exited with status {result.returncode}", report_dir)
         report = json.loads(report_path.read_text(encoding="utf-8"))

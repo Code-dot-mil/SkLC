@@ -1,6 +1,6 @@
 # Assessment kit
 
-Validate one local skill directory with Python 3.12–3.14. Validation requires
+Validate one local skill directory with Python 3.12 or later. Validation requires
 a readable UTF-8 `SKILL.md` with YAML frontmatter containing nonempty string
 fields `name` and `description`. The name must match the directory name.
 Additional metadata is allowed. Validation does not execute skill content or
@@ -27,7 +27,11 @@ for incorrect command usage. Diagnostics go to standard error on failure.
 
 ## Advice
 
-The wheel installs SkillSpector 2.10.0 from a pinned commit. Configure its
+SkillSpector is an external prerequisite for `advise` and must already be
+available as `skillspector` on `PATH`. Its installation and dependency management
+are outside this repository's scope; the assessment-kit wheel does not install it.
+Validation does not require SkillSpector. The advice integration was tested with
+SkillSpector 2.10.0. Configure its
 [provider environment](https://github.com/NVIDIA/SkillSpector/tree/v2.10.0#configuration)
 for default LLM-assisted scans; skill contents are sent to that provider.
 
@@ -46,7 +50,11 @@ locations, explanations, and remediations; `scanner.log` retains diagnostics.
 Failures preserve available reports and logs. Existing runs and skills stay unchanged.
 
 Exit status is `0` for completed advice regardless of finding severity, `1` for
-invalid input or output setup, `2` for incorrect usage, and `3` for scanner failure,
-timeout, missing/malformed output, incomplete coverage, or unavailable/degraded
-requested LLM analysis. A successful exit does not certify safety. Advice creates
+invalid input or output setup, `2` for incorrect usage, and `3` for a missing scanner,
+scanner failure, timeout, missing/malformed output, incomplete coverage, or
+unavailable/degraded requested LLM analysis. A successful exit does not certify safety. Advice creates
 no BOE or exchange evidence.
+
+For development, `uv run --extra test pytest` runs without installing SkillSpector.
+The real static scan integration test runs only when `skillspector` is on `PATH`;
+other advice tests exercise the external process boundary without a scanner install.

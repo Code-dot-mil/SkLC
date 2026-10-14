@@ -1,5 +1,7 @@
 import json
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -154,6 +156,7 @@ def test_rejects_multiple_skills_before_scanning(skill, scanner):
     assert not scanner["calls"]
 
 
+@pytest.mark.skipif(shutil.which("skillspector") is None, reason="external SkillSpector prerequisite is not installed")
 def test_real_static_scan_provides_actionable_findings(skill, tmp_path):
     # Arrange
     script = skill / "run.py"
@@ -172,3 +175,50 @@ def test_real_static_scan_provides_actionable_findings(skill, tmp_path):
     assert findings
     assert all(issue["explanation"] and issue["remediation"] for issue in findings)
     assert {path.name: path.read_bytes() for path in skill.iterdir()} == before
+
+
+def test_missing_scanner_reports_prerequisite_and_retains_diagnostics(skill, tmp_path, monkeypatch, capsys):
+    # Arrange
+    monkeypatch.setenv("PATH", "")
+    output = tmp_path / "reports"
+    before = (skill / "SKILL.md").read_bytes()
+
+    # Act
+    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+
+    # Assert
+    assert code == 3
+    assert "SkillSpector" in capsys.readouterr().err
+    logs = list(output.glob("*/scanner.log"))
+    assert len(logs) == 1
+    assert "PATH" in logs[0].read_text()
+    assert (skill / "SKILL.md").read_bytes() == before
+
+
+def test_advice_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
+    # Arrange: a standalone executable provides the scanner's public CLI contract.
+    scanner_bin = tmp_path / "bin"
+    scanner_bin.mkdir()
+    executable = scanner_bin / "skillspector"
+    executable.write_text(
+        f"#!{sys.executable}\n"
+        "import json, sys\n"
+        "from pathlib import Path\n"
+        "assert sys.argv[1] == 'scan' and '--no-llm' in sys.argv\n"
+        "report = {'execution_successful': True, 'analysis_completeness': {'is_complete': True}, "
+        "'metadata': {'llm_requested': False}, 'issues': []}\n"
+        "Path(sys.argv[sys.argv.index('--output') + 1]).write_text(json.dumps(report))\n"
+        "print('external scanner completed')\n"
+    )
+    executable.chmod(0o755)
+    monkeypatch.setenv("PATH", str(scanner_bin))
+    output = tmp_path / "reports"
+
+    # Act
+    code = main(["advise", "--skill", str(skill), "--scan-mode", "static-only", "--output-dir", str(output)])
+
+    # Assert
+    assert code == 0
+    report_path = next(output.glob("*/skillspector.json"))
+    assert json.loads(report_path.read_text())["execution_successful"] is True
+    assert "external scanner completed" in report_path.with_name("scanner.log").read_text()

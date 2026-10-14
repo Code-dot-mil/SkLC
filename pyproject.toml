@@ -1,20 +1,16 @@
 [project]
 name = "skill-exchange-local"
 version = "0.1.0"
-requires-python = ">=3.12,<3.15"
+requires-python = ">=3.12"
 dependencies = [
   "PyYAML>=6.0.2",
 ]
 
 [project.optional-dependencies]
 test = [
-  "skill-assessment",
   "pytest>=8.2",
   "ruff>=0.16.9",
 ]
-
-[tool.uv.sources]
-skill-assessment = { path = "products/assessment-kit" }
 
 [build-system]
 requires = ["setuptools>=84.0.0"]

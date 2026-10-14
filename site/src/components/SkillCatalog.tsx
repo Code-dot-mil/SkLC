@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { RECOMMENDATION_OPTIONS, RECOMMENDATION_VALUES } from "../lib/recommendation-options.mjs";
+import LocalDate from "./LocalDate";
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 
 type Skill = {
@@ -183,7 +184,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
                 </div>
                 <div>
                   <dt>Last scanned</dt>
-                  <dd>{formatDate(skill.last_scanned)}</dd>
+                  <dd><LocalDate value={skill.last_scanned} /></dd>
                 </div>
                 <div>
                   <dt>Owner</dt>
@@ -230,14 +231,4 @@ function recommendationToRisk(value: string) {
     return "Low";
   }
   return "Unknown";
-}
-
-function formatDate(value: string) {
-  if (!value) {
-    return "Unknown";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }

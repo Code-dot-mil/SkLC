@@ -3,6 +3,7 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import RecommendationBadge from "../../../components/RecommendationBadge.astro";
 import ScannerFindings from "../../../components/ScannerFindings";
 import { showSourceLinks } from "../../../lib/build-options.mjs";
+import LocalDate from "../../../components/LocalDate";
 import { sanitizeSkillHtml } from "../../../lib/sanitize-skill-html.mjs";
 import { sanitizeSkillMarkdown } from "../../../lib/sanitize-skill-markdown.mjs";
 import { createMarkdownProcessor, parseFrontmatter } from "@astrojs/markdown-remark";
@@ -44,16 +45,6 @@ const parsedSkillMarkdown = parseFrontmatter(skill.skill_md_content);
 const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmatter);
 const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
 const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
-
-function formatDate(value) {
-  if (!value) {
-    return "Unknown";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 function formatRecommendation(value) {
   if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
@@ -143,7 +134,7 @@ function flattenFrontmatterRows(value, prefix = "") {
           </div>
           <div>
             <dt>Last scanned</dt>
-            <dd>{formatDate(skill.last_scanned)}</dd>
+            <dd><LocalDate value={skill.last_scanned} client:load /></dd>
           </div>
           <div>
             <dt>Owner</dt>
@@ -174,8 +165,8 @@ function flattenFrontmatterRows(value, prefix = "") {
       <p><strong>Risk basis:</strong> {riskReason}</p>
     </dialog>
     <div class="metadata-strip">
-      <span><strong>Last updated:</strong> {formatDate(skill.last_updated)}</span>
-      <span><strong>First observed:</strong> {formatDate(skill.first_observed)}</span>
+      <span><strong>Last updated:</strong> <LocalDate value={skill.last_updated} client:load /></span>
+      <span><strong>First observed:</strong> <LocalDate value={skill.first_observed} client:load /></span>
       {skill.upstream_url && <a href={skill.upstream_url} rel="noreferrer" referrerpolicy="no-referrer">Upstream source</a>}
     </div>
   </header>
@@ -246,7 +237,7 @@ function flattenFrontmatterRows(value, prefix = "") {
           <p><strong>Latest recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} /></p>
           <p><strong>Scanner risk:</strong> {risk}</p>
           <p><strong>Scan mode:</strong> {skill.scan_mode}</p>
-          <p><strong>Last scanned:</strong> {formatDate(skill.last_scanned)}</p>
+          <p><strong>Last scanned:</strong> <LocalDate value={skill.last_scanned} client:load /></p>
           <p><strong>Content hash:</strong> <code>{skill.content_hash}</code></p>
         </section>
         <ScannerFindings scannerRuns={scannerRuns} scannerFindings={scannerFindings} scannerArtifacts={scannerArtifacts} client:load />

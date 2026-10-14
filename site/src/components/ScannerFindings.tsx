@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
+import LocalDate from "./LocalDate";
 
 type ScannerRun = {
   id: string;
@@ -186,7 +187,7 @@ export default function ScannerFindings({
                     </button>{" "}
                     {run.scanner_name} {run.scanner_version}
                   </td>
-                  <td>{formatDate(run.last_scanned)}</td>
+                  <td><LocalDate value={run.last_scanned} /></td>
                   <td><ModePill run={run} /></td>
                   <td>
                     <span className="hash-cell">
@@ -329,14 +330,4 @@ function RiskPills({ risk, flags }: { risk: string; flags: string[] }) {
       ))}
     </span>
   );
-}
-
-function formatDate(value?: string) {
-  if (!value) {
-    return "Unknown";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }

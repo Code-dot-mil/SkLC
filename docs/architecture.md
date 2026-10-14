@@ -34,9 +34,4 @@ Python produces site data; Astro consumes it. The CI and release workflows use t
 
 The skill-catalog download separately packages committed skill files and an installation README. It does not require site generation or assessment.
 
-Displayed dates use English (`en-US`) and UTC with a visible `UTC` suffix across
-the catalog, skill details, and scanner runs, for example `Sep 11, 2026, 7:53 PM UTC`.
-Static rendering and browser hydration produce identical date text regardless of
-the viewer's locale or timezone.
-
 See [CI](../CI.md) for build and release details.

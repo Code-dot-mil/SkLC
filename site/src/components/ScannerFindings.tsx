@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
-import { formatDate } from "../lib/format-date.mjs";
+import LocalDate from "./LocalDate";
 
 type ScannerRun = {
   id: string;
@@ -187,7 +187,7 @@ export default function ScannerFindings({
                     </button>{" "}
                     {run.scanner_name} {run.scanner_version}
                   </td>
-                  <td>{formatDate(run.last_scanned)}</td>
+                  <td><LocalDate value={run.last_scanned} /></td>
                   <td><ModePill run={run} /></td>
                   <td>
                     <span className="hash-cell">

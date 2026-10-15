@@ -6,50 +6,37 @@ This repository is intentionally self-contained. The site, exchange builder, pol
 
 ## Use the prebuilt site
 
-The prebuilt deployment kit contains an already-built site. Customers need an
-archive extractor and Python 3.12 or newer for offline verification, but no Node.js,
-`uv`, site build, or assessment tools.
+The prebuilt deployment kit contains an already-built site. Download
+`deployment-kit-prebuilt-<version>.zip` from
+[GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256
+with the digest GitHub displays for that asset, then unzip it once. Follow the
+[installation guide](products/deployment-kit/docs/prebuilt/install.md) for commands.
+You only need unzip support and a SHA-256 utility to install the package.
 
-Choose the download:
-
-- **Published release:** When a prebuilt version is available in
-  [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), download
-  `deployment-kit-prebuilt-<version>.tar.gz`, not the automatically generated
-  source-code archives. Follow the
-  [installation guide](products/deployment-kit/docs/prebuilt/install.md) to extract
-  it and verify the selected version.
-- **CI test build:** From a successful
-  [CI run](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml) that includes
-  prebuilt packaging, download the `static-site` artifact ZIP. This is not a
-  published product release. Extract the ZIP to get the complete package (no tar
-  archive to unpack), then run the verification command below.
-  See [CI package details](CI.md#github-validation).
-
-From the extracted package root (the folder containing `public/`, `README.md`,
-and `.gitlab-ci.yml`, not this source repository), run the shared verifier:
-
-```sh
-python3 -I -S scripts/verify_prebuilt.py .
-```
-
-Stop if verification fails. Once it passes, follow the included README or choose:
+Choose a hosting path:
 
 - [GitLab Pages](products/deployment-kit/docs/prebuilt/deploy-gitlab-pages.md): copy
-  the complete package, including hidden files. Configure `PAGES_RUNNER_TAG` for
-  an available Linux runner that supports and can pull the job's Python image.
+  the complete package, including hidden files, and configure `PAGES_RUNNER_TAG`
+  for an available Linux runner that can pull the selected job image.
 - [Another static host](products/deployment-kit/docs/prebuilt/deploy-static-hosting.md):
-  serve the complete `public/` directory unchanged, at a domain root or URL prefix.
+  serve the complete `public/` directory at a domain root or URL prefix.
 
-The developer setup below is for working on the source, not deploying this package.
+For a CI test build, download the `static-site` artifact ZIP from a successful
+[CI run](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml). Unzip it once
+to get the same package layout as a release. It is a preview,
+not a published product release. See [CI package details](CI.md#github-validation).
+
+The developer setup below is for working on the source.
 
 ## Download the skill catalog
 
-Download `skill-catalog-<version>.tar.gz` and its matching `.tar.gz.sha256` file
-from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), when published.
-The archive contains the developer skill folders, their supporting files,
-and a [short installation README](products/skill-catalog/README.md). Extract it
-and copy the folders into your workspace's `.agents/skills/`.
-For PR testing, the `skill-catalog` CI artifact contains the same layout.
+Download `skill-catalog-<version>.zip` from
+[GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256
+with the digest GitHub displays for that asset, then unzip it once. The archive
+contains the developer skill folders, their supporting files, and a
+[short installation README](products/skill-catalog/README.md). Copy the folders
+into your workspace's `.agents/skills/`. For PR testing, the `skill-catalog.zip` CI
+artifact contains the same layout.
 
 ## Validate a local skill
 
@@ -75,7 +62,6 @@ Tracked BOE lives under `.exchange/generated/boe/`. Site generation does not run
 - `.github/workflows/ci.yml` validates the codebase and builds preview catalog artifacts.
 - `CI.md` documents validation, packaging, and release behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
-- `contracts/` contains the release-manifest schema used by the prebuilt package and verifier.
 - `docs/architecture.md` documents the current component, evidence, catalog-build, and CI flows.
 - `docs/roadmap.md` defines the Q3 2026 target product, GitHub release, and downstream delivery plan.
 - `GOVERNANCE.md` describes exchange roles and generated-output boundaries.

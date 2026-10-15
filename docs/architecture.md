@@ -30,7 +30,7 @@ The builder reads these bundles without modifying them. It has no scanner depend
 
 ## Builds and downloads
 
-Python produces site data; Astro consumes it. The CI and release workflows use the same evidence-reading path. The prebuilt deployment package contains the resulting site, deployment instructions, release-manifest schema, and offline verifier.
+Python produces site data; Astro consumes it. The CI and release workflows use the same evidence-reading path. The prebuilt deployment package contains the resulting site, deployment instructions, and a GitLab Pages job. Each product is one ZIP. Consumers compare its SHA-256 with GitHub’s digest, unzip once, and use it. CI uploads staged directories so its downloads have the same layout.
 
 The skill-catalog download separately packages committed skill files and an installation README. It does not require site generation or assessment.
 

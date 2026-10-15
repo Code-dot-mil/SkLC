@@ -29,3 +29,9 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[dependency-groups]
+release = [
+    "pygit2>=1.20.1",
+    "pygithub>=2.10.0",
+]

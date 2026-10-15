@@ -4,7 +4,7 @@
 
 Deliver four standalone products as independently consumable artifacts in cumulative GitHub releases: skill lifecycle guidance, the assessment kit, the initial skill catalog, and the deployment kit. Private GitHub is the source of truth and release origin for the assessment kit, initial skill catalog, and deployment kit. Skill lifecycle guidance will be published from the Code-dot-mil AI4SDLC GitHub after the team accepts the minimum useful guidance shape. Customers receive released artifacts and deploy or use them in GitLab without mirroring maintainer source or importing maintainer release workflows.
 
-The Q3 priority is the smallest release path that proves this model: GitHub publishes a checksummed release, a clean GitLab project receives it, and GitLab Pages deploys it. Work that does not protect product independence or prove GitHub-to-GitLab delivery is deferred.
+The Q3 priority is the smallest release path that proves this model: GitHub publishes one ZIP per product with native per-asset SHA-256 digests, a clean GitLab project receives the prebuilt ZIP, and GitLab Pages deploys it. Work that does not protect product independence or prove GitHub-to-GitLab delivery is deferred.
 
 ## 2. Design summary
 
@@ -19,13 +19,13 @@ The Q3 priority is the smallest release path that proves this model: GitHub publ
 
 ### 2.2 How the products fit together
 
-Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Documented file formats and commands allow the products to work together without sharing code. Shared schemas and examples live under `contracts/` where products need a common serialized format; each product defines the formats it needs.
+Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Documented file formats and commands allow the products to work together without sharing code. Each product defines the formats it needs; add shared schemas and examples when products need a common serialized format.
 
 | Product | Release artifact | Uses another product? | Primary use-case |
 |---|---|---|---|
 | Skill lifecycle guidance | Code-dot-mil AI4SDLC GitHub guidance | No | Help users understand and apply the skill lifecycle. |
 | Assessment kit | Python wheel, usage documentation, and optional GitLab CI profile | No | Validate skills, run assessments, and produce BOE. |
-| Skill catalog | Complete skill packages and download integrity information | No | Install skills or supply a skill exchange. |
+| Skill catalog | Complete skill packages in one ZIP | No | Install skills or supply a skill exchange. |
 | Deployment kit - prebuilt | `deployment-kit-prebuilt` with deployment-only GitLab CI | Released catalog artifacts and optional assessment-kit artifacts | Deploy GitLab Pages or a static hosted site from released static site artifacts. |
 | Deployment kit - operator | `deployment-kit-operator` with reference GitLab CI | Compatible SkLC release artifacts for skill catalog, assessment kit, and assessment artifacts | Build and deploy GitLab Pages or a static hosted site from released catalog and assessment-kit inputs. |
 
@@ -53,7 +53,6 @@ Solid arrows show how released products are used together. Dotted arrows show wh
 The source tree follows the same product boundaries:
 
 ```text
-contracts/
 products/
   assessment-kit/
   skill-catalog/
@@ -67,7 +66,7 @@ maintainer/
 
 ## 3. Release strategy
 
-Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with product-specific integrity checks and installation documentation. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process is described in `CI.md` and guided by `.agents/skills/sklc-release-process`.
+Each milestone produces a usable release or a documented internal capability. Customer-facing releases are published from GitHub with native per-asset SHA-256 digests and installation documentation. Skill lifecycle guidance is published from the Code-dot-mil AI4SDLC GitHub; the assessment kit, initial catalog, and deployment kit are published from the maintainer GitHub release process. Customers consume those releases in GitLab; they do not mirror maintainer source or import maintainer release workflows. The SkLC release process is described in `CI.md` and guided by `.agents/skills/sklc-release-process`.
 
 Some products include reference GitLab CI after their core behavior exists. That CI is customer-facing packaging: it shows how to run the released product in GitLab. It is not a separate product, and it does not reuse maintainer GitHub workflows.
 
@@ -82,7 +81,7 @@ The sequence is release-first. Release-first means each milestone is judged by t
 
 Q3 must ship:
 
-1. A GitHub release process that publishes manifests and checksums.
+1. A GitHub release process that publishes one ZIP per product with native per-asset SHA-256 digests.
 2. The prebuilt reference site release installed unchanged in a clean GitLab project and deployed to GitLab Pages.
 3. Release scope and acceptance criteria for the initial catalog, assessment kit, and deployment kit, with lifecycle guidance explicitly tracked as parallel non-gating research.
 
@@ -110,13 +109,13 @@ Excluded:
 #### 3.1.3 Team delivery tasks
 
 1. Establish GitHub as the source of truth and implement the release process for the prebuilt site.
-2. Package the static site, downloads, manifest, checksums, deployment CI, and documentation as one release artifact.
+2. Package the static site, downloads, deployment CI, and documentation as one release ZIP.
 3. Support GitLab Pages without requiring the customer to build the site.
 4. Test the installation and deployment instructions in a clean GitLab project.
 
 #### 3.1.4 Acceptance evidence
 
-- A developer obtains the artifact from the GitHub Releases page, verifies its checksums, and deploys it unchanged to GitLab Pages in a clean GitLab project using the shipped documentation and CI.
+- A developer obtains the artifact from the GitHub Releases page, compares its SHA-256 with GitHub’s asset digest, unzips it, and deploys it unchanged to GitLab Pages in a clean GitLab project using the shipped documentation and CI.
 - The installed release serves the expected site and downloads without assessment or build tooling.
 
 ### 3.2 Parallel milestone — Skill lifecycle guidance
@@ -164,22 +163,22 @@ A customer can obtain the initial skill catalog for use in a GitLab-hosted skill
 #### 3.3.2 Scope
 
 - Exactly the four named skill folders and their committed supporting files.
-- A short README explaining download, extraction, and workspace installation.
-- One archive checksum.
+- A short README explaining download, unzip, and workspace installation.
+- One ZIP with a native GitHub Release asset digest.
 
 Assessment, BOE packaging, policy-derived selection, and site generation are
 outside the initial download milestone.
 
 #### 3.3.3 Team delivery tasks
 
-1. Archive the four folders and README from the selected Git commit.
-2. Generate the archive checksum and publish both files through CI and releases.
+1. Package the four folders and README from the selected Git commit in one ZIP.
+2. Publish one ZIP through CI and releases; GitHub computes the release asset digest.
 3. Check the downloaded file set and installation instructions.
 
 #### 3.3.4 Acceptance evidence
 
 - The download contains exactly the four complete skill folders and README.
-- Its checksum matches; untracked files and unrelated repository content are absent.
+- Its SHA-256 matches GitHub’s asset digest; untracked files and unrelated repository content are absent.
 - A developer copies the folders into a clean workspace's `.agents/skills/` and
   confirms a fresh agent session discovers those workspace skills.
 

@@ -3,24 +3,22 @@
 from __future__ import annotations
 
 import argparse
-import gzip
-import hashlib
 import json
 import os
 import re
 import shutil
-import tarfile
 import tempfile
-from datetime import UTC, datetime
 from pathlib import Path
 
-RELEASE_MANIFEST_SCHEMA = "skill-exchange-release-manifest/v1"
 SEMVER_PATTERN = re.compile(
     r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
     r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
     r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?"
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
 )
+
+
+RELEASE_REPOSITORY = "Code-dot-mil/SkLC"
 
 
 class ReleaseError(ValueError):
@@ -32,140 +30,16 @@ def validate_version(version: str) -> None:
         raise ReleaseError(f"version must be a SemVer value without a leading v: {version}")
 
 
-def _reject_link(path: Path) -> None:
-    if path.is_symlink() or path.is_junction():
-        raise ReleaseError(f"release input must not contain a symbolic link or directory junction: {path}")
-
-
-def _check_source_path(source: Path) -> None:
-    # Do not resolve the path first: that would hide a linked source or parent.
-    absolute = source.absolute()
-    for parent in reversed(absolute.parents):
-        _reject_link(parent)
-    _reject_link(absolute)
-
-
-def _tree_entries(root: Path) -> list[Path]:
-    _check_source_path(root)
-    if not root.is_dir():
-        raise ReleaseError(f"required release directory is missing: {root}")
-    entries: list[Path] = []
-    pending = [root]
-    while pending:
-        directory = pending.pop()
-        for path in sorted(directory.iterdir()):
-            # Reject links before classifying or descending into the entry.
-            _reject_link(path)
-            if path.is_dir():
-                pending.append(path)
-            elif not path.is_file():
-                raise ReleaseError(f"release input must be a regular file or directory: {path}")
-            entries.append(path)
-    return sorted(entries)
-
-
-def _regular_files(root: Path) -> list[Path]:
-    return [path for path in _tree_entries(root) if path.is_file()]
-
-
-def _copy_tree(source: Path, destination: Path) -> None:
-    """Preflight the entire source, then copy into a trusted staging directory."""
-    entries = _tree_entries(source)
-    destination.mkdir(parents=True, exist_ok=True)
-    for path in entries:
-        target = destination / path.relative_to(source)
-        if path.is_dir():
-            target.mkdir(parents=True, exist_ok=True)
-        else:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, target)
-
-
-def _copy_file(source: Path, destination: Path) -> None:
-    _check_source_path(source)
-    if not source.is_file():
-        raise ReleaseError(f"required release file is missing or invalid: {source}")
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, destination)
-
-
-def _sha256(path: Path) -> str:
-    with path.open("rb") as handle:
-        return hashlib.file_digest(handle, "sha256").hexdigest()
-
-
-def _write_metadata(
-    root: Path,
-    files: list[Path],
-    *,
-    product: str,
-    version: str,
-    source_revision: str,
-    created_at: str,
-    checksum_manifest: bool = False,
-) -> list[Path]:
-    entries = [
-        {"path": path.relative_to(root).as_posix(), "sha256": f"sha256:{_sha256(path)}"}
-        for path in sorted(files, key=lambda path: path.relative_to(root).as_posix())
-    ]
-    manifest = {
-        "schema_version": RELEASE_MANIFEST_SCHEMA,
-        "product": product,
-        "version": version,
-        "source_revision": source_revision,
-        "created_at": created_at,
-        "produces": {"release_manifest": [RELEASE_MANIFEST_SCHEMA]},
-        "consumes": {},
-        "artifacts": entries,
-    }
-    manifest_path = root / "release-manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
-    checksum_entries = list(entries)
-    if checksum_manifest:
-        checksum_entries.append({"path": manifest_path.name, "sha256": f"sha256:{_sha256(manifest_path)}"})
-    checksum_path = root / "SHA256SUMS.txt"
-    checksum_path.write_text(
-        "".join(f"{entry['sha256'].removeprefix('sha256:')}  {entry['path']}\n" for entry in checksum_entries),
-        encoding="utf-8",
-        newline="\n",
-    )
-    return [manifest_path, checksum_path]
-
-
 def _stage_deployment_kit(repo_root: Path, site_dir: Path, stage_root: Path) -> None:
-    public = stage_root / "public"
-    _copy_tree(site_dir, public)
-    (public / ".gitkeep").unlink(missing_ok=True)
-    if not (public / "index.html").is_file():
-        raise ReleaseError("prebuilt site must contain public/index.html")
-    for name in ("assets", "downloads"):
-        if not (public / name).is_dir():
-            raise ReleaseError(f"prebuilt site must contain public/{name}")
-
+    shutil.copytree(site_dir, stage_root / "public")
+    (stage_root / "public" / ".gitkeep").unlink(missing_ok=True)
     product = repo_root / "products" / "deployment-kit"
     docs = product / "docs" / "prebuilt"
-    _copy_file(product / "ci" / "gitlab" / "prebuilt" / ".gitlab-ci.yml", stage_root / ".gitlab-ci.yml")
-    _copy_file(docs / "README.md", stage_root / "README.md")
+    shutil.copy2(product / "ci" / "gitlab" / "prebuilt" / ".gitlab-ci.yml", stage_root / ".gitlab-ci.yml")
+    shutil.copy2(docs / "README.md", stage_root / "README.md")
+    (stage_root / "docs").mkdir()
     for name in ("install.md", "deploy-gitlab-pages.md", "deploy-static-hosting.md"):
-        _copy_file(docs / name, stage_root / "docs" / name)
-    schema = Path("contracts/release-manifest/v1/release-manifest.schema.json")
-    _copy_file(repo_root / schema, stage_root / schema)
-    _copy_file(product / "scripts" / "verify_prebuilt.py", stage_root / "scripts" / "verify_prebuilt.py")
-
-
-def _write_tar_gz(source: Path, destination: Path, *, source_date_epoch: int) -> None:
-    def normalize(info: tarfile.TarInfo) -> tarfile.TarInfo:
-        if not (info.isfile() or info.isdir()):
-            raise ReleaseError(f"release archive must contain only regular files and directories: {info.name}")
-        info.uid = info.gid = 0
-        info.uname = info.gname = "root"
-        info.mtime = source_date_epoch
-        return info
-
-    with destination.open("wb") as raw_handle:
-        with gzip.GzipFile(filename="", mode="wb", fileobj=raw_handle, mtime=source_date_epoch) as gzip_handle:
-            with tarfile.open(fileobj=gzip_handle, mode="w") as archive:
-                archive.add(source, arcname=source.name, recursive=True, filter=normalize)
+        shutil.copy2(docs / name, stage_root / "docs" / name)
 
 
 def build_release(
@@ -174,56 +48,20 @@ def build_release(
     site_dir: Path,
     output_dir: Path,
     version: str,
-    source_revision: str,
-    source_date_epoch: int | None = None,
-    catalog_archive: Path | None = None,
-) -> list[Path]:
-    """Build the prebuilt archive and metadata, optionally including existing catalog assets."""
+) -> Path:
+    """Package the built site and deployment guides as one ZIP."""
     validate_version(version)
-    if not source_revision.strip():
-        raise ReleaseError("source revision must not be empty")
-    _check_source_path(repo_root)
-    output_dir = output_dir.absolute()
-    catalog_files = []
-    if catalog_archive is not None:
-        catalog_archive = catalog_archive.absolute()
-        if (catalog_archive.parent != output_dir
-                or catalog_archive.name != f"skill-catalog-{version}.tar.gz"):
-            raise ReleaseError("catalog archive must use the release version and be in the output directory")
-        catalog_files = [catalog_archive, Path(f"{catalog_archive}.sha256")]
-        for path in catalog_files:
-            _check_source_path(path)
-            if not path.is_file():
-                raise ReleaseError(f"required catalog release file is missing or invalid: {path}")
-    epoch = source_date_epoch if source_date_epoch is not None else int(datetime.now(UTC).timestamp())
-    timestamp = datetime.fromtimestamp(epoch, UTC).isoformat().replace("+00:00", "Z")
-    product = "deployment-kit-prebuilt"
-    archive_path = output_dir / f"{product}-{version}.tar.gz"
-
+    package_name = f"deployment-kit-prebuilt-{version}"
     with tempfile.TemporaryDirectory(prefix="sklc-prebuilt-") as temporary:
-        package_root = Path(temporary) / f"{product}-{version}"
+        package_root = Path(temporary) / package_name
         _stage_deployment_kit(repo_root, site_dir, package_root)
-        # Enumerate before writing root metadata; nested files with the same names
-        # are ordinary assets and must remain covered by the checksums.
-        _write_metadata(
-            package_root, _regular_files(package_root), product=product, version=version,
-            source_revision=source_revision, created_at=timestamp,
-        )
-        # Invalid sources must fail before any release assets are published here.
         output_dir.mkdir(parents=True, exist_ok=True)
-        _write_tar_gz(package_root, archive_path, source_date_epoch=epoch)
-
-    metadata_paths = _write_metadata(
-        output_dir, [archive_path, *catalog_files], product="sklc", version=version,
-        source_revision=source_revision, created_at=timestamp, checksum_manifest=True,
-    )
-    return [archive_path, *metadata_paths, *catalog_files]
+        return Path(shutil.make_archive(str(output_dir / package_name), "zip", root_dir=package_root))
 
 
 def extract_release_notes(notes_path: Path, version: str) -> str:
     """Select exactly one nonempty version section, ignoring fenced examples."""
     validate_version(version)
-    _check_source_path(notes_path)
     if not notes_path.is_file():
         raise ReleaseError(f"release notes file is missing: {notes_path}")
     lines = notes_path.read_text(encoding="utf-8").splitlines()
@@ -251,23 +89,97 @@ def extract_release_notes(notes_path: Path, version: str) -> str:
     return "\n".join(lines[start:end]).strip() + "\n"
 
 
+def check_ready(*, version: str, expected_commit: str) -> dict[str, str]:
+    """Require the selected GitHub commit, unchanged locally, with successful main CI."""
+    import pygit2
+    from github import Auth, Github, GithubException, UnknownObjectException
+    from requests.exceptions import RequestException
+
+    validate_version(version)
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", expected_commit):
+        raise ReleaseError("expected commit must be the full 40-character SHA selected from GitHub")
+    sha = expected_commit.lower()
+    try:
+        git_dir = pygit2.discover_repository(str(Path.cwd()))
+        if git_dir is None:
+            raise ReleaseError("run from the candidate Git checkout")
+        local = pygit2.Repository(git_dir)
+        if local.is_bare or local.head_is_unborn:
+            raise ReleaseError("a working checkout with a committed HEAD is required")
+        if str(local.head.target) != sha:
+            raise ReleaseError(f"local HEAD {local.head.target} does not match expected commit {sha}")
+        if local.status(untracked_files="all"):
+            raise ReleaseError("checkout must be clean, including staged and untracked files")
+        if local.state() != pygit2.enums.RepositoryState.NONE:
+            raise ReleaseError("finish the in-progress Git operation before checking readiness")
+        tag = f"v{version}"
+        if f"refs/tags/{tag}" in local.references:
+            raise ReleaseError(f"local tag {tag} already exists")
+        extract_release_notes(Path(local.workdir) / "RELEASE_NOTES.md", version)
+    except (pygit2.GitError, OSError) as error:
+        raise ReleaseError(f"cannot verify local checkout: {error}") from error
+
+    # A token is required so private/draft release visibility is not silently omitted.
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise ReleaseError("set GH_TOKEN (or GITHUB_TOKEN) with repository and Actions read access")
+    try:
+        with Github(auth=Auth.Token(token), timeout=30) as client:
+            remote = client.get_repo(RELEASE_REPOSITORY)
+            if remote.compare(sha, "main").status not in {"ahead", "identical"}:
+                raise ReleaseError(f"candidate {sha} is not on {RELEASE_REPOSITORY} main history")
+            try:
+                remote.get_git_ref(f"tags/{tag}")
+            except UnknownObjectException:
+                pass
+            else:
+                raise ReleaseError(f"GitHub tag {tag} already exists")
+            # Include drafts visible to this identity, which tag-based release lookup can omit.
+            if any(release.tag_name == tag for release in remote.get_releases()):
+                raise ReleaseError(f"GitHub release {tag} already exists")
+            workflow = remote.get_workflow("ci.yml")
+            run = next(iter(workflow.get_runs(branch="main", event="push", head_sha=sha)), None)
+            if run is None:
+                raise ReleaseError(f"no main push CI run exists for {sha}")
+            if run.status != "completed" or run.conclusion != "success":
+                raise ReleaseError(f"CI is {run.status}/{run.conclusion}: {run.html_url}")
+            return {"version": version, "tag": tag, "candidate_sha": sha, "ci_url": run.html_url}
+    except GithubException as error:
+        raise ReleaseError(f"GitHub verification failed (HTTP {error.status}); readiness is unverified") from error
+    except RequestException as error:
+        raise ReleaseError("GitHub request failed; readiness is unverified") from error
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Assemble the prebuilt site release package")
+    parser = argparse.ArgumentParser(description="Check release readiness and assemble release packages")
     commands = parser.add_subparsers(dest="command", required=True)
-    build = commands.add_parser("build", help="package an already-built site; do not build or assess inputs")
-    build.add_argument("--version", required=True)
-    build.add_argument("--source-revision", required=True)
-    build.add_argument("--repo-root", type=Path, default=Path.cwd())
-    build.add_argument("--site-dir", type=Path, default=Path("site/dist"))
-    build.add_argument("--output-dir", type=Path, default=Path("release"))
-    build.add_argument("--catalog-archive", type=Path, help="include an existing catalog archive and its .sha256 file")
+    for command, help_text in (
+        ("build", "package an already-built site as a ZIP"),
+        ("stage", "stage package contents for a CI artifact upload"),
+    ):
+        package = commands.add_parser(command, help=help_text)
+        if command == "build":
+            package.add_argument("--version", required=True)
+        package.add_argument("--repo-root", type=Path, default=Path.cwd())
+        package.add_argument("--site-dir", type=Path, default=Path("site/dist"))
+        package.add_argument("--output-dir", type=Path, required=True)
     validate = commands.add_parser("validate-version", help="validate a SemVer release version without a leading v")
     validate.add_argument("--version", required=True)
     notes = commands.add_parser("release-notes", help="extract one accepted version section")
     notes.add_argument("--version", required=True)
     notes.add_argument("--notes-file", type=Path, default=Path("RELEASE_NOTES.md"))
     notes.add_argument("--output", type=Path, required=True)
+    ready = commands.add_parser("check-ready", help="verify a candidate against local Git and GitHub CI")
+    ready.add_argument("--version", required=True)
+    ready.add_argument("--expected-commit", required=True)
     args = parser.parse_args()
+    if args.command == "check-ready":
+        try:
+            result = check_ready(version=args.version, expected_commit=args.expected_commit)
+        except ReleaseError as error:
+            parser.exit(1, f"Release blocked: {error}\n")
+        print(json.dumps(result, indent=2))
+        return
     if args.command == "validate-version":
         validate_version(args.version)
         return
@@ -276,20 +188,18 @@ def main() -> None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(snippet, encoding="utf-8", newline="\n")
         return
-    source_date_epoch = int(os.environ["SOURCE_DATE_EPOCH"]) if "SOURCE_DATE_EPOCH" in os.environ else None
-    # Keep source links visible to the safety checks, including relative CLI inputs.
     repo_root = args.repo_root.absolute()
     site_dir = args.site_dir if args.site_dir.is_absolute() else repo_root / args.site_dir
+    if args.command == "stage":
+        _stage_deployment_kit(repo_root, site_dir, args.output_dir.absolute())
+        return
     built = build_release(
         repo_root=repo_root,
         site_dir=site_dir,
         output_dir=args.output_dir.absolute(),
         version=args.version,
-        source_revision=args.source_revision,
-        source_date_epoch=source_date_epoch,
-        catalog_archive=args.catalog_archive,
     )
-    print(json.dumps({"artifacts": [str(path) for path in built]}, indent=2))
+    print(json.dumps({"artifacts": [str(built)]}, indent=2))
 
 
 if __name__ == "__main__":

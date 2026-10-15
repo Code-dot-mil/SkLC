@@ -35,21 +35,15 @@ jobs:
         id: release-inputs
         shell: bash
         run: |
-          test "$GITHUB_REF_TYPE" = tag
-          case "$GITHUB_REF_NAME" in v*) ;; *) exit 1 ;; esac
           version="${GITHUB_REF_NAME#v}"
           python -m skill_exchange.release validate-version --version "$version"
           source_revision="$(git rev-parse HEAD)"
-          test "$source_revision" = "$(git rev-parse "${GITHUB_REF}^{commit}")"
-          git ls-files --error-unmatch RELEASE_NOTES.md > /dev/null
-          git diff --exit-code HEAD -- RELEASE_NOTES.md
           release_dir="$(mktemp -d "$RUNNER_TEMP/sklc-release.XXXXXX")"
           python -m skill_exchange.release release-notes \
             --version "$version" --notes-file RELEASE_NOTES.md \
             --output "$release_dir/release-body.md"
-          source_date_epoch="$(git show -s --format=%ct "$source_revision")"
-          printf 'RELEASE_VERSION=%s\nSOURCE_REVISION=%s\nSOURCE_DATE_EPOCH=%s\nRELEASE_DIR=%s\n' \
-            "$version" "$source_revision" "$source_date_epoch" "$release_dir" >> "$GITHUB_ENV"
+          printf 'RELEASE_VERSION=%s\nSOURCE_REVISION=%s\nRELEASE_DIR=%s\n' \
+            "$version" "$source_revision" "$release_dir" >> "$GITHUB_ENV"
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -60,7 +54,7 @@ jobs:
           npm ci --prefix site
       - name: Run repository checks
         run: |
-          uv run --extra test ruff check scripts tests products/assessment-kit products/deployment-kit/scripts/verify_prebuilt.py
+          uv run --extra test ruff check scripts tests products/assessment-kit
           uv run --extra test pytest
           npm --prefix site run lint
           npm --prefix site run test
@@ -74,28 +68,15 @@ jobs:
           --scan-mode static-only
       - name: Build static site
         run: npm --prefix site run build
-      - name: Build and verify release assets
+      - name: Build product archives
         id: release-assets
         shell: bash
         run: |
-          bash scripts/package-skill-catalog.sh "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz"
+          bash scripts/package-skill-catalog.sh "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip"
           python -m skill_exchange.release build \
             --repo-root . --site-dir site/dist \
-            --version "$RELEASE_VERSION" --source-revision "$SOURCE_REVISION" \
-            --output-dir "$RELEASE_DIR/assets" \
-            --catalog-archive "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz"
-          mkdir "$RELEASE_DIR/extracted"
-          tar -xzf "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.tar.gz" \
-            -C "$RELEASE_DIR/extracted"
-          cd "$RELEASE_DIR/extracted/deployment-kit-prebuilt-$RELEASE_VERSION"
-          python3 -I -S scripts/verify_prebuilt.py . --expected-version "$RELEASE_VERSION"
-          test -s public/index.html
-          test -n "$(find public/skills -type f -name 'index.html' -print -quit)"
-          test -n "$(find public/downloads -type f -name '*.zip' -print -quit)"
-          test ! -e public/.gitkeep
-          cd "$RELEASE_DIR/assets"
-          sha256sum --strict --check SHA256SUMS.txt
-          sha256sum --strict --check "skill-catalog-$RELEASE_VERSION.tar.gz.sha256"
+            --version "$RELEASE_VERSION" \
+            --output-dir "$RELEASE_DIR/assets"
       - name: Create GitHub Release
         id: publish-release
         shell: bash
@@ -107,11 +88,8 @@ jobs:
             prerelease_args+=(--prerelease)
           fi
           gh release create "$GITHUB_REF_NAME" \
-            "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.tar.gz" \
-            "$RELEASE_DIR/assets/release-manifest.json" \
-            "$RELEASE_DIR/assets/SHA256SUMS.txt" \
-            "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz" \
-            "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.tar.gz.sha256" \
+            "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.zip" \
+            "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip" \
             --verify-tag --title "$GITHUB_REF_NAME" \
             --notes-file "$RELEASE_DIR/release-body.md" \
             "${prerelease_args[@]}"

@@ -13,32 +13,26 @@ version or release notes have been accepted by adding this document.
 First SkLC release, providing a prebuilt Skill Exchange site and a separate
 catalog of developer skills.
 
-- Deploy the static Skill Exchange site to GitLab Pages or another static host.
-  The package includes skill detail pages, review evidence, risk information,
-  downloadable skill bundles, and installation and deployment guides.
-  The separate skill catalog contains skill instructions and supporting files;
-  it does not include assessment evidence.
-- Verify the prebuilt package offline using its included Python verifier,
-  manifest, and SHA-256 checksums. The included GitLab Pages job verifies the
-  package before publishing the existing site without rebuilding it.
-- Install four developer skills from the separate catalog archive:
-  `python-secure-code-review` for secure Python code review,
-  `unit-test-generation` for unit tests, `inline-documentation` for code-adjacent
-  documentation, and `code-change-description` for pull request and merge request
-  descriptions.
-- Serve the static site at a domain root or beneath a URL path prefix.
+### Prebuilt Skill Exchange site
 
-Choose the archive for your task from this release's assets:
+The Skill Exchange site lets users browse agent skills, read their review
+evidence and risk information, and download skill bundles. The deployment kit
+provides a ready-to-host copy of the site.
 
-- `deployment-kit-prebuilt-1.0.0.tar.gz` to deploy the site. Follow the
-  [prebuilt installation guide](https://github.com/Code-dot-mil/SkLC/blob/v1.0.0/products/deployment-kit/docs/prebuilt/install.md).
-- `skill-catalog-1.0.0.tar.gz` to install the four developer skills. Download its
-  matching `.tar.gz.sha256` file and follow the
-  [catalog installation guide](https://github.com/Code-dot-mil/SkLC/blob/v1.0.0/products/skill-catalog/README.md).
+1. Download `deployment-kit-prebuilt-1.0.0.zip` from this release's assets and
+   follow the [installation guide](https://github.com/Code-dot-mil/SkLC/blob/v1.0.0/products/deployment-kit/docs/prebuilt/install.md)
+   to check and unpack it.
+2. Follow the deployment guide for
+   [GitLab Pages](https://github.com/Code-dot-mil/SkLC/blob/v1.0.0/products/deployment-kit/docs/prebuilt/deploy-gitlab-pages.md)
+   or [another static host](https://github.com/Code-dot-mil/SkLC/blob/v1.0.0/products/deployment-kit/docs/prebuilt/deploy-static-hosting.md).
 
-Prebuilt verification requires Python 3.12 or newer. GitLab Pages deployment
-requires a Linux runner that supports job images and can pull the configured
-Python image. Runner routing and image settings use CI/CD variables.
+### Developer skill catalog
 
-This release includes the prebuilt deployment kit and skill catalog. Assessment
-tooling, operator site-build tooling, and managed updates are not included.
+The skill catalog provides four skills for your coding agent: secure Python code
+review, unit test generation, inline documentation, and change descriptions.
+Each skill includes its instructions and supporting files.
+
+1. Download `skill-catalog-1.0.0.zip` from this release's assets.
+2. Follow the [catalog installation guide](https://github.com/Code-dot-mil/SkLC/blob/v1.0.0/products/skill-catalog/README.md)
+   to check the download, install the skills in your workspace, and confirm your
+   agent can find them.

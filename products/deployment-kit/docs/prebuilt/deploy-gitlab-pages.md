@@ -17,11 +17,8 @@ accept; the job's image selects its container environment. See the GitLab docume
 [runners](https://docs.gitlab.com/ci/runners/),
 [runner scope](https://docs.gitlab.com/ci/runners/runners_scope/), and
 [runner setup](https://docs.gitlab.com/user/get_started/get_started_runner/).
-The shipped job selects the official `python:3.12-slim` image, which provides a
-POSIX shell and Python for verification without installing additional packages.
-Python is needed only for the pre-deployment check, not to serve the website.
-The runner must be allowed to pull the selected image; Python does not need to
-be installed on the runner host.
+The shipped job uses the official `alpine:3.24.2` image for its POSIX shell.
+The runner must be allowed to pull the selected image.
 
 If you are unsure which runner tags are available, ask your GitLab
 administrator.
@@ -30,11 +27,10 @@ In **Settings > CI/CD > Variables**, create `PAGES_RUNNER_TAG` with the tag of t
 selected runner. GitLab documents project and group variables in
 [CI/CD variables](https://docs.gitlab.com/ci/variables/).
 
-If your environment requires an internal registry, override `PYTHON_IMAGE` with
-the complete approved image reference, or override `PYTHON_IMAGE_REGISTRY`,
-`PYTHON_IMAGE_REPOSITORY`, and `PYTHON_IMAGE_TAG`. The image must include a POSIX
-shell and `python3` running Python 3.12 or newer. Set these as project or group
-CI/CD variables instead of editing the checksummed package files. See GitLab's
+If your environment requires an internal registry, override `PAGES_IMAGE` with
+the complete approved image reference, or override `PAGES_IMAGE_REGISTRY`,
+`PAGES_IMAGE_REPOSITORY`, and `PAGES_IMAGE_TAG`. The image only needs a POSIX
+shell. Set these as project or group CI/CD variables. See GitLab's
 [job image configuration](https://docs.gitlab.com/ci/yaml/#image).
 
 The following Git configuration is a template. Replace `<git-user-name>` with
@@ -67,8 +63,7 @@ git push origin main
 ## Verify the deployment
 
 Open **Build > Pipelines** and select the pipeline created by the push. The
-`pages` job verifies the release manifest and checksums before publishing the
-existing `public/` directory. After it passes, open **Deploy > Pages**, follow
-the published URL, and confirm that the catalog loads with styling, a skill detail
+`pages` job publishes the existing `public/` directory. After it passes, open
+**Deploy > Pages**, follow the published URL, and confirm that the catalog loads with styling, a skill detail
 page opens, and a skill download works. The runner does not build the site or
 rewrite its links.

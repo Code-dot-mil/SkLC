@@ -2,10 +2,10 @@ stages:
   - deploy
 
 variables:
-  PYTHON_IMAGE_REGISTRY: "docker.io"
-  PYTHON_IMAGE_REPOSITORY: "library/python"
-  PYTHON_IMAGE_TAG: "3.12-slim"
-  PYTHON_IMAGE: "$PYTHON_IMAGE_REGISTRY/$PYTHON_IMAGE_REPOSITORY:$PYTHON_IMAGE_TAG"
+  PAGES_IMAGE_REGISTRY: "docker.io"
+  PAGES_IMAGE_REPOSITORY: "library/alpine"
+  PAGES_IMAGE_TAG: "3.24.2"
+  PAGES_IMAGE: "$PAGES_IMAGE_REGISTRY/$PAGES_IMAGE_REPOSITORY:$PAGES_IMAGE_TAG"
 
 workflow:
   rules:
@@ -13,12 +13,12 @@ workflow:
     - when: never
 
 pages:
-  image: "$PYTHON_IMAGE"
+  image: "$PAGES_IMAGE"
   stage: deploy
   tags:
     - "$PAGES_RUNNER_TAG"
   script:
-    - python3 -I -S scripts/verify_prebuilt.py .
+    - echo "Publishing the prebuilt site from public/"
   artifacts:
     paths:
       - public/

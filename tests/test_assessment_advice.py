@@ -1,7 +1,10 @@
+import io
 import json
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 from unittest.mock import mock_open
 
@@ -26,7 +29,43 @@ def skill(tmp_path):
 
 
 @pytest.fixture
-def scanner(monkeypatch):
+def gateway(monkeypatch):
+    for key in ("SKILLSPECTOR_COMPAT_BASE_URL", "SKILLSPECTOR_COMPAT_API_KEY", "AZURE_OPENAI_ENDPOINT",
+                "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEPLOYMENT", "AZURE_OPENAI_API_VERSION", "OPENAI_PROJECT_ID"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai")
+    monkeypatch.setenv("SKILLSPECTOR_MODEL", "review-model")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://gateway.example/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-secret")
+    state = {"calls": [], "overrides": {}, "finish_reason": "stop"}
+
+    def complete(opener, request, *, timeout):
+        state["calls"].append(request)
+        if "error" in state:
+            raise state["error"]
+        payload = json.loads(request.data)
+        evidence = json.loads(payload["messages"][1]["content"])
+        result = {
+            "safe_to_use": True, "summary": "Benign examples.",
+            "coverage_sufficient": True, "coverage_reason": "Supplied context is sufficient.",
+            "findings": [{"index": index, "rule_id": issue["id"], "determination": "false_positive",
+                          "reason": "Illustrative example."}
+                         for index, issue in enumerate(evidence["report"]["issues"], 1)],
+        }
+        result.update(state["overrides"])
+        content = state.get("content", json.dumps(result))
+        response = {"model": "served-model", "choices": [{"finish_reason": state["finish_reason"],
+                                                          "message": {"content": content}}]}
+        if "usage" in state:
+            response["usage"] = state["usage"]
+        return io.BytesIO(json.dumps(response).encode())
+
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", complete)
+    return state
+
+
+@pytest.fixture
+def scanner(monkeypatch, gateway):
     report = {
         "execution_successful": True,
         "analysis_completeness": {"is_complete": True},
@@ -86,6 +125,8 @@ def test_retains_useful_native_findings_across_runs(skill, scanner, tmp_path, mo
     assert len(reports) == 2
     assert all(json.loads(path.read_text()) == scanner["report"] for path in reports)
     assert all(path.with_name("scanner.log").read_text() for path in reports)
+    assert all(json.loads(path.with_name("adjudication.json").read_text())["status"] == "completed"
+               for path in reports)
     assert all("--no-llm" not in command for command in scanner["calls"])
     assert list(skill.iterdir()) == [skill / "SKILL.md"]
     assert (skill / "SKILL.md").read_bytes() == before
@@ -143,6 +184,12 @@ def test_failed_scans_retain_artifacts_and_never_retry(skill, scanner, tmp_path,
             assert not path.exists()
         else:
             assert json.loads(path.read_text()) == scanner["report"]
+        adjudication = json.loads((run / "adjudication.json").read_text())
+        if failure in ("process", "missing", "malformed", "execution", "timeout"):
+            assert adjudication["status"] == "unavailable"
+            assert adjudication["safe_to_use"] is None
+        else:
+            assert adjudication["status"] == "completed"
 
 
 @pytest.mark.parametrize("invalid_skill", [False, True])
@@ -294,3 +341,135 @@ def test_advice_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
     report_path = next(output.glob("*/skillspector.json"))
     assert json.loads(report_path.read_text())["execution_successful"] is True
     assert report_path.with_name("scanner.log").stat().st_size > 0
+
+
+def test_adjudicates_partial_report_with_full_skill_context(skill, scanner, gateway, tmp_path):
+    scanner['report']['analysis_completeness'].update(
+        is_complete=False, status='partial', coverage_percent=100,
+        ledger_exceptions=[{'reason_code': 'reference_unresolved', 'start_line': 5, 'fatal': False}],
+        references=[{'evidence': 'Authn/authz checks', 'status': 'missing'}],
+    )
+    scanner['report']['issues'][0].update(tags=['llm-unconfirmed', 'likely-benign-context'], confidence=0.9)
+    # Repeated rule IDs must remain distinct findings.
+    scanner['report']['issues'].append(dict(scanner['report']['issues'][0], finding_id='another-finding'))
+    (skill / 'private.py').write_text('DO_NOT_TRANSMIT_THIS_FILE')
+    output = tmp_path / 'reports'
+
+    assert main(['advise', '--skill', str(skill), '--output-dir', str(output)]) == 3
+
+    raw = next(output.glob('*/skillspector.json'))
+    assert json.loads(raw.read_text()) == scanner['report']
+    result = json.loads(raw.with_name('adjudication.json').read_text())
+    assert result['status'] == 'completed'
+    assert len(result['findings']) == 2
+    assert [item['index'] for item in result['findings']] == [1, 2]
+    request = json.loads(gateway['calls'][0].data)
+    evidence = json.loads(request['messages'][1]['content'])
+    assert evidence['report']['analysis_completeness']['references']
+    assert 'source' not in evidence['report']['skill']
+    assert evidence['skill_text_with_line_numbers'].endswith('5: Instructions.')
+    assert 'DO_NOT_TRANSMIT_THIS_FILE' not in gateway['calls'][0].data.decode()
+    assert result['metadata']['model'] == 'review-model'
+    assert result['metadata']['response_model'] == 'served-model'
+    assert result['metadata']['calls_attempted'] == result['metadata']['calls_succeeded'] == 1
+    assert result['metadata']['token_usage'] is None  # Missing usage is unknown, not zero.
+
+
+@pytest.mark.parametrize('provider', ['openai', 'openai_compatible', 'azure_openai'])
+def test_gateway_protocol_and_usage_are_retained(skill, scanner, gateway, tmp_path, monkeypatch, provider):
+    monkeypatch.setenv('SKILLSPECTOR_PROVIDER', provider)
+    monkeypatch.setenv('SKILLSPECTOR_COMPAT_BASE_URL', 'https://compatible.example/api/v1')
+    monkeypatch.setenv('SKILLSPECTOR_COMPAT_API_KEY', 'compat-secret')
+    monkeypatch.setenv('AZURE_OPENAI_ENDPOINT', 'https://azure.example/gateway')
+    monkeypatch.setenv('AZURE_OPENAI_API_KEY', 'azure-secret')
+    monkeypatch.setenv('AZURE_OPENAI_DEPLOYMENT', 'review deployment')
+    monkeypatch.setenv('AZURE_OPENAI_API_VERSION', '2024-10-21')
+    gateway['usage'] = {'prompt_tokens': 100, 'completion_tokens': 30, 'total_tokens': 130}
+
+    report = advise_skill(skill, tmp_path / 'reports')
+
+    request = gateway['calls'][0]
+    if provider == 'azure_openai':
+        assert request.full_url == ('https://azure.example/gateway/openai/deployments/review%20deployment/'
+                                    'chat/completions?api-version=2024-10-21')
+        assert request.get_header('Api-key') == 'azure-secret'
+        assert request.get_header('Authorization') is None
+    else:
+        expected = 'https://gateway.example/v1' if provider == 'openai' else 'https://compatible.example/api/v1'
+        assert request.full_url == expected + '/chat/completions'
+        assert request.get_header('Authorization') == ('Bearer test-secret' if provider == 'openai'
+                                                       else 'Bearer compat-secret')
+    result = json.loads(report.with_name('adjudication.json').read_text())
+    assert result['metadata']['provider'] == provider
+    assert result['metadata']['token_usage'] == gateway['usage']
+    assert 'secret' not in report.with_name('adjudication.json').read_text()
+
+
+@pytest.mark.parametrize('failure', ['credentials', 'model', 'unsupported', 'http', 'timeout', 'json',
+                                    'missing-finding', 'contradiction', 'uncertain', 'identity', 'truncated'])
+def test_adjudication_failure_is_explicit_and_preserves_native_report(
+    skill, scanner, gateway, tmp_path, monkeypatch, failure,
+):
+    unavailable = failure in ('credentials', 'model', 'unsupported')
+    if failure == 'credentials':
+        monkeypatch.delenv('OPENAI_API_KEY')
+        scanner['report']['metadata']['llm_available'] = False
+    elif failure == 'model':
+        monkeypatch.delenv('SKILLSPECTOR_MODEL')
+    elif failure == 'unsupported':
+        monkeypatch.setenv('SKILLSPECTOR_PROVIDER', 'anthropic')
+    elif failure == 'http':
+        gateway['error'] = urllib.error.HTTPError('https://gateway.example', 401, 'test-secret', {}, None)
+    elif failure == 'timeout':
+        gateway['error'] = TimeoutError('test-secret')
+    elif failure == 'json':
+        gateway['content'] = 'not JSON test-secret'
+    elif failure == 'missing-finding':
+        gateway['overrides'] = {'findings': []}
+    elif failure == 'contradiction':
+        gateway['overrides'] = {'coverage_sufficient': False}
+    elif failure in ('uncertain', 'identity'):
+        gateway['overrides'] = {'findings': [
+            {'index': 1, 'rule_id': 'CE1' if failure == 'uncertain' else 'invented',
+             'determination': 'uncertain' if failure == 'uncertain' else 'false_positive', 'reason': 'Unknown.'},
+        ]}
+    elif failure == 'truncated':
+        gateway['finish_reason'] = 'length'
+    output = tmp_path / 'reports'
+
+    assert main(['advise', '--skill', str(skill), '--output-dir', str(output)]) == 3
+
+    raw = next(output.glob('*/skillspector.json'))
+    assert json.loads(raw.read_text()) == scanner['report']
+    path = raw.with_name('adjudication.json')
+    result = json.loads(path.read_text())
+    assert result['status'] == ('unavailable' if unavailable else 'failed')
+    assert result['safe_to_use'] is None
+    assert result['coverage_sufficient'] is None
+    assert result['findings'][0]['determination'] == 'not_adjudicated'
+    assert result['metadata']['calls_attempted'] == (0 if unavailable else 1)
+    assert len(gateway['calls']) == (0 if unavailable else 1)  # No retry or provider fallback.
+    assert 'test-secret' not in path.read_text()
+
+
+def test_true_positive_is_advice_not_execution_failure(skill, scanner, gateway, tmp_path):
+    gateway['overrides'] = {
+        'safe_to_use': False,
+        'findings': [{'index': 1, 'rule_id': 'CE1', 'determination': 'true_positive', 'reason': 'Unsafe eval.'}],
+    }
+    output = tmp_path / 'reports'
+
+    assert main(['advise', '--skill', str(skill), '--output-dir', str(output)]) == 0
+
+    result = json.loads(next(output.glob('*/adjudication.json')).read_text())
+    assert result['safe_to_use'] is False
+    assert result['status'] == 'completed'
+
+
+def test_static_only_never_calls_adjudication_gateway(skill, scanner, gateway, tmp_path):
+    scanner['report']['metadata'] = {'llm_requested': False}
+    report = advise_skill(skill, tmp_path / 'reports', static_only=True)
+
+    assert not gateway['calls']
+    assert not report.with_name('adjudication.json').exists()
+    assert json.loads(report.read_text()) == scanner['report']

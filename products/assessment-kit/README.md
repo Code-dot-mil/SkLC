@@ -8,9 +8,9 @@ Validate a local skill directory and get advisory scan findings with
 Python 3.12 or later is required. The examples below use `uv` to build and install
 the assessment kit and run its commands.
 
-### SkillSpector (advise only)
+### SkillSpector (Advise only)
 
-SkillSpector is an external prerequisite for `advise`. The compatibility target
+SkillSpector is an external prerequisite for Advise. The compatibility target
 is SkillSpector `>=2.10,<3`, using its public CLI and JSON report format. Integration
 has been tested with 2.10.0; compatibility with later v2 releases is expected,
 not individually verified.
@@ -90,11 +90,11 @@ On success, the command displays the path to the report. `skillspector.json` ret
 locations, explanations, and remediations; `scanner.log` retains diagnostics.
 Failures preserve available reports and logs. Existing runs and skills stay unchanged.
 
-Exit status is `0` for completed advice regardless of finding severity, `1` for
+Exit status is `0` when Advise completes, regardless of finding severity, `1` for
 invalid input or output setup, `2` for incorrect usage, and `3` for a missing scanner,
 scanner failure, timeout, missing/malformed output, incomplete coverage, or
-unavailable/degraded requested LLM analysis. A successful exit does not certify safety. Advice creates
-no BOE or exchange evidence.
+unavailable/degraded requested LLM analysis. A successful exit does not certify safety.
+Advise creates no BOE or exchange evidence.
 
 ## Python callers
 
@@ -108,4 +108,4 @@ and unreadable or malformed reports. Error types live in `skill_assessment.error
 
 `uv run --extra test pytest` runs without installing SkillSpector.
 The real static scan integration test runs only when `skillspector` is on `PATH`;
-other advice tests exercise the external process boundary without a scanner install.
+other Advise tests exercise the external process boundary without a scanner install.

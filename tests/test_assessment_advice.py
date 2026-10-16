@@ -502,7 +502,9 @@ def test_static_only_records_unadjudicated_findings_without_inference(skill, sca
     assert result['status'] == 'not_performed'
     assert result['safe_to_use'] is None
     assert result['coverage_sufficient'] is None
-    assert result['summary'] and result['coverage_reason'] and result['scope']
+    assert result['summary']
+    assert result['coverage_reason']
+    assert result['scope']
     assert [(f['index'], f['rule_id'], f['determination']) for f in result['findings']] == [
         (index, issue['id'], 'not_adjudicated') for index, issue in enumerate(issues, 1)
     ]

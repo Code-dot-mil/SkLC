@@ -1,31 +1,14 @@
 # Assessment kit
 
-Validate one local skill directory with Python 3.12 or later. Validation requires
-a readable UTF-8 `SKILL.md` with YAML frontmatter containing nonempty string
-fields `name` and `description`. The name must match the directory name.
-Additional metadata is allowed. Validation does not execute skill content or
-assess its safety.
+Validate a local skill directory and get advisory scan findings with
+`skill-assessment validate` and `skill-assessment advise`.
 
-From the repository root, build the wheel:
+## Prerequisites
 
-```sh
-uv build --wheel products/assessment-kit --out-dir release/assessment-kit
-```
+Python 3.12 or later is required. The examples below use `uv` to build and install
+the assessment kit and run its commands.
 
-Copy the wheel into a separate working directory, then install and run it:
-
-```sh
-uv venv --python 3.12
-uv pip install skill_assessment-0.1.0-py3-none-any.whl
-uv run --no-project skill-assessment validate --skill ./my-skill
-```
-
-The command accepts a single directory, without a namespace or repository layout
-requirement. Validation reads no exchange policy and makes no scanner or provider calls.
-Exit status is `0` for valid input, `1` for invalid or unreadable input, and `2`
-for incorrect command usage. Diagnostics go to standard error on failure.
-
-## Advice
+### SkillSpector (advise only)
 
 SkillSpector is an external prerequisite for `advise`. The compatibility target
 is SkillSpector `>=2.10,<3`, using its public CLI and JSON report format. Integration
@@ -52,6 +35,44 @@ Configure SkillSpector's
 [provider environment](https://github.com/NVIDIA/SkillSpector/tree/v2.10.0#configuration)
 for default LLM-assisted scans; skill contents are sent to that provider.
 
+## Installation
+
+From the repository root, build the wheel:
+
+```sh
+uv build --wheel products/assessment-kit --out-dir release/assessment-kit
+```
+
+Copy the wheel into a separate working directory, then install it:
+
+```sh
+uv venv --python 3.12
+uv pip install skill_assessment-0.1.0-py3-none-any.whl
+```
+
+## Validate
+
+Validate one local skill directory. Validation requires
+a readable UTF-8 `SKILL.md` with YAML frontmatter containing nonempty string
+fields `name` and `description`. The name must match the directory name.
+Additional metadata is allowed. Validation does not execute skill content or
+assess its safety.
+
+```sh
+uv run --no-project skill-assessment validate --skill ./my-skill
+```
+
+The command accepts a single directory, without a namespace or repository layout
+requirement. Validation reads no exchange policy and makes no scanner or provider calls.
+Exit status is `0` for valid input, `1` for invalid or unreadable input, and `2`
+for incorrect command usage. Diagnostics go to standard error on failure.
+
+## Advise
+
+Validate and scan one local skill directory using SkillSpector. Complete the
+[SkillSpector prerequisites](#skillspector-advise-only) before running this command.
+LLM-assisted scanning is the default.
+
 ```sh
 uv run --no-project skill-assessment advise --skill ./my-skill
 uv run --no-project skill-assessment advise --skill ./my-skill --scan-mode static-only --output-dir ./reports
@@ -72,12 +93,16 @@ scanner failure, timeout, missing/malformed output, incomplete coverage, or
 unavailable/degraded requested LLM analysis. A successful exit does not certify safety. Advice creates
 no BOE or exchange evidence.
 
+## Python callers
+
 Python callers can catch `ScanTimeoutError` to decide whether to retry and
 `OutputDirectoryError` to choose or repair the output location. `IncompleteScanError`
 identifies partial or degraded analysis. Timeout and incomplete-analysis errors
 inherit from `ScanError`, which also covers missing scanners, process failures,
 and unreadable or malformed reports. Error types live in `skill_assessment.errors`.
 
-For development, `uv run --extra test pytest` runs without installing SkillSpector.
+## Development
+
+`uv run --extra test pytest` runs without installing SkillSpector.
 The real static scan integration test runs only when `skillspector` is on `PATH`;
 other advice tests exercise the external process boundary without a scanner install.

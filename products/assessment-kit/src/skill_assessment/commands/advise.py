@@ -14,6 +14,7 @@ SKILL_OPTION_FLAG = "--skill"
 OUTPUT_OPTION_FLAG = "--output-dir"
 SCAN_MODE_OPTION_FLAG = "--scan-mode"
 TIMEOUT_OPTION_FLAG = "--timeout"
+ADJUDICATION_FILENAME = "adjudication.json"
 
 
 def run_scanner(command: list[str], report_dir: Path, *, timeout: int = 300) -> subprocess.CompletedProcess:
@@ -31,6 +32,41 @@ def run_scanner(command: list[str], report_dir: Path, *, timeout: int = 300) -> 
                 raise ScanError(str(exc), report_dir) from exc
     except OSError as exc:
         raise OutputDirectoryError(f"Cannot write diagnostics in {report_dir}: {exc}") from exc
+
+
+def load_scanner_report(report_path: Path) -> dict:
+    """Read native findings before checking execution and completeness."""
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if not isinstance(report, dict) or not isinstance(report.get("issues"), list) or not all(
+        isinstance(issue, dict) for issue in report["issues"]
+    ):
+        raise ScanError("missing or invalid findings", report_path.parent)
+    return report
+
+
+def validate_scan_execution(report: dict, returncode: int, report_dir: Path) -> None:
+    """Reject failed execution while leaving readable findings available."""
+    if returncode not in (0, 1):  # SkillSpector uses 1 for risk findings.
+        raise ScanError(f"SkillSpector exited with status {returncode}", report_dir)
+    if not isinstance(report.get("metadata"), dict) or not isinstance(report.get("analysis_completeness"), dict):
+        raise ScanError("missing or invalid scan metadata", report_dir)
+    if report.get("execution_successful") is not True:
+        raise ScanError("SkillSpector execution failed", report_dir)
+
+
+def validate_scan_completeness(report: dict, report_dir: Path, *, static_only: bool) -> None:
+    """Enforce the requested scan mode after contextual adjudication."""
+    metadata = report["metadata"]
+    completeness = report["analysis_completeness"]
+    if completeness.get("is_complete") is not True or metadata.get("llm_requested") is not (not static_only):
+        raise IncompleteScanError("requested analysis was incomplete or changed mode", report_dir)
+    if not static_only and (
+        metadata.get("llm_available") is not True
+        or metadata.get("llm_degraded")
+        or metadata.get("llm_error")
+        or metadata.get("llm_calls_attempted", 0) != metadata.get("llm_calls_succeeded", 0)
+    ):
+        raise IncompleteScanError("requested analysis was incomplete or degraded", report_dir)
 
 
 def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = 300) -> Path:
@@ -53,24 +89,12 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, ti
     report = {}
     try:
         result = run_scanner(command, report_dir, timeout=timeout)
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-        if not isinstance(report, dict) or not isinstance(report.get("issues"), list) or not all(
-            isinstance(issue, dict) for issue in report["issues"]
-        ):
-            report = {}
-            raise ScanError("missing or invalid findings", report_dir)
-        if result.returncode not in (0, 1):  # SkillSpector uses 1 for risk findings.
-            raise ScanError(f"SkillSpector exited with status {result.returncode}", report_dir)
-        metadata = report.get("metadata")
-        completeness = report.get("analysis_completeness")
-        if not isinstance(metadata, dict) or not isinstance(completeness, dict):
-            raise ScanError("missing or invalid scan metadata", report_dir)
-        if report.get("execution_successful") is not True:
-            raise ScanError("SkillSpector execution failed", report_dir)
+        report = load_scanner_report(report_path)
+        validate_scan_execution(report, result.returncode, report_dir)
     except (ScanError, OSError, ValueError) as exc:
         if not static_only:
             adjudicate_report(
-                report if isinstance(report, dict) else {}, skill / "SKILL.md", report_dir / "adjudication.json",
+                report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME,
                 unavailable_reason="Scanner did not produce a usable report; findings were not adjudicated.",
             )
         if isinstance(exc, ScanError):
@@ -78,16 +102,10 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, ti
         raise ScanError("Cannot read the scanner report", report_dir) from exc
     # Partial coverage remains visible, but must not prevent contextual adjudication.
     if not static_only:
-        adjudication = adjudicate_report(report, skill / "SKILL.md", report_dir / "adjudication.json", timeout=timeout)
-    if completeness.get("is_complete") is not True or metadata.get("llm_requested") is not (not static_only):
-        raise IncompleteScanError("requested analysis was incomplete or changed mode", report_dir)
-    if not static_only and (
-        metadata.get("llm_available") is not True
-        or metadata.get("llm_degraded")
-        or metadata.get("llm_error")
-        or metadata.get("llm_calls_attempted", 0) != metadata.get("llm_calls_succeeded", 0)
-    ):
-        raise IncompleteScanError("requested analysis was incomplete or degraded", report_dir)
+        adjudication = adjudicate_report(
+            report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, timeout=timeout,
+        )
+    validate_scan_completeness(report, report_dir, static_only=static_only)
     if not static_only and adjudication["status"] != "completed":
         raise IncompleteScanError(f"Adjudication {adjudication['status']}", report_dir)
     return report_path
@@ -123,9 +141,9 @@ def run(args: argparse.Namespace) -> int:
 
 
 def show_reports(report_dir: Path) -> None:
-    for name in ("skillspector.json", "adjudication.json"):
+    for name in ("skillspector.json", ADJUDICATION_FILENAME):
         path = report_dir / name
         if path.exists():
-            print(f"{'Adjudication' if name == 'adjudication.json' else 'Advice report'}: {path}")
-    if (report_dir / "adjudication.json").exists():
+            print(f"{'Adjudication' if name == ADJUDICATION_FILENAME else 'Advice report'}: {path}")
+    if (report_dir / ADJUDICATION_FILENAME).exists():
         print(SCOPE)

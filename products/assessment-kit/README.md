@@ -78,12 +78,15 @@ uv run --no-project skill-assessment advise --skill ./my-skill
 uv run --no-project skill-assessment advise --skill ./my-skill --scan-mode static-only --output-dir ./reports
 ```
 
-Static scanning is explicit and never a fallback. After validation, SkillSpector's
-CLI runs once with a five-minute timeout and default settings, without recursive
-or transitive scanning or author-supplied baselines.
+By default, scans use LLM analysis. Use `--scan-mode static-only` to scan without
+an LLM. If LLM analysis fails, the command reports an error instead of switching
+to static scanning.
 
-Each run prints its unique directory under `./assessment-reports/` or `--output-dir`,
-which must be outside the skill. `skillspector.json` retains native findings,
+Each scan checks the selected skill and stops if the scan takes longer than 5 minutes.
+
+Each run creates a new directory inside `./assessment-reports/`, or inside the
+directory you specify with `--output-dir`. This location must be outside the skill.
+On success, the command displays the path to the report. `skillspector.json` retains native findings,
 locations, explanations, and remediations; `scanner.log` retains diagnostics.
 Failures preserve available reports and logs. Existing runs and skills stay unchanged.
 

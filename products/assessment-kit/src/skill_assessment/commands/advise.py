@@ -92,19 +92,17 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, ti
         report = load_scanner_report(report_path)
         validate_scan_execution(report, result.returncode, report_dir)
     except (ScanError, OSError, ValueError) as exc:
-        if not static_only:
-            adjudicate_report(
-                report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME,
-                unavailable_reason="Scanner did not produce a usable report; findings were not adjudicated.",
-            )
+        adjudicate_report(
+            report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, static_only=static_only,
+            unavailable_reason="Scanner did not produce a usable report; findings were not adjudicated.",
+        )
         if isinstance(exc, ScanError):
             raise
         raise ScanError("Cannot read the scanner report", report_dir) from exc
     # Partial coverage remains visible, but must not prevent contextual adjudication.
-    if not static_only:
-        adjudication = adjudicate_report(
-            report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, timeout=timeout,
-        )
+    adjudication = adjudicate_report(
+        report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, timeout=timeout, static_only=static_only,
+    )
     validate_scan_completeness(report, report_dir, static_only=static_only)
     if not static_only and adjudication["status"] != "completed":
         raise IncompleteScanError(f"Adjudication {adjudication['status']}", report_dir)

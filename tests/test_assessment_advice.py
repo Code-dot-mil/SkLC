@@ -466,10 +466,69 @@ def test_true_positive_is_advice_not_execution_failure(skill, scanner, gateway, 
     assert result['status'] == 'completed'
 
 
-def test_static_only_never_calls_adjudication_gateway(skill, scanner, gateway, tmp_path):
+@pytest.mark.parametrize('scenario', ['findings', 'no-findings', 'partial', 'failed', 'missing'])
+def test_static_only_records_unadjudicated_findings_without_inference(skill, scanner, gateway, tmp_path, scenario):
     scanner['report']['metadata'] = {'llm_requested': False}
-    report = advise_skill(skill, tmp_path / 'reports', static_only=True)
+    scanner['report']['issues'] = [
+        {'id': 'AR3', 'severity': 'HIGH', 'location': {'file': 'SKILL.md', 'start_line': 278}},
+        {'id': 'AS3', 'severity': 'MEDIUM', 'location': {'file': 'SKILL.md', 'start_line': 9}},
+    ]
+    if scenario == 'no-findings':
+        scanner['report']['issues'] = []
+    elif scenario == 'partial':
+        scanner['report']['analysis_completeness']['is_complete'] = False
+    elif scenario == 'failed':
+        scanner['report']['execution_successful'] = False
+    elif scenario == 'missing':
+        scanner['report'] = None
+    output = tmp_path / 'reports'
 
+    code = main(['advise', '--skill', str(skill), '--scan-mode', 'static-only', '--output-dir', str(output)])
+
+    assert code == (3 if scenario in ('partial', 'failed', 'missing') else 0)
     assert not gateway['calls']
-    assert not report.with_name('adjudication.json').exists()
-    assert json.loads(report.read_text()) == scanner['report']
+    assert '--no-llm' in scanner['calls'][0]
+    run = next(output.iterdir())
+    if scanner['report'] is None:
+        assert not (run / 'skillspector.json').exists()
+        issues = []
+    else:
+        assert json.loads((run / 'skillspector.json').read_text()) == scanner['report']
+        issues = scanner['report']['issues']
+    result = json.loads((run / 'adjudication.json').read_text())
+    assert set(result) == {
+        'safe_to_use', 'summary', 'coverage_sufficient', 'coverage_reason', 'findings', 'status', 'scope', 'metadata',
+    }
+    assert result['status'] == 'not_performed'
+    assert result['safe_to_use'] is None
+    assert result['coverage_sufficient'] is None
+    assert result['summary'] and result['coverage_reason'] and result['scope']
+    assert [(f['index'], f['rule_id'], f['determination']) for f in result['findings']] == [
+        (index, issue['id'], 'not_adjudicated') for index, issue in enumerate(issues, 1)
+    ]
+    assert all(f['reason'] for f in result['findings'])
+    metadata = result['metadata']
+    assert metadata.pop('created_at')
+    assert metadata == {
+        'provider': None, 'model': None, 'response_model': None, 'duration_seconds': 0.0,
+        'calls_attempted': 0, 'calls_succeeded': 0, 'token_usage': None,
+    }
+
+
+@pytest.mark.parametrize('static_only', [False, True])
+def test_adjudication_storage_failure_preserves_native_report(skill, scanner, tmp_path, monkeypatch, static_only):
+    scanner['report']['metadata']['llm_requested'] = not static_only
+    original_open = Path.open
+
+    def open_file(path, *args, **kwargs):
+        if path.name == 'adjudication.json':
+            raise PermissionError('storage unavailable')
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'open', open_file)
+    output = tmp_path / 'reports'
+    options = ['--scan-mode', 'static-only'] if static_only else []
+
+    assert main(['advise', '--skill', str(skill), '--output-dir', str(output), *options]) == 1
+
+    assert json.loads(next(output.glob('*/skillspector.json')).read_text()) == scanner['report']

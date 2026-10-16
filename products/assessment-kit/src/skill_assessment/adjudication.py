@@ -178,17 +178,46 @@ def request_completion(config: GatewayConfig, evidence: dict, metadata: dict, *,
     return GatewayResponse(completion=completion, response_model=model, token_usage=token_usage)
 
 
-def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: int = 300,
-                      unavailable_reason: str | None = None) -> dict:
-    """Save a validated verdict or an explicit failure, leaving the raw report unchanged."""
-    started = time.monotonic()
-    issues = report.get("issues", [])
-    metadata = {
-        "provider": os.environ.get("SKILLSPECTOR_PROVIDER", "").strip().lower() or None,
-        "model": os.environ.get("SKILLSPECTOR_MODEL", "").strip() or None,
+def inference_metadata(*, provider: str | None = None, model: str | None = None) -> dict:
+    """Start inference metadata without implying any request has been made."""
+    return {
+        "provider": provider,
+        "model": model,
         "response_model": None, "created_at": datetime.now(UTC).isoformat(),
         "duration_seconds": 0.0, "calls_attempted": 0, "calls_succeeded": 0, "token_usage": None,
     }
+
+
+def save_adjudication(result: dict, output: Path) -> dict:
+    """Retain the adjudication artifact without overwriting an existing result."""
+    try:
+        with output.open("x", encoding="utf-8") as target:
+            json.dump(result, target, indent=2)
+            target.write("\n")
+    except OSError as exc:
+        raise OutputDirectoryError(f"Cannot save adjudication in {output.parent}") from exc
+    return result
+
+
+def record_static_adjudication(report: dict, output: Path) -> dict:
+    """Record unadjudicated findings without loading configuration or calling an LLM."""
+    result = not_adjudicated(report.get("issues", []), "Static-only scan; adjudication was not requested.")
+    result["coverage_reason"] = "Adjudication coverage was not assessed."
+    result.update(status="not_performed", scope=SCOPE, metadata=inference_metadata())
+    return save_adjudication(result, output)
+
+
+def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: int = 300, static_only: bool = False,
+                      unavailable_reason: str | None = None) -> dict:
+    """Save a verdict or explicit non-adjudication, leaving the raw report unchanged."""
+    if static_only:
+        return record_static_adjudication(report, output)
+    started = time.monotonic()
+    issues = report.get("issues", [])
+    metadata = inference_metadata(
+        provider=os.environ.get("SKILLSPECTOR_PROVIDER", "").strip().lower() or None,
+        model=os.environ.get("SKILLSPECTOR_MODEL", "").strip() or None,
+    )
     reason = unavailable_reason or "Adjudication did not complete."
     status = "unavailable"
     result = not_adjudicated(issues, reason)
@@ -213,10 +242,4 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
             result = not_adjudicated(issues, "Adjudication request, input, or response validation failed.")
     metadata["duration_seconds"] = round(time.monotonic() - started, 3)
     result.update(status=status, scope=SCOPE, metadata=metadata)
-    try:
-        with output.open("x", encoding="utf-8") as target:
-            json.dump(result, target, indent=2)
-            target.write("\n")
-    except OSError as exc:
-        raise OutputDirectoryError(f"Cannot save adjudication in {output.parent}") from exc
-    return result
+    return save_adjudication(result, output)

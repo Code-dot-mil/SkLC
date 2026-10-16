@@ -112,10 +112,15 @@ up to 10 minutes per stage.
 Each run creates a new directory inside `./assessment-reports/`, or inside the
 directory you specify with `--output-dir`. This location must be outside the skill.
 The command displays retained report paths. `skillspector.json` preserves the raw
-native report; `scanner.log` retains diagnostics. LLM-assisted runs also produce
-`adjudication.json` with a determination and brief reason for each finding,
-`safe_to_use`, and a coverage assessment. Static-only runs do not perform
-adjudication. Existing runs and skills stay unchanged.
+native report; `scanner.log` retains diagnostics. Both scan modes produce
+`adjudication.json` with the same fields: findings, safety and coverage judgments,
+status, scope, and inference metadata. LLM-assisted runs adjudicate each finding.
+Static-only runs record `status: not_performed`, null safety and coverage judgments,
+and `not_adjudicated` entries preserving each finding's index and rule ID.
+Provider and model fields and token usage are null, inference call counts and
+duration are zero, and the creation timestamp records when the artifact was written.
+Static-only runs make no adjudication request, even when provider credentials are
+configured. Existing runs and skills stay unchanged.
 
 **MVP: adjudication examines SKILL.md and scanner evidence only; additional skill
 files are not independently reviewed.** The full SKILL.md is sent in one request,
@@ -133,12 +138,15 @@ status, scope, provider/model, timestamp, duration, attempted/successful call
 counts, and token usage when the gateway supplies it. Unknown usage is not zero.
 Credentials and endpoint URLs are not included in adjudication metadata.
 
-Readable partial scans still reach adjudication, but retain their incomplete
+Readable partial LLM-assisted scans still reach adjudication, but retain their incomplete
 scanner status and exit code 3. Missing configuration produces `status: unavailable`;
 request or response failures produce `status: failed`. Both use `safe_to_use: null`,
 unknown coverage, and `not_adjudicated` findings with a brief reason. Scanner
-failures also produce an unavailable adjudication when artifacts can be written;
-raw scanner reports are retained only if the scanner emitted them.
+failures also produce an unavailable adjudication in LLM-assisted mode when artifacts
+can be written. Static-only failures retain `status: not_performed`, with any readable
+findings, or an empty findings list when no usable report exists. Scan failure and
+incompleteness still return exit code 3 in either mode; `not_performed` alone is not
+an execution failure. Raw scanner reports are retained only if the scanner emitted them.
 
 Exit status is `0` when Advise completes, regardless of finding severity, `1` for
 invalid input or output setup, `2` for incorrect usage, and `3` for a missing scanner,

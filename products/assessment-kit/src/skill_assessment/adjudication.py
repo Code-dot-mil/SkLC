@@ -5,21 +5,28 @@ import os
 import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from urllib.parse import quote, urlencode, urlsplit
 
-from .errors import OutputDirectoryError
+from .errors import ConfigurationUnavailable, OutputDirectoryError
 
 SCOPE = "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed."
 
 
-class ConfigurationUnavailable(ValueError):
-    """The requested gateway cannot be configured without changing providers."""
+@dataclass(frozen=True)
+class GatewayConfig:
+    """Connection settings for the selected adjudication gateway."""
+
+    provider: str
+    model: str
+    url: str
+    headers: dict[str, str] = field(repr=False)
 
 
-def gateway_config() -> tuple[str, str, str, dict[str, str]]:
+def gateway_config() -> GatewayConfig:
     """Reuse documented SkillSpector environment settings, without importing it."""
     provider = os.environ.get("SKILLSPECTOR_PROVIDER", "").strip().lower()
     model = os.environ.get("SKILLSPECTOR_MODEL", "").strip()
@@ -52,7 +59,7 @@ def gateway_config() -> tuple[str, str, str, dict[str, str]]:
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
         raise ConfigurationUnavailable("Adjudication requires an HTTPS gateway without credentials in its URL.")
     headers["Content-Type"] = "application/json"
-    return provider, model, url, headers
+    return GatewayConfig(provider=provider, model=model, url=url, headers=headers)
 
 
 def validate_verdict(result: object, issues: list[dict]) -> None:
@@ -120,8 +127,8 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
     result = not_adjudicated(issues, reason)
     if unavailable_reason is None:
         try:
-            provider, model, url, headers = gateway_config()
-            metadata.update(provider=provider, model=model)
+            config = gateway_config()
+            metadata.update(provider=config.provider, model=config.model)
             # Strip the machine-local source path, without mutating native evidence.
             evidence_report = dict(report)
             evidence_report["skill"] = {k: v for k, v in report.get("skill", {}).items() if k != "source"}
@@ -134,11 +141,11 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
             }
             prompt = files("skill_assessment").joinpath("prompts/adjudicate.md").read_text(encoding="utf-8")
             payload = {
-                "model": model, "messages": [{"role": "system", "content": prompt},
+                "model": config.model, "messages": [{"role": "system", "content": prompt},
                                               {"role": "user", "content": json.dumps(evidence)}],
                 "response_format": {"type": "json_object"}, "max_completion_tokens": 6000,
             }
-            request = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers)
+            request = urllib.request.Request(config.url, data=json.dumps(payload).encode(), headers=config.headers)
             metadata["calls_attempted"] = 1
             with urllib.request.build_opener(NoRedirect()).open(request, timeout=timeout) as response:
                 completion = json.load(response)

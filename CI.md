@@ -1,10 +1,10 @@
 # Skill Exchange CI
 
-Two GitHub Actions workflows validate and publish this repository:
+Two GitHub Actions workflows validate and prepare releases for this repository:
 
 - `.github/workflows/ci.yml` checks proposed changes and builds preview downloads.
-- `.github/workflows/release.yml` publishes versioned product downloads when a
-  maintainer pushes a release tag.
+- `.github/workflows/release.yml` prepares a draft with versioned product downloads
+  when a maintainer pushes a release tag. The maintainer publishes the existing draft.
 
 ## GitHub Validation
 
@@ -79,8 +79,8 @@ bash scripts/package-skill-catalog.sh release/skill-catalog.zip
 
 ## Releases
 
-Passing CI creates preview downloads. Publishing a release requires a maintainer
-to push a version tag after checking readiness:
+Passing CI creates preview downloads. Release preparation and publication are
+separate stages:
 
 ```mermaid
 flowchart TD
@@ -88,9 +88,11 @@ flowchart TD
     R --> Q["Run check-ready<br/>Checks clean checkout, successful CI,<br/>release notes, and unused tag"]
     Q --> T["Maintainer pushes version tag"]
     T --> V["Release workflow repeats checks<br/>and rebuilds from tagged commit"]
-    V --> G["Publish GitHub Release"]
-    G --> D["deployment-kit-prebuilt-VERSION.zip"]
-    G --> C["skill-catalog-VERSION.zip"]
+    V --> G["Create draft with both product ZIPs"]
+    G --> H["Run check-draft<br/>Checks tag, notes, assets,<br/>and successful preparation workflow"]
+    H --> P["Maintainer publishes existing draft"]
+    P --> D["deployment-kit-prebuilt-VERSION.zip"]
+    P --> C["skill-catalog-VERSION.zip"]
 ```
 
 ### Check readiness
@@ -131,24 +133,80 @@ preview the packages without rebuilding locally.
 The check is read-only: it creates no tag or release. If the candidate changes,
 run it again. When ready to release, tag the exact SHA reported by the check.
 
-The `release` dependency group installs `pygit2` and `PyGithub`, which the check
-uses to read Git and GitHub state. It does not invoke Git, `gh`, or `jq`
-subprocesses.
+The `release` dependency group installs `pygit2` and `PyGithub`, which both gates
+use to read Git and GitHub state. The gates do not invoke Git, `gh`, or `jq`
+subprocesses. Use their results instead of repeating their checks manually.
 
-### Publish a release
+### Prepare a draft
 
 The release workflow starts when a maintainer pushes a `v<version>` tag. The
 tagged commit must contain exactly one nonempty `## <version>` section in
 `RELEASE_NOTES.md`. Headings inside fenced Markdown examples do not count. The
 matching section becomes the GitHub Release body.
 
-The workflow runs the Python and site checks, generates catalog data from tracked
-BOE that matches each skill's content, and builds the site. Missing evidence fails
-the build without running a scanner. The workflow then packages and publishes
-two assets under the same version:
+After a successful `check-ready`, create and push the tag at the exact reported SHA:
+
+```sh
+git tag v<version> <candidate-sha>
+git push origin refs/tags/v<version>
+```
+
+This creates the public tag and starts release preparation; it does not publish
+the release. The workflow runs the Python and site checks, generates catalog
+data from tracked BOE that matches each skill's content, and builds the site. Missing evidence fails
+the build without running a scanner. The workflow then creates an unpublished
+draft containing exactly two assets under the same version:
 
 - `deployment-kit-prebuilt-<version>.zip`
 - `skill-catalog-<version>.zip`
+
+Draft creation uses `gh release create --verify-tag --draft`, which requires an
+existing tag and does not overwrite an existing release. Versions with a SemVer
+prerelease suffix are marked as GitHub prereleases.
+
+The release job runs on GitHub-hosted Ubuntu with a 30-minute timeout. Runs for
+the same tag share a concurrency group; a new run does not cancel a release
+already in progress. Temporary files stay under `RUNNER_TEMP`, and catalog source
+links point to the tagged commit. Checkout does not retain Git credentials, and
+`GH_TOKEN` is available only to the draft-creation step.
+
+Wait for the workflow to finish before publishing. The workflow owns packaging,
+draft creation, and uploads. Do not separately create a draft or upload locally
+repackaged CI previews. If preparation fails, inspect that run and resolve its
+failure before proceeding. An existing tag or partial draft is a recovery case;
+do not move tags or replace assets without agreeing on recovery.
+
+### Check and publish the draft
+
+Once the preparation run succeeds, run the draft gate from the clean candidate
+checkout, using the same version and expected SHA:
+
+```sh
+uv run --group release python -m skill_exchange.release check-draft \
+  --version <version> --expected-commit <expected-commit-sha>
+```
+
+The gate verifies the checkout and committed notes, confirms the GitHub tag
+resolves to the expected commit on `main`, and requires an existing draft with
+matching notes and prerelease status. That draft must contain exactly the two
+versioned product ZIPs, both uploaded, nonempty, and carrying GitHub SHA-256
+digests. The latest `release.yml` push run for the tag and commit must have
+completed successfully. Missing authentication, API errors, missing assets, and
+unfinished or failed runs block publication.
+
+On success, it prints the candidate SHA, draft URL, workflow URL, and asset
+digests. It does not download the assets or change GitHub state. `check-ready`
+is for an unused version; `check-draft` is for an existing draft. Do not rerun
+`check-ready` after creating the tag or draft.
+
+After reviewing the draft, publish it with:
+
+```sh
+gh release edit v<version> --repo Code-dot-mil/SkLC --draft=false
+```
+
+The tag already exists, so this does not trigger another tag-push workflow.
+Publication uses the draft's existing assets rather than rebuilding them.
 
 GitHub displays a SHA-256 digest for each asset. Download the ZIP you need,
 calculate its SHA-256, and compare it with the digest shown by GitHub before
@@ -156,15 +214,10 @@ unzipping. See the
 [GitHub digest announcement](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/)
 for background.
 
-Publication uses `gh release create --verify-tag`, which requires an existing tag
-and does not overwrite an existing release. Versions with a SemVer prerelease
-suffix are marked as GitHub prereleases.
-
-The release job runs on GitHub-hosted Ubuntu with a 30-minute timeout. Runs for
-the same tag share a concurrency group; a new run does not cancel a release
-already in progress. Temporary files stay under `RUNNER_TEMP`, and catalog source
-links point to the tagged commit. Checkout does not retain Git credentials, and
-`GH_TOKEN` is available only to the publishing step.
+Release-script changes are validated through release use; do not add automated
+tests or create throwaway releases for them. Open Dependabot findings can be
+briefly investigated and discussed in the maintainer session, without adding a
+recorded decision or a separate security or acceptance gate.
 
 ## Prebuilt Deployment
 

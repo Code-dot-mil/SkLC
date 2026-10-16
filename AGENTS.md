@@ -2,6 +2,12 @@
 
 These instructions apply to this repository.
 
+## Release Requests
+
+- When asked to check release readiness, prepare a release, create a draft, or publish, read `.agents/skills/sklc-release-process/SKILL.md` before starting release checks or a general project review. Follow its stage-specific commands instead of duplicating their checks manually.
+- The release workflow prepares the draft and its assets; publication uses that existing draft. Do not create a competing release from the agent session.
+- Validate release tooling through the release process itself. Do not add automated tests for the release script.
+
 ## Project Shape
 
 - This repository is a static skill exchange: Python reads tracked evidence and builds generated data, and Astro builds the static site.

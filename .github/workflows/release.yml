@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   release:
-    name: Build and publish release
+    name: Build draft release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -77,8 +77,8 @@ jobs:
             --repo-root . --site-dir site/dist \
             --version "$RELEASE_VERSION" \
             --output-dir "$RELEASE_DIR/assets"
-      - name: Create GitHub Release
-        id: publish-release
+      - name: Create draft GitHub Release
+        id: draft-release
         shell: bash
         env:
           GH_TOKEN: "${{ github.token }}"
@@ -90,6 +90,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.zip" \
             "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip" \
-            --verify-tag --title "$GITHUB_REF_NAME" \
+            --verify-tag --draft --target "$SOURCE_REVISION" --title "$GITHUB_REF_NAME" \
             --notes-file "$RELEASE_DIR/release-body.md" \
             "${prerelease_args[@]}"

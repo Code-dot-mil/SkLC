@@ -19,4 +19,16 @@ The team shall deliver 4 standalone products:
 
 ## 4. SkillSpector
 
-NVIDIA SkillSpector will be the baseline skill assessor in `llm-assisted` scan mode. `static-only` has a high false positive rate, must be explicitly requested, and must not be used as a fallback when `llm-assisted` is configured but unavailable.
+NVIDIA SkillSpector will be the baseline skill assessor in `llm-assisted` scan mode.
+`static-only` has a high false positive rate, must be explicitly requested, and must
+not be used as a fallback when `llm-assisted` is configured but unavailable.
+
+SkillSpector installation and dependency management are outside this repository's
+scope. The assessment kit requires an externally installed `skillspector` executable
+on `PATH` for advice; validation has no scanner prerequisite. The compatibility
+target is SkillSpector `>=2.10,<3` through its public CLI and JSON report format.
+Version 2.10.0 is tested; later v2 releases are expected to remain compatible.
+
+## 5. Assessment errors
+
+Define all assessment-kit exception types in `skill_assessment/errors.py`. Commands and callers import these shared types; command modules own parsing and execution, not exception definitions.

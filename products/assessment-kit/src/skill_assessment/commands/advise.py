@@ -5,6 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from ..adjudication import SCOPE, adjudicate_report
 from ..errors import IncompleteScanError, OutputDirectoryError, ScanError, ScanTimeoutError, SkillValidationError
 from .validate import validate_skill
 
@@ -49,21 +50,35 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, ti
                "--format", "json", "--output", str(report_path)]
     if static_only:
         command.append("--no-llm")
-    result = run_scanner(command, report_dir, timeout=timeout)
+    report = {}
     try:
+        result = run_scanner(command, report_dir, timeout=timeout)
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        if not isinstance(report, dict) or not isinstance(report.get("issues"), list) or not all(
+            isinstance(issue, dict) for issue in report["issues"]
+        ):
+            report = {}
+            raise ScanError("missing or invalid findings", report_dir)
         if result.returncode not in (0, 1):  # SkillSpector uses 1 for risk findings.
             raise ScanError(f"SkillSpector exited with status {result.returncode}", report_dir)
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        raise ScanError(str(exc), report_dir) from exc
-    if not isinstance(report, dict) or not isinstance(report.get("issues"), list):
-        raise ScanError("missing or invalid findings", report_dir)
-    metadata = report.get("metadata")
-    completeness = report.get("analysis_completeness")
-    if not isinstance(metadata, dict) or not isinstance(completeness, dict):
-        raise ScanError("missing or invalid scan metadata", report_dir)
-    if report.get("execution_successful") is not True:
-        raise ScanError("SkillSpector execution failed", report_dir)
+        metadata = report.get("metadata")
+        completeness = report.get("analysis_completeness")
+        if not isinstance(metadata, dict) or not isinstance(completeness, dict):
+            raise ScanError("missing or invalid scan metadata", report_dir)
+        if report.get("execution_successful") is not True:
+            raise ScanError("SkillSpector execution failed", report_dir)
+    except (ScanError, OSError, ValueError) as exc:
+        if not static_only:
+            adjudicate_report(
+                report if isinstance(report, dict) else {}, skill / "SKILL.md", report_dir / "adjudication.json",
+                unavailable_reason="Scanner did not produce a usable report; findings were not adjudicated.",
+            )
+        if isinstance(exc, ScanError):
+            raise
+        raise ScanError("Cannot read the scanner report", report_dir) from exc
+    # Partial coverage remains visible, but must not prevent contextual adjudication.
+    if not static_only:
+        adjudication = adjudicate_report(report, skill / "SKILL.md", report_dir / "adjudication.json", timeout=timeout)
     if completeness.get("is_complete") is not True or metadata.get("llm_requested") is not (not static_only):
         raise IncompleteScanError("requested analysis was incomplete or changed mode", report_dir)
     if not static_only and (
@@ -73,16 +88,18 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, ti
         or metadata.get("llm_calls_attempted", 0) != metadata.get("llm_calls_succeeded", 0)
     ):
         raise IncompleteScanError("requested analysis was incomplete or degraded", report_dir)
+    if not static_only and adjudication["status"] != "completed":
+        raise IncompleteScanError(f"Adjudication {adjudication['status']}", report_dir)
     return report_path
 
 
 def register(subparsers) -> None:
-    parser = subparsers.add_parser(COMMAND_ARG_NAME, help="Retain SkillSpector advice for one skill.")
+    parser = subparsers.add_parser(COMMAND_ARG_NAME, help="Retain a scan and optional SKILL.md adjudication.")
     parser.add_argument(SKILL_OPTION_FLAG, type=Path, action="append", required=True)
     parser.add_argument(OUTPUT_OPTION_FLAG, type=Path, default=Path("assessment-reports"))
     parser.add_argument(SCAN_MODE_OPTION_FLAG, choices=("llm-assisted", "static-only"), default="llm-assisted")
     parser.add_argument(TIMEOUT_OPTION_FLAG, type=int, default=300, metavar="SECONDS",
-                        help="Stop the scanner after this many seconds (positive integer; default: 300).")
+                        help="Timeout for each scanner or adjudication request (positive integer; default: 300).")
     parser.set_defaults(handler=run, command_parser=parser)
 
 
@@ -96,9 +113,19 @@ def run(args: argparse.Namespace) -> int:
                               static_only=args.scan_mode == "static-only", timeout=args.timeout)
     except ScanError as exc:
         print(str(exc), file=sys.stderr)
+        show_reports(exc.report_dir)
         return 3
     except (OSError, UnicodeError, SkillValidationError, OutputDirectoryError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
-    print(f"Advice report: {report}")
+    show_reports(report.parent)
     return 0
+
+
+def show_reports(report_dir: Path) -> None:
+    for name in ("skillspector.json", "adjudication.json"):
+        path = report_dir / name
+        if path.exists():
+            print(f"{'Adjudication' if name == 'adjudication.json' else 'Advice report'}: {path}")
+    if (report_dir / "adjudication.json").exists():
+        print(SCOPE)

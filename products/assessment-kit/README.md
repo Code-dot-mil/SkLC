@@ -33,7 +33,29 @@ skillspector --version
 
 Configure SkillSpector's
 [provider environment](https://github.com/NVIDIA/SkillSpector/tree/v2.10.0#configuration)
-for default LLM-assisted scans; skill contents are sent to that provider.
+for default LLM-assisted scans; skill contents are sent to that provider. Advise
+also uses that configuration for a separate finding-adjudication request.
+
+### Adjudication gateways
+
+Set `SKILLSPECTOR_MODEL` explicitly. Adjudication supports these existing
+SkillSpector configurations, without importing SkillSpector or installing its SDKs:
+
+| `SKILLSPECTOR_PROVIDER` | Configuration |
+| --- | --- |
+| `openai` | `OPENAI_API_KEY`; optional `OPENAI_BASE_URL` (defaults to the OpenAI API) and `OPENAI_PROJECT_ID` |
+| `openai_compatible` | `SKILLSPECTOR_COMPAT_API_KEY` and `SKILLSPECTOR_COMPAT_BASE_URL` |
+| `azure_openai` | `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT`; optional `AZURE_OPENAI_DEPLOYMENT` (defaults to model) and `AZURE_OPENAI_API_VERSION` (defaults to `2024-06-01`, matching SkillSpector 2.10.0) |
+
+For an OpenAI-compatible gateway, the base URL includes its API prefix, such as
+`https://gateway.example/v1`. For Azure deployment routing, the endpoint is the
+resource or gateway prefix before `/openai/deployments/...`; authentication uses
+the `api-key` header. An Azure gateway exposing the OpenAI-compatible v1 protocol
+instead uses the `openai` configuration. Gateways must use HTTPS and accept chat
+completions with JSON-object output and `max_completion_tokens`.
+
+Adjudication does not switch providers or models automatically. Unsupported
+providers or missing configuration produce an explicit unavailable adjudication.
 
 ## Installation
 
@@ -82,20 +104,48 @@ By default, scans use LLM analysis. Use `--scan-mode static-only` to scan withou
 an LLM. If LLM analysis fails, the command reports an error instead of switching
 to static scanning.
 
-Each scan checks the selected skill and stops if the scan takes longer than 5 minutes
-by default. Use `--timeout SECONDS` to change this limit to a positive whole number
-of seconds. For example, `--timeout 600` allows up to 10 minutes.
+Each scan checks the selected skill. The scanner and subsequent adjudication request
+each have a 5-minute timeout by default. Use `--timeout SECONDS` to change each
+limit to a positive whole number of seconds. For example, `--timeout 600` allows
+up to 10 minutes per stage.
 
 Each run creates a new directory inside `./assessment-reports/`, or inside the
 directory you specify with `--output-dir`. This location must be outside the skill.
-On success, the command displays the path to the report. `skillspector.json` retains native findings,
-locations, explanations, and remediations; `scanner.log` retains diagnostics.
-Failures preserve available reports and logs. Existing runs and skills stay unchanged.
+The command displays retained report paths. `skillspector.json` preserves the raw
+native report; `scanner.log` retains diagnostics. LLM-assisted runs also produce
+`adjudication.json` with a determination and brief reason for each finding,
+`safe_to_use`, and a coverage assessment. Static-only runs do not perform
+adjudication. Existing runs and skills stay unchanged.
+
+**MVP: adjudication examines SKILL.md and scanner evidence only; additional skill
+files are not independently reviewed.** The full SKILL.md is sent in one request,
+without execution, following links, secret redaction, or chunking. A model's
+`safe_to_use: true` is limited to that scope and does not certify the package.
+Assessment-kit does not truncate inputs; gateway context-limit errors produce a
+failed adjudication.
+
+The system prompt is packaged in
+[`prompts/adjudicate.md`](src/skill_assessment/prompts/adjudicate.md). It explains
+static confidence, `llm-unconfirmed`, benign-context tags, and ledger exceptions.
+The response is checked for a verdict on every finding and consistency between
+the safety flag, findings, and coverage. The adjudication adds code-generated
+status, scope, provider/model, timestamp, duration, attempted/successful call
+counts, and token usage when the gateway supplies it. Unknown usage is not zero.
+Credentials and endpoint URLs are not included in adjudication metadata.
+
+Readable partial scans still reach adjudication, but retain their incomplete
+scanner status and exit code 3. Missing configuration produces `status: unavailable`;
+request or response failures produce `status: failed`. Both use `safe_to_use: null`,
+unknown coverage, and `not_adjudicated` findings with a brief reason. Scanner
+failures also produce an unavailable adjudication when artifacts can be written;
+raw scanner reports are retained only if the scanner emitted them.
 
 Exit status is `0` when Advise completes, regardless of finding severity, `1` for
 invalid input or output setup, `2` for incorrect usage, and `3` for a missing scanner,
 scanner failure, timeout, missing/malformed output, incomplete coverage, or
-unavailable/degraded requested LLM analysis. A successful exit does not certify safety.
+unavailable/degraded requested LLM analysis, or unavailable/failed adjudication.
+A completed negative safety verdict remains advisory and does not change a successful
+exit to an execution error. A successful exit does not certify safety.
 Advise creates no BOE or exchange evidence.
 
 ## Python callers
@@ -110,4 +160,5 @@ and unreadable or malformed reports. Error types live in `skill_assessment.error
 
 `uv run --extra test pytest` runs without installing SkillSpector.
 The real static scan integration test runs only when `skillspector` is on `PATH`;
-other Advise tests exercise the external process boundary without a scanner install.
+other Advise tests exercise the external process and HTTP boundaries without a
+scanner install or provider credentials.

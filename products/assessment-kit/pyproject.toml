@@ -17,3 +17,6 @@ skill-assessment = "skill_assessment.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+skill_assessment = ["prompts/*.md"]

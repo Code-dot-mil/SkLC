@@ -53,3 +53,7 @@ class ScanTimeoutError(ScanError):
 
 class OutputDirectoryError(RuntimeError):
     """The output location is unsafe or its artifacts cannot be created or written."""
+
+
+class ConfigurationUnavailable(ValueError):
+    """The requested gateway cannot be configured without changing providers."""

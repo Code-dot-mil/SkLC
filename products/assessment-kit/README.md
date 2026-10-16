@@ -82,7 +82,9 @@ By default, scans use LLM analysis. Use `--scan-mode static-only` to scan withou
 an LLM. If LLM analysis fails, the command reports an error instead of switching
 to static scanning.
 
-Each scan checks the selected skill and stops if the scan takes longer than 5 minutes.
+Each scan checks the selected skill and stops if the scan takes longer than 5 minutes
+by default. Use `--timeout SECONDS` to change this limit to a positive whole number
+of seconds. For example, `--timeout 600` allows up to 10 minutes.
 
 Each run creates a new directory inside `./assessment-reports/`, or inside the
 directory you specify with `--output-dir`. This location must be outside the skill.

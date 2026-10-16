@@ -12,14 +12,15 @@ COMMAND_ARG_NAME = "advise"
 SKILL_OPTION_FLAG = "--skill"
 OUTPUT_OPTION_FLAG = "--output-dir"
 SCAN_MODE_OPTION_FLAG = "--scan-mode"
+TIMEOUT_OPTION_FLAG = "--timeout"
 
 
-def run_scanner(command: list[str], report_dir: Path) -> subprocess.CompletedProcess:
+def run_scanner(command: list[str], report_dir: Path, *, timeout: int = 300) -> subprocess.CompletedProcess:
     """Distinguish scanner failures from failures writing retained diagnostics."""
     try:
         with (report_dir / "scanner.log").open("w", encoding="utf-8") as log:
             try:
-                return subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=300, check=False)
+                return subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=timeout, check=False)
             except subprocess.TimeoutExpired as exc:
                 raise ScanTimeoutError(str(exc), report_dir) from exc
             except FileNotFoundError as exc:
@@ -31,7 +32,7 @@ def run_scanner(command: list[str], report_dir: Path) -> subprocess.CompletedPro
         raise OutputDirectoryError(f"Cannot write diagnostics in {report_dir}: {exc}") from exc
 
 
-def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False) -> Path:
+def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = 300) -> Path:
     """Validate and scan one skill, retaining native output even on failure."""
     skill = skill.resolve()
     validate_skill(skill)
@@ -48,7 +49,7 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False) ->
                "--format", "json", "--output", str(report_path)]
     if static_only:
         command.append("--no-llm")
-    result = run_scanner(command, report_dir)
+    result = run_scanner(command, report_dir, timeout=timeout)
     try:
         if result.returncode not in (0, 1):  # SkillSpector uses 1 for risk findings.
             raise ScanError(f"SkillSpector exited with status {result.returncode}", report_dir)
@@ -80,14 +81,19 @@ def register(subparsers) -> None:
     parser.add_argument(SKILL_OPTION_FLAG, type=Path, action="append", required=True)
     parser.add_argument(OUTPUT_OPTION_FLAG, type=Path, default=Path("assessment-reports"))
     parser.add_argument(SCAN_MODE_OPTION_FLAG, choices=("llm-assisted", "static-only"), default="llm-assisted")
+    parser.add_argument(TIMEOUT_OPTION_FLAG, type=int, default=300, metavar="SECONDS",
+                        help="Stop the scanner after this many seconds (positive integer; default: 300).")
     parser.set_defaults(handler=run, command_parser=parser)
 
 
 def run(args: argparse.Namespace) -> int:
     if len(args.skill) != 1:
         args.command_parser.error(f"select exactly one {SKILL_OPTION_FLAG} directory")
+    if args.timeout <= 0:
+        args.command_parser.error(f"{TIMEOUT_OPTION_FLAG} must be a positive integer")
     try:
-        report = advise_skill(args.skill[0], args.output_dir, static_only=args.scan_mode == "static-only")
+        report = advise_skill(args.skill[0], args.output_dir,
+                              static_only=args.scan_mode == "static-only", timeout=args.timeout)
     except ScanError as exc:
         print(str(exc), file=sys.stderr)
         return 3

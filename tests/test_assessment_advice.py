@@ -35,10 +35,11 @@ def scanner(monkeypatch):
         "issues": [{"id": "CE1", "severity": "HIGH", "location": {"file": "run.py", "start_line": 3},
                     "explanation": "Untrusted input reaches eval", "remediation": "Parse data without eval"}],
     }
-    state = {"report": report, "status": 1, "calls": []}
+    state = {"report": report, "status": 1, "calls": [], "timeouts": []}
 
     def scan(command, *, stdout, **kwargs):
         state["calls"].append(command)
+        state["timeouts"].append(kwargs["timeout"])
         stdout.write("scanner diagnostics\n")
         path = Path(command[command.index("--output") + 1])
         if state["report"] is not None:
@@ -49,6 +50,26 @@ def scanner(monkeypatch):
 
     monkeypatch.setattr(subprocess, "run", scan)
     return state
+
+
+@pytest.mark.parametrize(("options", "timeout"), [([], 300), (["--timeout", "600"], 600)])
+def test_cli_applies_scanner_timeout(skill, scanner, tmp_path, options, timeout):
+    code = main(["advise", "--skill", str(skill), "--output-dir", str(tmp_path / "reports"), *options])
+
+    assert code == 0
+    assert scanner["timeouts"] == [timeout]
+
+
+@pytest.mark.parametrize("timeout", ["0", "-1", "1.5", "invalid"])
+def test_cli_rejects_invalid_timeout_before_scanning(skill, scanner, tmp_path, timeout):
+    output = tmp_path / "reports"
+
+    with pytest.raises(SystemExit) as error:
+        main(["advise", "--skill", str(skill), "--output-dir", str(output), "--timeout", timeout])
+
+    assert error.value.code == 2
+    assert not scanner["calls"]
+    assert not output.exists()
 
 
 def test_retains_useful_native_findings_across_runs(skill, scanner, tmp_path, monkeypatch):

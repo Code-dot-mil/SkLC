@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from ..errors import IncompleteScanError, InvalidOutputDirectoryError, ScanError, SkillValidationError
+from ..errors import IncompleteScanError, OutputDirectoryError, ScanError, ScanTimeoutError, SkillValidationError
 from .validate import validate_skill
 
 COMMAND_ARG_NAME = "advise"
@@ -14,31 +14,46 @@ OUTPUT_OPTION_FLAG = "--output-dir"
 SCAN_MODE_OPTION_FLAG = "--scan-mode"
 
 
+def run_scanner(command: list[str], report_dir: Path) -> subprocess.CompletedProcess:
+    """Distinguish scanner failures from failures writing retained diagnostics."""
+    try:
+        with (report_dir / "scanner.log").open("w", encoding="utf-8") as log:
+            try:
+                return subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=300, check=False)
+            except subprocess.TimeoutExpired as exc:
+                raise ScanTimeoutError(str(exc), report_dir) from exc
+            except FileNotFoundError as exc:
+                message = "SkillSpector is required: install it separately and ensure 'skillspector' is on PATH."
+                raise ScanError(message, report_dir) from exc
+            except OSError as exc:
+                raise ScanError(str(exc), report_dir) from exc
+    except OSError as exc:
+        raise OutputDirectoryError(f"Cannot write diagnostics in {report_dir}: {exc}") from exc
+
+
 def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False) -> Path:
     """Validate and scan one skill, retaining native output even on failure."""
-    skill, output_dir = skill.resolve(), output_dir.resolve()
+    skill = skill.resolve()
     validate_skill(skill)
-    if output_dir.is_relative_to(skill):
-        raise InvalidOutputDirectoryError("choose an output directory outside the skill")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    report_dir = Path(tempfile.mkdtemp(prefix=f"{skill.name}-", dir=output_dir))
+    try:
+        output_dir = output_dir.resolve()
+        if output_dir.is_relative_to(skill):
+            raise OutputDirectoryError("choose an output directory outside the skill")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report_dir = Path(tempfile.mkdtemp(prefix=f"{skill.name}-", dir=output_dir))
+    except OSError as exc:
+        raise OutputDirectoryError(f"Cannot create reports in {output_dir}: {exc}") from exc
     report_path = report_dir / "skillspector.json"
     command = ["skillspector", "scan", str(skill),
                "--format", "json", "--output", str(report_path)]
     if static_only:
         command.append("--no-llm")
+    result = run_scanner(command, report_dir)
     try:
-        with (report_dir / "scanner.log").open("w", encoding="utf-8") as log:
-            try:
-                result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=300, check=False)
-            except FileNotFoundError as exc:
-                message = "SkillSpector is required: install it separately and ensure 'skillspector' is on PATH."
-                log.write(message + "\n")
-                raise ScanError(message, report_dir) from exc
         if result.returncode not in (0, 1):  # SkillSpector uses 1 for risk findings.
             raise ScanError(f"SkillSpector exited with status {result.returncode}", report_dir)
         report = json.loads(report_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+    except (OSError, ValueError) as exc:
         raise ScanError(str(exc), report_dir) from exc
     if not isinstance(report, dict) or not isinstance(report.get("issues"), list):
         raise ScanError("missing or invalid findings", report_dir)
@@ -76,7 +91,7 @@ def run(args: argparse.Namespace) -> int:
     except ScanError as exc:
         print(str(exc), file=sys.stderr)
         return 3
-    except (OSError, UnicodeError, SkillValidationError, InvalidOutputDirectoryError) as exc:
+    except (OSError, UnicodeError, SkillValidationError, OutputDirectoryError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
     print(f"Advice report: {report}")

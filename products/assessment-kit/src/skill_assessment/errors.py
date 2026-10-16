@@ -47,5 +47,9 @@ class IncompleteScanError(ScanError):
     """The requested analysis did not complete without degradation."""
 
 
-class InvalidOutputDirectoryError(ValueError):
-    """Reports must be stored outside the scanned skill."""
+class ScanTimeoutError(ScanError):
+    """The scanner exceeded its allowed execution time."""
+
+
+class OutputDirectoryError(RuntimeError):
+    """The output location is unsafe or its artifacts cannot be created or written."""

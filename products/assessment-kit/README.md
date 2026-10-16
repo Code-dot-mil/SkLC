@@ -72,6 +72,12 @@ scanner failure, timeout, missing/malformed output, incomplete coverage, or
 unavailable/degraded requested LLM analysis. A successful exit does not certify safety. Advice creates
 no BOE or exchange evidence.
 
+Python callers can catch `ScanTimeoutError` to decide whether to retry and
+`OutputDirectoryError` to choose or repair the output location. `IncompleteScanError`
+identifies partial or degraded analysis. Timeout and incomplete-analysis errors
+inherit from `ScanError`, which also covers missing scanners, process failures,
+and unreadable or malformed reports. Error types live in `skill_assessment.errors`.
+
 For development, `uv run --extra test pytest` runs without installing SkillSpector.
 The real static scan integration test runs only when `skillspector` is on `PATH`;
 other advice tests exercise the external process boundary without a scanner install.

@@ -3,15 +3,17 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import mock_open
 
 import pytest
 from skill_assessment.cli import main
 from skill_assessment.commands.advise import advise_skill
 from skill_assessment.errors import (
     IncompleteScanError,
-    InvalidOutputDirectoryError,
     MissingFrontmatterError,
+    OutputDirectoryError,
     ScanError,
+    ScanTimeoutError,
 )
 
 
@@ -97,6 +99,7 @@ def test_failed_scans_retain_artifacts_and_never_retry(skill, scanner, tmp_path,
     elif failure == "mode":
         report["metadata"]["llm_requested"] = False
     elif failure == "timeout":
+        expected_error = ScanTimeoutError
         scanner["error"] = subprocess.TimeoutExpired("skillspector", 300)
     output = tmp_path / "retained"
 
@@ -124,7 +127,7 @@ def test_failed_scans_retain_artifacts_and_never_retry(skill, scanner, tmp_path,
 @pytest.mark.parametrize("invalid_skill", [False, True])
 def test_rejects_invalid_input_before_writing_or_scanning(skill, scanner, invalid_skill):
     # Arrange
-    expected_error = InvalidOutputDirectoryError
+    expected_error = OutputDirectoryError
     if invalid_skill:
         (skill / "SKILL.md").write_text("No frontmatter")
         expected_error = MissingFrontmatterError
@@ -156,6 +159,52 @@ def test_rejects_multiple_skills_before_scanning(skill, scanner):
     assert not scanner["calls"]
 
 
+def test_output_setup_failure_preserves_existing_file(skill, scanner, tmp_path):
+    # Arrange
+    output = tmp_path / "reports"
+    output.write_bytes(b"existing file")
+    before = (skill / "SKILL.md").read_bytes()
+
+    # Act
+    with pytest.raises(OutputDirectoryError):
+        advise_skill(skill, output)
+    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+
+    # Assert
+    assert code == 1
+    assert not scanner["calls"]
+    assert output.read_bytes() == b"existing file"
+    assert (skill / "SKILL.md").read_bytes() == before
+
+
+@pytest.mark.parametrize("failure", ["open", "close"])
+def test_diagnostic_storage_failure_is_an_output_error(skill, tmp_path, monkeypatch, failure):
+    # Arrange: filesystem faults are injected at the diagnostic file boundary.
+    monkeypatch.setenv("PATH", "")
+    output = tmp_path / "reports"
+    before = (skill / "SKILL.md").read_bytes()
+    original_open = Path.open
+    log = mock_open()
+    if failure == "open":
+        log.side_effect = PermissionError("storage unavailable")
+    else:
+        log.return_value.__exit__.side_effect = OSError("storage unavailable")
+
+    def open_file(path, *args, **kwargs):
+        return log(*args, **kwargs) if path.name == "scanner.log" else original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_file)
+
+    # Act
+    with pytest.raises(OutputDirectoryError):
+        advise_skill(skill, output)
+    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+
+    # Assert
+    assert code == 1
+    assert (skill / "SKILL.md").read_bytes() == before
+
+
 @pytest.mark.skipif(shutil.which("skillspector") is None, reason="external SkillSpector prerequisite is not installed")
 def test_real_static_scan_provides_actionable_findings(skill, tmp_path):
     # Arrange
@@ -177,21 +226,23 @@ def test_real_static_scan_provides_actionable_findings(skill, tmp_path):
     assert {path.name: path.read_bytes() for path in skill.iterdir()} == before
 
 
-def test_missing_scanner_reports_prerequisite_and_retains_diagnostics(skill, tmp_path, monkeypatch, capsys):
+def test_missing_scanner_reports_failure_without_adding_scanner_output(skill, tmp_path, monkeypatch):
     # Arrange
     monkeypatch.setenv("PATH", "")
     output = tmp_path / "reports"
     before = (skill / "SKILL.md").read_bytes()
 
     # Act
+    with pytest.raises(ScanError) as error:
+        advise_skill(skill, output)
     code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
 
     # Assert
     assert code == 3
-    assert "SkillSpector" in capsys.readouterr().err
+    assert error.value.report_dir.parent == output
     logs = list(output.glob("*/scanner.log"))
-    assert len(logs) == 1
-    assert "PATH" in logs[0].read_text()
+    assert len(logs) == 2
+    assert all(log.stat().st_size == 0 for log in logs)
     assert (skill / "SKILL.md").read_bytes() == before
 
 
@@ -221,4 +272,4 @@ def test_advice_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
     assert code == 0
     report_path = next(output.glob("*/skillspector.json"))
     assert json.loads(report_path.read_text())["execution_successful"] is True
-    assert "external scanner completed" in report_path.with_name("scanner.log").read_text()
+    assert report_path.with_name("scanner.log").stat().st_size > 0

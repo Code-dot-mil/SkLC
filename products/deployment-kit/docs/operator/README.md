@@ -1,24 +1,40 @@
 # Operator kit
 
-Build and deploy your own skill exchange using the bundled catalog, assessment
-wheel, Python generator, Astro site, and GitLab CI. SkillSpector remains external.
+The operator kit provides assessment tooling, site source, and a reference GitLab
+pipeline for building and deploying an organization's skill exchange. A reference
+skill catalog is included to support initial setup. SkillSpector is installed separately.
 
 ## Install
 
 Download `deployment-kit-operator-<version>.zip` from SkLC GitHub Releases and
 compare its SHA-256 with GitHub's asset digest. Extract into an empty GitLab
 project, including `.gitlab-ci.yml` and `.exchange/`, and commit the contents.
-Use the default branch's **Build > Pipelines > New pipeline** to run the kit.
-The template deliberately runs only manually on the default branch.
 
-Set these GitLab CI/CD variables before running:
+## Configure the catalog
 
-| Variable | Required value |
+Operators can retain, extend, or replace the included reference catalog. Place each
+skill package under `skills/<namespace>/<skill>/`, including its `SKILL.md` and
+supporting files. The pipeline discovers and processes the packages present in that
+directory. Each `SKILL.md` must declare a name matching its skill directory and a
+nonempty description. The included catalog uses the `ai4sdlc` namespace; operators
+can use their own namespaces for additional or replacement catalogs.
+
+Configure catalog categories, tags, and display settings through `.exchange/`.
+Native assessment findings inform the site's risk display. Publication decisions
+remain with the organization operating the exchange.
+
+## Configure the environment
+
+Configure the assessment image and runner tags for the target environment using
+GitLab CI/CD variables. Review the supplied scan-mode and build-image defaults and
+override them as needed.
+
+| Variable | Purpose and default |
 | --- | --- |
-| `ASSESSMENT_IMAGE` | Linux image with Python 3.12+, pip, Git, and external SkillSpector `>=2.10,<3` on PATH; 2.10.0 is tested |
-| `ASSESSMENT_RUNNER_TAG` | Trusted container runner with assessor/provider access |
-| `BUILD_RUNNER_TAG` | Container runner able to install npm dependencies |
-| `PAGES_RUNNER_TAG` | Runner allowed to publish GitLab Pages |
+| `ASSESSMENT_IMAGE` | Required: Linux image with Python 3.12+, pip, Git, and external SkillSpector `>=2.10,<3` on PATH; 2.10.0 is tested |
+| `ASSESSMENT_RUNNER_TAG` | Required: trusted container runner with assessor/provider access |
+| `BUILD_RUNNER_TAG` | Required: container runner able to install npm dependencies |
+| `PAGES_RUNNER_TAG` | Required: runner allowed to publish GitLab Pages |
 | `SCAN_MODE` | `llm-assisted` (default) or explicitly `static-only` |
 | `NODE_IMAGE` | Defaults to `node:22`; replacement must provide Node >=22.22.0 and npm |
 | `PAGES_IMAGE` | Defaults to `alpine:3.24.2`; replace for your registry if needed |
@@ -30,6 +46,10 @@ requests. Runners need access to configured image/package registries and any
 selected provider; the ZIP is not an offline dependency bundle. Enable GitLab Pages.
 
 ## Run and retain results
+
+The supplied pipeline runs when manually started on the default branch through
+**Build > Pipelines > New pipeline**. Operators can adapt the reference CI
+configuration to their organization's workflow and access controls.
 
 Jobs run advice, formal assessment, verified data generation, site build, then
 Pages deployment. Native reports, adjudication and logs are retained as artifacts;
@@ -44,10 +64,7 @@ commits or pushes. A fresh run without persisted evidence reassesses the catalog
 Persisted assessments for unchanged skill contents require an explicit `--override`
 when invoking assess again; the template never replaces them silently.
 
-The reference catalog lives at `skills/ai4sdlc/<skill>/`. Other catalogs can use
-`skills/<namespace>/<skill>/SKILL.md`; no specific skill names are required.
-Configure display/tags/categories through `.exchange/`. Native report risk drives
-the existing site policy; this kit does not add automatic approval decisions.
+## Run locally
 
 For local use, install the wheel into an activated Python environment, ensure
 SkillSpector and Git are on PATH, and run from the extracted root:

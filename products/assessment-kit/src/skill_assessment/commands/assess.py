@@ -44,6 +44,8 @@ def assess_skill(
         "assessed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "path": existing["path"] if existing is not None else assessment.name,
         "skill_sha256": digest,
+        "reports": {name: hashlib.sha256((assessment / name).read_bytes()).hexdigest()
+                    for name in ("skillspector.json", "adjudication.json", "scanner.log")},
     })
     index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
     return assessment

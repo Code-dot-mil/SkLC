@@ -35,7 +35,7 @@ jobs:
         run: ${{ matrix.command }}
 
   skill-catalog:
-    name: Skill catalog
+    name: Catalog and operator kit
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -47,6 +47,21 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           path: ${{ runner.temp }}/skill-catalog.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Build operator kit preview
+        run: |
+          python -m pip install --no-cache-dir uv
+          uv build --wheel --python 3.12 products/assessment-kit --out-dir "$RUNNER_TEMP/operator"
+          version=$(python -c 'import tomllib; print(tomllib.load(open("products/assessment-kit/pyproject.toml", "rb"))["project"]["version"])')
+          python scripts/package-operator.py --version "$version" \
+            --catalog "$RUNNER_TEMP/skill-catalog.zip" --wheel "$RUNNER_TEMP"/operator/*.whl \
+            --output-dir "$RUNNER_TEMP/operator"
+      - name: Upload operator kit preview
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: ${{ runner.temp }}/operator/deployment-kit-operator-*.zip
           archive: false
           if-no-files-found: error
 

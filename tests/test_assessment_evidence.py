@@ -88,7 +88,7 @@ def test_override_replaces_hash_assessment_and_preserves_other_hashes(skill, sca
     assert latest["skill_sha256"] == first["skill_sha256"]
     assert latest["assessed_at"] > first["assessed_at"]
     assert index["assessments"][1:] == [other]
-    assert set(latest) == {"assessed_at", "path", "skill_sha256"}
+    assert set(latest) == {"assessed_at", "path", "skill_sha256", "reports"}
     assert {path.name for path in output.iterdir()} == {"index.json", first["path"], other["path"]}
     assert all(path.read_bytes() == content for path, content in retained.items())
     directory = output / latest["path"]

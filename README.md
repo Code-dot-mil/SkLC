@@ -139,3 +139,8 @@ Secrets should be configured as masked CI variables in the target environment an
 ## Current Boundaries
 
 This is a static exchange MVP. It does not implement a live application server, interactive approval workflow, protected-branch administration, hosting-provider API simulation, or user account model. Those responsibilities belong to the hosting platform and future exchange services.
+
+## Operator kit
+
+Use `deployment-kit-operator-<version>.zip` to assess a catalog and build/deploy
+your exchange in GitLab. See the [operator guide](products/deployment-kit/docs/operator/README.md).

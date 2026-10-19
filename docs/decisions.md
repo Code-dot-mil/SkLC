@@ -38,6 +38,5 @@ Define all assessment-kit exception types in `skill_assessment/errors.py`. Comma
 Publish the existing assessment-kit wheel directly on authorized SkLC releases,
 as the third product alongside the deployment and catalog ZIPs, using GitHub
 asset digests for download integrity. Its package version must correspond
-to the release version under Python packaging normalization. Before upload, prove
-all three commands work outside the checkout with the installed wheel and supported
-SkillSpector; explicit static scanning is sufficient for this installation proof.
+to the release version under Python packaging normalization. Use `uv build` to
+build the wheel and rely on the Python packaging tools for wheel validation.

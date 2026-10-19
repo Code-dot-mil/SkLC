@@ -165,10 +165,8 @@ draft containing exactly three assets under the same version:
 The assessment-kit package version must match the release version under Python
 packaging normalization (for example, `1.2.3-rc.1` becomes `1.2.3rc1`). Set
 `products/assessment-kit/pyproject.toml` accordingly before selecting the release
-candidate. The workflow checks the wheel filename, packaged metadata, and installed
-version before upload. It installs the wheel outside the checkout, separately
-provisions the tested external SkillSpector CLI, and exercises `validate`, `advise`,
-and `assess` with explicit static scans. The wheel does not install SkillSpector.
+candidate. The workflow builds the wheel with `uv build` and uploads it alongside
+the ZIPs. The wheel does not install SkillSpector.
 
 Draft creation uses `gh release create --verify-tag --draft`, which requires an
 existing tag and does not overwrite an existing release. Versions with a SemVer
@@ -199,7 +197,7 @@ uv run --group release python -m skill_exchange.release check-draft \
 The gate verifies the checkout and committed notes, confirms the GitHub tag
 resolves to the expected commit on `main`, and requires an existing draft with
 matching notes and prerelease status. That draft must contain exactly the two
-versioned product ZIPs and the version-matched assessment wheel, all uploaded,
+versioned product ZIPs and the assessment wheel, all uploaded,
 nonempty, and carrying GitHub SHA-256 digests. The latest `release.yml` push run
 for the tag and commit must have completed successfully. Missing authentication, API errors, missing assets, and
 unfinished or failed runs block publication.

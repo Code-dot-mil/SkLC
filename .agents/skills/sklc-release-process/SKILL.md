@@ -29,8 +29,8 @@ maintainer. Use the version without `v` in filenames and the exact heading
 `## <version>` in `RELEASE_NOTES.md`; the tag is `v<version>`. Keep notes focused
 on changes consumers need to understand. Set the assessment-kit version in
 `products/assessment-kit/pyproject.toml` to match the release under Python packaging
-normalization before selecting the candidate. The workflow verifies wheel identity,
-metadata, installed version, and all three commands using an external scanner.
+normalization before selecting the candidate. The workflow builds the wheel with
+`uv build` and uploads it alongside the ZIPs.
 
 Select the intended release commit from GitHub and record its full SHA. Run the
 readiness command from the candidate checkout, supplying the SHA selected from

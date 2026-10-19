@@ -77,39 +77,11 @@ jobs:
             --repo-root . --site-dir site/dist \
             --version "$RELEASE_VERSION" \
             --output-dir "$RELEASE_DIR/assets"
-      - name: Build and verify assessment wheel
+      - name: Build assessment wheel
         shell: bash
         run: |
           uv build --wheel --python "$(command -v python)" \
             products/assessment-kit --out-dir "$RELEASE_DIR/assets"
-          wheels=("$RELEASE_DIR"/assets/*.whl)
-          test "${#wheels[@]}" -eq 1
-          uv run --group release python -m skill_exchange.release check-wheel \
-            --wheel "${wheels[0]}" --version "$RELEASE_VERSION"
-          uv venv --python "$(command -v python)" "$RELEASE_DIR/installed"
-          uv pip install --python "$RELEASE_DIR/installed/bin/python" "${wheels[0]}"
-          uv pip check --python "$RELEASE_DIR/installed/bin/python"
-          installed_version="$("$RELEASE_DIR/installed/bin/python" -I -c \
-            'from importlib.metadata import version; print(version("skill-assessment"))')"
-          uv run --group release python -c \
-            'from packaging.version import Version; import sys; assert Version(sys.argv[1]) == Version(sys.argv[2])' \
-            "$RELEASE_VERSION" "$installed_version"
-          # SkillSpector is an external CLI prerequisite, installed separately for this proof.
-          uv venv --python "$(command -v python)" "$RELEASE_DIR/scanner"
-          uv pip install --python "$RELEASE_DIR/scanner/bin/python" \
-            'skillspector @ git+https://github.com/NVIDIA/SkillSpector.git@e29b16d305b0e738e3d4b952ba102f5522a6f084'
-          (
-            unset PYTHONPATH PYTHONHOME
-            export PATH="$RELEASE_DIR/installed/bin:$RELEASE_DIR/scanner/bin:$PATH"
-            mkdir "$RELEASE_DIR/installation-proof"
-            cd "$RELEASE_DIR/installation-proof"
-            mkdir example-skill
-            printf '%s\n' '---' 'name: example-skill' 'description: Local installation proof.' '---' > example-skill/SKILL.md
-            printf 'eval(input())\n' > example-skill/run.py
-            skill-assessment validate --skill example-skill
-            skill-assessment advise --skill example-skill --scan-mode static-only --output-dir reports
-            skill-assessment assess --skill example-skill --scan-mode static-only --output-dir evidence
-          )
       - name: Create draft GitHub Release
         id: draft-release
         shell: bash

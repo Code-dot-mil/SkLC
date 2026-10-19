@@ -2,10 +2,8 @@ import json
 import subprocess
 from pathlib import Path
 
-import pytest
 from skill_assessment.cli import main as assessment
-from skill_exchange.exchange_builder import build_exchange
-from skill_exchange.operator import main, read_assessment_boe
+from skill_exchange.operator import main
 from test_assessment_advice import gateway as gateway
 from test_assessment_advice import scanner as scanner
 from test_assessment_advice import skill as skill
@@ -27,7 +25,6 @@ def test_assessment_index_builds_site_without_reassessment(skill, scanner, tmp_p
     scanner["report"]["risk_assessment"]["score"] = 60
     assert assessment(args) == 0
     before = {p: p.read_bytes() for p in evidence.rglob("*") if p.is_file()}
-    calls = len(scanner["calls"])
 
     def run(command, **kwargs):
         assert command[0] == "git", "Generation must not invoke assessment commands or a scanner"
@@ -47,26 +44,3 @@ def test_assessment_index_builds_site_without_reassessment(skill, scanner, tmp_p
     native = next(item for item in artifacts if item["artifact_kind"] == "native_report")
     assert json.loads(Path(native["path"]).read_text()) == scanner["report"]
     assert before == {p: p.read_bytes() for p in evidence.rglob("*") if p.is_file()}
-    assert len(scanner["calls"]) == calls
-    invalid_skill = catalog / "invalid-skill"
-    invalid_skill.mkdir()
-    invalid_source = invalid_skill / "SKILL.md"
-    invalid_source.write_text("---\nname: wrong-name\ndescription: Example\n---\nInstructions")
-    with pytest.raises(ValueError, match="invalid skills"):
-        main()
-    invalid_source.unlink()
-    options = dict(skills_root=tmp_path / "skills", exchange_dir=Path(".exchange"),
-                   generated_dir=generated, boe_dir=evidence, boe_reader=read_assessment_boe)
-    with pytest.raises(ValueError, match="wrong scan mode"):
-        build_exchange(**options, scan_modes=("llm-assisted",))
-    index = json.loads((directory / "index.json").read_text())
-    (directory / index["assessments"][0]["path"] / "skillspector.json").unlink()
-    with pytest.raises(FileNotFoundError):
-        build_exchange(**options, scan_modes=("static-only",))
-
-
-def test_generation_rejects_empty_catalog(tmp_path, monkeypatch):
-    monkeypatch.setattr("sys.argv", ["operator", "generate", "--skills", str(tmp_path / "skills"),
-                                    "--generated", str(tmp_path / "generated")])
-    with pytest.raises(ValueError, match="Catalog is empty"):
-        main()

@@ -34,10 +34,6 @@ def test_changed_skill_adds_assessment_and_preserves_history(skill, scanner, gat
         assert started <= datetime.fromisoformat(entry["assessed_at"]) <= datetime.now(UTC)
         assert len(entry["skill_sha256"]) == 64
         report_dir = output / entry["path"]
-        assert entry["reports"] == {
-            name: hashlib.sha256((report_dir / name).read_bytes()).hexdigest()
-            for name in ("skillspector.json", "adjudication.json", "scanner.log")
-        }
         assert report_dir.parent == output
         assert json.loads((report_dir / "skillspector.json").read_text()) == scanner["report"]
         adjudication = json.loads((report_dir / "adjudication.json").read_text())

@@ -11,7 +11,7 @@ independent products under one SemVer version:
 
 - `deployment-kit-prebuilt-<version>.zip`
 - `skill-catalog-<version>.zip`
-- `skill_assessment-<normalized-version>-py3-none-any.whl`
+- `skill_assessment-<version>-py3-none-any.whl`
 
 GitHub computes and displays each asset's SHA-256 digest. A consumer chooses a
 product, compares its SHA-256 with that asset's GitHub digest, then unzips the ZIP

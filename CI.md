@@ -160,7 +160,7 @@ draft containing exactly three assets under the same version:
 
 - `deployment-kit-prebuilt-<version>.zip`
 - `skill-catalog-<version>.zip`
-- `skill_assessment-<normalized-version>-py3-none-any.whl`
+- `skill_assessment-<version>-py3-none-any.whl`
 
 The assessment-kit package version must match the release version under Python
 packaging normalization (for example, `1.2.3-rc.1` becomes `1.2.3rc1`). Set

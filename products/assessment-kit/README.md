@@ -8,17 +8,17 @@ Validate a local skill directory and get advisory scan findings with
 Python 3.12 or later is required. The examples below use `uv` to build and install
 the assessment kit and run its commands.
 
-### SkillSpector (Advise only)
+### SkillSpector
 
-SkillSpector is an external prerequisite for Advise. The compatibility target
-is SkillSpector `>=2.10,<3`, using its public CLI and JSON report format. Integration
-has been tested with 2.10.0; compatibility with later v2 releases is expected,
-not individually verified.
+SkillSpector is an external prerequisite. The `validate` command does not require it.
+The compatibility target is SkillSpector `>=2.10,<3`, using its public CLI and JSON
+report format. Integration has been tested with 2.10.0; compatibility with later
+v2 releases is expected, not individually verified.
 
 The `skillspector` executable must be available on `PATH` in the environment that
 runs assessment-kit. Follow [SkillSpector's installation guidance](https://github.com/NVIDIA/SkillSpector#installation).
 Its installation and dependency management are outside this repository's scope;
-the assessment-kit wheel does not install it. Validation does not require it.
+the assessment-kit wheel does not install it.
 
 `uv tool install` exposes the executable through uv's tool executable directory.
 That directory must be on `PATH`; if uv warns that it is missing, run
@@ -92,7 +92,7 @@ for incorrect command usage. Diagnostics go to standard error on failure.
 ## Advise
 
 Validate and scan one local skill directory using SkillSpector. Complete the
-[SkillSpector prerequisites](#skillspector-advise-only) before running this command.
+[SkillSpector prerequisites](#skillspector) before running this command.
 LLM-assisted scanning is the default.
 
 ```sh
@@ -155,6 +155,49 @@ unavailable/degraded requested LLM analysis, or unavailable/failed adjudication.
 A completed negative safety verdict remains advisory and does not change a successful
 exit to an execution error. A successful exit does not certify safety.
 Advise creates no BOE or exchange evidence.
+
+## Assess
+
+`assess` scans a local skill, produces an adjudication, and records the reports in
+the skill’s assessment history.
+
+```sh
+uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./evidence/my-skill
+uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./evidence/my-skill --override --scan-mode static-only
+```
+
+Each successful assessment retains `skillspector.json`, `adjudication.json`, and
+`scanner.log`. The index holds one assessment per `skill_sha256`, regardless of
+scan mode. Assessing unchanged content returns an error without scanning; use
+`--override` to replace its indexed assessment. Changed skill content adds a new
+hash entry, retaining assessments for other hashes.
+
+The index lists assessments newest first. Each path is relative to the index;
+consumers read metadata from the entry rather than deriving it from directory names.
+
+```json
+{
+  "boe_schema_version": 1,
+  "skill": "my-skill",
+  "assessments": [
+    {
+      "assessed_at": "2026-10-19T15:42:08Z",
+      "path": "my-skill-example",
+      "skill_sha256": "<64 hexadecimal characters>"
+    }
+  ]
+}
+```
+
+`skill_sha256` records the skill's file paths and contents as metadata. It hashes
+sorted relative POSIX file paths and contents, each prefixed by its unsigned
+eight-byte big-endian byte length, following `skill-assessment-package-v1` and a
+NUL byte. Empty directories are omitted.
+
+`--scan-mode` and `--timeout` have the same behavior as in `advise`. If scanning
+or adjudication fails, diagnostics and available outputs are retained, and the
+index and any previous assessment remain unchanged. Exit codes match `advise`;
+duplicate assessments without `--override` and index read or write errors return `1`.
 
 ## Python callers
 

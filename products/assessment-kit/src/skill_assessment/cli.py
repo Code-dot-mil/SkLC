@@ -1,6 +1,6 @@
 import argparse
 
-from .commands import advise, validate
+from .commands import advise, assess, validate
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -8,5 +8,6 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     validate.register(commands)
     advise.register(commands)
+    assess.register(commands)
     args = parser.parse_args(argv)
     return args.handler(args)

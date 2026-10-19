@@ -47,10 +47,10 @@ def main() -> None:
     args = parser.parse_args()
     if args.override and args.command != "assess":
         parser.error("--override is only valid for assess")
-    skills = discover_skills(args.skills)
-    if not skills:
-        parser.error("No skills found: expected <skills>/<namespace>/<skill>/SKILL.md")
     if args.command != "generate":
+        skills = discover_skills(args.skills)
+        if not skills:
+            parser.error("No skills found: expected <skills>/<namespace>/<skill>/SKILL.md")
         for skill in skills:
             output = args.evidence / skill.metadata.namespace / skill.metadata.skill_id
             command = ["skill-assessment", args.command, "--skill", str(skill.path),
@@ -62,8 +62,8 @@ def main() -> None:
         result = build_exchange(skills_root=args.skills, exchange_dir=args.policy,
                                 generated_dir=args.generated, scan_modes=(args.scan_mode,),
                                 boe_dir=args.evidence, boe_reader=read_assessment_boe)
-        if result["skills_written"] != len(skills):
-            raise ValueError(f"Not all selected skills were generated: {result}")
+        if not result["skills_written"] or result["invalid_skills"]:
+            raise ValueError(f"Catalog is empty or contains invalid skills: {result}")
         print(json.dumps(result))
 
 

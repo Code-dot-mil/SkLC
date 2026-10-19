@@ -19,9 +19,11 @@ def main():
     # The explicit source inventory excludes generated data, dependencies and maintainer workflows.
     roots = ["site/src", "site/scripts", "site/public/favicon.ico", "site/package.json",
              "site/package-lock.json", "site/astro.config.mjs", "site/tsconfig.json", "site/.npmrc",
-             "scripts/skill_exchange", ".exchange/*.yaml", ".exchange/site-config.json", ".gitignore", "LICENSE"]
+             "scripts/skill_exchange", ".exchange/categories.yaml", ".exchange/tags.yaml",
+             ".exchange/display-policy.yaml", ".exchange/site-config.json", ".gitignore", "LICENSE"]
     tracked = subprocess.check_output(["git", "ls-files", "-z", "--", *roots]).decode().split("\0")
-    files = {name: Path(name).read_bytes() for name in tracked if name and name != "scripts/skill_exchange/release.py"}
+    excluded = {"scripts/skill_exchange/cli.py", "scripts/skill_exchange/release.py"}
+    files = {name: Path(name).read_bytes() for name in tracked if name and name not in excluded}
     files.update({
         ".gitlab-ci.yml": Path("products/deployment-kit/ci/gitlab/operator/.gitlab-ci.yml").read_bytes(),
         "ci/assessment.yml": Path("products/assessment-kit/ci/gitlab/profile.yml").read_bytes(),

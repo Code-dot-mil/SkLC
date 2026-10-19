@@ -245,7 +245,7 @@ A customer can use a supported assessment-kit GitLab CI profile for skill advice
 Included:
 
 - A minimal reference GitLab CI profile with separate advice and assessment jobs. Customers provide the skill directory, output locations, assessor settings, and credentials.
-- Advice-job artifacts containing the assessor's original reports and `advice.md`, without a BOE.
+- Advice-job artifacts containing the native scanner report, adjudication, and scanner log, without a BOE.
 - Assessment-job artifacts containing the assessor's original reports and the updated BOE.
 - Documentation for manually persisting assessment reports and the updated BOE index.
 

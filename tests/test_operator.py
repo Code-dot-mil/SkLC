@@ -48,6 +48,13 @@ def test_assessment_index_builds_site_without_reassessment(skill, scanner, tmp_p
     assert json.loads(Path(native["path"]).read_text()) == scanner["report"]
     assert before == {p: p.read_bytes() for p in evidence.rglob("*") if p.is_file()}
     assert len(scanner["calls"]) == calls
+    invalid_skill = catalog / "invalid-skill"
+    invalid_skill.mkdir()
+    invalid_source = invalid_skill / "SKILL.md"
+    invalid_source.write_text("---\nname: wrong-name\ndescription: Example\n---\nInstructions")
+    with pytest.raises(ValueError, match="invalid skills"):
+        main()
+    invalid_source.unlink()
     options = dict(skills_root=tmp_path / "skills", exchange_dir=Path(".exchange"),
                    generated_dir=generated, boe_dir=evidence, boe_reader=read_assessment_boe)
     with pytest.raises(ValueError, match="wrong scan mode"):
@@ -56,3 +63,10 @@ def test_assessment_index_builds_site_without_reassessment(skill, scanner, tmp_p
     (directory / index["assessments"][0]["path"] / "skillspector.json").unlink()
     with pytest.raises(FileNotFoundError):
         build_exchange(**options, scan_modes=("static-only",))
+
+
+def test_generation_rejects_empty_catalog(tmp_path, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["operator", "generate", "--skills", str(tmp_path / "skills"),
+                                    "--generated", str(tmp_path / "generated")])
+    with pytest.raises(ValueError, match="Catalog is empty"):
+        main()

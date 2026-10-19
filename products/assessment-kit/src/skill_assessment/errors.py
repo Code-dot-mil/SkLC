@@ -57,3 +57,7 @@ class OutputDirectoryError(RuntimeError):
 
 class ConfigurationUnavailable(ValueError):
     """The requested gateway cannot be configured without changing providers."""
+
+
+class EvidenceError(RuntimeError):
+    """A BOE index is unreadable, incompatible, or refers to missing outputs."""

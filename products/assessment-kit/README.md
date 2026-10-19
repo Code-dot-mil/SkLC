@@ -199,6 +199,25 @@ or adjudication fails, diagnostics and available outputs are retained, and the
 index and any previous assessment remain unchanged. Exit codes match `advise`;
 duplicate assessments without `--override` and index read or write errors return `1`.
 
+## Verify BOE
+
+Check the BOE index's schema version and the presence of each listed scan's output
+files. This command does not require SkillSpector.
+
+```sh
+uv run --no-project skill-assessment verify-boe --index ./evidence/my-skill/index.json
+```
+
+`verify-boe` reads the index, checks that `boe_schema_version` is supported
+(currently integer `1`), and checks that `skillspector.json` and
+`adjudication.json` exist for every listed assessment. Paths are resolved relative
+to the index. Verification needs only the index and referenced files and runs
+offline without modifying them.
+
+Exit status is `0` when the version is supported and all listed output files
+exist, `2` for incorrect usage, and `4` when the index cannot be read or
+interpreted, its version is unsupported, or an output file is missing.
+
 ## Python callers
 
 Python callers can catch `ScanTimeoutError` to decide whether to retry and

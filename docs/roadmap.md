@@ -203,8 +203,8 @@ Included:
   - `validate` checks that skill packages are valid.
   - `advise` produces native assessor reports and author-facing advice. It does not create a BOE or decide publication.
   - `assess` records one successful assessment per skill content hash in the BOE index; `--override` explicitly replaces the assessment for that hash.
-  - `verify-boe` checks that a BOE matches the selected skill and that each listed report exists and matches its recorded SHA-256 digest.
-- One explicitly selected skill per invocation, using SkillSpector for advice and assessment.
+  - `verify-boe` checks that the BOE index uses a supported schema version and that each listed scan's raw output and adjudication files exist.
+- One explicitly selected skill for validation, advice, or assessment; one BOE index for verification.
 - Supported assessor versions and unchanged native assessor output.
 
 Excluded:

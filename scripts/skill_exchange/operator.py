@@ -1,4 +1,4 @@
-"""Run the installed assessment CLI and build the operator's catalog from verified evidence."""
+"""Run the installed assessment CLI and build the operator's catalog from its assessment output."""
 
 import argparse
 import json
@@ -12,11 +12,9 @@ from .skills import discover_skills
 
 def read_assessment_boe(*, boe_dir, skill, mode):
     directory = boe_dir / skill.metadata.namespace / skill.metadata.skill_id
-    completed = subprocess.run(
-        ["skill-assessment", "verify-boe", "--skill", str(skill.path), "--boe-dir", str(directory)],
-        stdout=subprocess.PIPE, text=True, check=True,
-    )
-    entry = json.loads(completed.stdout)
+    # Assess prepends its successful run; generation consumes that job's latest output.
+    index = json.loads((directory / "index.json").read_text(encoding="utf-8"))
+    entry = index["assessments"][0]
     report_path = directory / entry["path"] / "skillspector.json"
     report = json.loads(report_path.read_text(encoding="utf-8"))
     if not is_successful_skillspector_report(report) or scan_mode(report) != mode:
@@ -52,9 +50,8 @@ def main() -> None:
     skills = discover_skills(args.skills)
     if not skills:
         parser.error("No skills found: expected <skills>/<namespace>/<skill>/SKILL.md")
-    for skill in skills:
-        subprocess.run(["skill-assessment", "validate", "--skill", str(skill.path)], check=True)
-        if args.command != "generate":
+    if args.command != "generate":
+        for skill in skills:
             output = args.evidence / skill.metadata.namespace / skill.metadata.skill_id
             command = ["skill-assessment", args.command, "--skill", str(skill.path),
                        "--output-dir", str(output), "--scan-mode", args.scan_mode]

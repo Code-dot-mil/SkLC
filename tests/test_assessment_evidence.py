@@ -1,3 +1,4 @@
+import hashlib
 import json
 import subprocess
 from datetime import UTC, datetime
@@ -33,6 +34,10 @@ def test_changed_skill_adds_assessment_and_preserves_history(skill, scanner, gat
         assert started <= datetime.fromisoformat(entry["assessed_at"]) <= datetime.now(UTC)
         assert len(entry["skill_sha256"]) == 64
         report_dir = output / entry["path"]
+        assert entry["reports"] == {
+            name: hashlib.sha256((report_dir / name).read_bytes()).hexdigest()
+            for name in ("skillspector.json", "adjudication.json", "scanner.log")
+        }
         assert report_dir.parent == output
         assert json.loads((report_dir / "skillspector.json").read_text()) == scanner["report"]
         adjudication = json.loads((report_dir / "adjudication.json").read_text())
@@ -92,6 +97,10 @@ def test_override_replaces_hash_assessment_and_preserves_other_hashes(skill, sca
     assert {path.name for path in output.iterdir()} == {"index.json", first["path"], other["path"]}
     assert all(path.read_bytes() == content for path, content in retained.items())
     directory = output / latest["path"]
+    assert latest["reports"] == {
+        name: hashlib.sha256((directory / name).read_bytes()).hexdigest()
+        for name in ("skillspector.json", "adjudication.json", "scanner.log")
+    }
     assert json.loads((directory / "skillspector.json").read_text()) == scanner["report"]
     assert json.loads((directory / "adjudication.json").read_text())["status"] == "not_performed"
     assert (directory / "scanner.log").read_text() == "scanner diagnostics\n"

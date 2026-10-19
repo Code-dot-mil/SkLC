@@ -199,11 +199,10 @@ A customer can install the assessment kit and assess their own skills, retaining
 
 Included:
 
-- Four public commands:
+- Three public commands:
   - `validate` checks that skill packages are valid.
   - `advise` produces native assessor reports and author-facing advice. It does not create a BOE or decide publication.
   - `assess` records one successful assessment per skill content hash in the BOE index; `--override` explicitly replaces the assessment for that hash.
-  - `verify-boe` checks that a BOE matches the selected skill and that each listed report exists and matches its recorded SHA-256 digest.
 - One explicitly selected skill per invocation, using SkillSpector for advice and assessment.
 - Supported assessor versions and unchanged native assessor output.
 
@@ -221,16 +220,16 @@ Deliver these steps as separate PRs, each with its behavior tests and usage guid
 1. Installable wheel and validation.
 2. Single-skill advice.
 3. Assessment evidence.
-4. Offline evidence verification.
-5. Wheel release integration.
+4. Wheel release integration.
 
 #### 3.4.4 Acceptance evidence
 
 - A developer obtains the assessment-kit artifact from GitHub Releases, verifies its checksums, installs the wheel in an isolated local environment, configures the assessment kit, and runs it against a local skill package without the catalog, site, deployment kit, GitLab project, or GitLab CI.
-- The local run produces advice artifacts, native reports, and BOE accepted by the released `verify-boe` command.
+- The local run produces advice artifacts, native reports, and a per-skill assessment index.
 
 #### 3.4.5 Future capabilities
 
+- `verify-boe` is deferred until version 2; it is not a prerequisite for the operator foundation.
 - Assess multiple explicitly selected skills in one invocation.
 - Discover skill packages recursively below a selected root.
 - Support reusable configuration files, machine-readable advice manifests, and additional assessors as consumer needs are established.
@@ -248,7 +247,7 @@ Included:
 - A minimal reference GitLab CI profile with separate advice and assessment jobs. Customers provide the skill directory, output locations, assessor settings, and credentials.
 - Advice-job artifacts containing the assessor's original reports and `advice.md`, without a BOE.
 - Assessment-job artifacts containing the assessor's original reports and the updated BOE.
-- Documentation for manually persisting verified reports and updated BOE.
+- Documentation for manually persisting assessment reports and the updated BOE index.
 
 Excluded:
 
@@ -266,7 +265,7 @@ Excluded:
 
 - A developer configures the reference CI in a clean GitLab project using the shipped documentation.
 - The advice job retains the documented advice and native reports without producing a BOE.
-- The assessment job retains native reports and a BOE accepted by the released `verify-boe` command.
+- The assessment job retains native reports and the updated per-skill assessment index.
 - The assessment job makes no source-control changes.
 
 ### 3.6 Deferred internal milestone — Catalog assessment automation
@@ -298,14 +297,14 @@ Excluded:
 1. Install and secure the maintainer assessment runner with the required assessor access.
 2. Adapt maintainer GitHub Actions to set up and invoke the assessment kit from the current checkout.
 3. Run advice for proposed skill changes and assessment after skill changes reach `main`.
-4. Store verified native reports and updated BOE manifests in the source-controlled initial catalog.
+4. Store native assessment reports and updated BOE indexes in the source-controlled initial catalog.
 5. Keep jobs that do not require assessor access on GitHub-hosted runners.
 
 #### 3.6.4 Acceptance evidence
 
 - Maintainer advice and assessment workflows set up and use the assessment kit from the current checkout.
 - Advice on a proposed skill change does not create a BOE or alter catalog policy.
-- Assessment after a skill change reaches `main` stores native reports and an updated BOE in the initial catalog, and the checked-out `verify-boe` command accepts them.
+- Assessment after a skill change reaches `main` stores native reports and an updated per-skill assessment index in the initial catalog.
 
 ### 3.7 Release milestone — Operator foundation
 
@@ -337,7 +336,7 @@ Excluded:
 #### 3.7.4 Acceptance evidence
 
 - A developer obtains the operator release from GitHub Releases and installs it in a clean GitLab project using the shipped documentation.
-- The reference pipeline runs advice and formal assessment for the installed catalog's skills, verifies BOE, retains BOE as artifacts, builds the site, and produces a GitLab Pages artifact.
+- The reference pipeline runs advice and formal assessment for the installed catalog's skills, retains assessment indexes and reports as artifacts, builds the site, and produces a GitLab Pages artifact.
 - The operator pipeline makes no source-control changes by default.
 - Every required customer-provided runner, credential, and configuration value is documented.
 

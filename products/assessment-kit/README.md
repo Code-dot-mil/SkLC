@@ -211,15 +211,12 @@ or adjudication fails, diagnostics and available outputs are retained, and the
 index and any previous assessment remain unchanged. Exit codes match `advise`;
 duplicate assessments without `--override` and index read or write errors return `1`.
 
-## Verify BOE
+The `reports` mapping records SHA-256 hashes of `skillspector.json`,
+`adjudication.json`, and `scanner.log` when assessment succeeds. These are retained
+metadata; the kit does not automatically verify report integrity. Existing index
+entries without this mapping remain readable.
 
-`skill-assessment verify-boe --skill ./my-skill --boe-dir ./evidence/my-skill`
-checks the current skill hash and the SHA-256 of each retained report without
-calling SkillSpector or a provider. Exit 0 prints the matching assessment entry as
-JSON; exit 1 reports missing, stale, modified, or unsupported evidence. New assess
-entries add a `reports` mapping for `skillspector.json`, `adjudication.json`, and
-`scanner.log` to the version-1 index. Older entries without digests cannot be
-verified; explicitly reassess with `--override` to replace such an entry.
+## Reference GitLab CI
 
 The optional GitLab profile `ci/gitlab/profile.yml` (shipped as `ci/assessment.yml`
 in the operator ZIP) supplies `.skill-advice` and

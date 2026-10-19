@@ -14,4 +14,3 @@
   extends: .assessment-runtime
   script:
     - skill-assessment assess --skill "$SKILL_DIRECTORY" --output-dir "$ASSESSMENT_OUTPUT" --scan-mode "$SCAN_MODE"
-    - skill-assessment verify-boe --skill "$SKILL_DIRECTORY" --boe-dir "$ASSESSMENT_OUTPUT"

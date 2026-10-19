@@ -51,18 +51,21 @@ The supplied pipeline runs when manually started on the default branch through
 **Build > Pipelines > New pipeline**. Operators can adapt the reference CI
 configuration to their organization's workflow and access controls.
 
-Jobs run advice, formal assessment, verified data generation, site build, then
+Jobs run advice, formal assessment, data generation, site build, then
 Pages deployment. Native reports, adjudication and logs are retained as artifacts;
 advice creates no BOE. Assessment creates `evidence/<namespace>/<skill>/index.json`
-with content hashes and report digests. Generation rejects stale or changed evidence.
+with assessment history and hashes described in the [assessment guide](docs/assessment-kit.md#assess).
+Generation reads the newest assessment entry produced by the assessment job;
+it does not verify skill or report hashes. Run assessment after changing skill content
+and keep its outputs together through the build.
 Failures stop dependent jobs; available advice/evidence artifacts remain for diagnosis.
 Successful scans with findings remain successful execution, not approval to publish.
 
 Advice and evidence artifacts expire after 30 days by default. Download them before
 expiry; commit evidence manually if you want durable history. The pipeline never
 commits or pushes. A fresh run without persisted evidence reassesses the catalog.
-Persisted assessments for unchanged skill contents require an explicit `--override`
-when invoking assess again; the template never replaces them silently.
+See the [assessment guide](docs/assessment-kit.md#assess) for history and explicit
+`--override` behavior when reassessing unchanged content.
 
 ## Run locally
 
@@ -86,7 +89,7 @@ For source links outside CI, set `SKILL_EXCHANGE_SOURCE_REPOSITORY_URL` and
 `SKILL_EXCHANGE_SOURCE_BRANCH` to the installed catalog's repository and revision.
 
 Missing scanner/provider errors: inspect the retained logs and assessment setup.
-Invalid BOE: restore the matching skill/reports, or explicitly reassess; do not edit
-hashes to bypass verification. Missing site data: confirm the generation job succeeded
+Missing assessment outputs: inspect the assessment job's diagnostics and artifacts.
+Missing site data: confirm the generation job succeeded
 and its artifact reached the build job. Pending jobs: check the configured runner
 tags/images. Pages publishes the generated `public/` directory unchanged.

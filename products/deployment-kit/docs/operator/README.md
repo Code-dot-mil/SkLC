@@ -1,8 +1,6 @@
 # Operator kit
 
-The operator kit provides assessment tooling, site source, and a reference GitLab
-pipeline for building and deploying an organization's skill exchange. A reference
-skill catalog is included to support initial setup. SkillSpector is installed separately.
+Assess an organization's skill catalog and build its exchange using the supplied GitLab pipeline.
 
 ## Install
 
@@ -10,24 +8,14 @@ Download `deployment-kit-operator-<version>.zip` from SkLC GitHub Releases and
 compare its SHA-256 with GitHub's asset digest. Extract into an empty GitLab
 project, including `.gitlab-ci.yml` and `.exchange/`, and commit the contents.
 
-## Configure the catalog
-
-Operators can retain, extend, or replace the included reference catalog. Place each
-skill package under `skills/<namespace>/<skill>/`, including its `SKILL.md` and
-supporting files. The pipeline discovers and processes the packages present in that
-directory. Each `SKILL.md` must declare a name matching its skill directory and a
-nonempty description. The included catalog uses the `ai4sdlc` namespace; operators
-can use their own namespaces for additional or replacement catalogs.
-
-Configure catalog categories, tags, and display settings through `.exchange/`.
-Native assessment findings inform the site's risk display. Publication decisions
-remain with the organization operating the exchange.
+Retain, extend, or replace the reference catalog under `skills/ai4sdlc/`.
+Place packages in `skills/<namespace>/<skill>/`, including supporting files and a
+`SKILL.md` with a matching name and nonempty description. Configure categories,
+tags, and display settings through `.exchange/`.
 
 ## Configure the environment
 
-Configure the assessment image and runner tags for the target environment using
-GitLab CI/CD variables. Review the supplied scan-mode and build-image defaults and
-override them as needed.
+Set the required GitLab CI/CD variables; override defaults as needed.
 
 | Variable | Purpose and default |
 | --- | --- |
@@ -39,38 +27,24 @@ override them as needed.
 | `NODE_IMAGE` | Defaults to `node:22`; replacement must provide Node >=22.22.0 and npm |
 | `PAGES_IMAGE` | Defaults to `alpine:3.24.2`; replace for your registry if needed |
 
-For LLM-assisted assessment, configure the provider/model and masked credentials
-described in [assessment-kit setup](docs/assessment-kit.md). Give these only to
-trusted runners and reviewed default-branch content. Static-only makes no LLM
-requests. Runners need access to configured image/package registries and any
-selected provider; the ZIP is not an offline dependency bundle. Enable GitLab Pages.
+Install SkillSpector separately and configure providers and masked credentials using
+[assessment-kit setup](docs/assessment-kit.md). Use trusted runners for reviewed content.
+Runners need registry/package and selected-provider access. Enable GitLab Pages.
 
 ## Run and retain results
 
-The supplied pipeline runs when manually started on the default branch through
-**Build > Pipelines > New pipeline**. Operators can adapt the reference CI
-configuration to their organization's workflow and access controls.
+Start **Build > Pipelines > New pipeline** on the default branch. The supplied CI
+runs advice, assessment, generation, build, then Pages deployment; failures stop dependent jobs.
+Generation reads the newest entry in `evidence/<namespace>/<skill>/index.json`
+without verifying hashes. Assess after changing skills and retain the matching outputs.
 
-Jobs run advice, formal assessment, data generation, site build, then
-Pages deployment. Native reports, adjudication and logs are retained as artifacts;
-advice creates no BOE. Assessment creates `evidence/<namespace>/<skill>/index.json`
-with assessment history and hashes described in the [assessment guide](docs/assessment-kit.md#assess).
-Generation reads the newest assessment entry produced by the assessment job;
-it does not verify skill or report hashes. Run assessment after changing skill content
-and keep its outputs together through the build.
-Failures stop dependent jobs; available advice/evidence artifacts remain for diagnosis.
-Successful scans with findings remain successful execution, not approval to publish.
-
-Advice and evidence artifacts expire after 30 days by default. Download them before
-expiry; commit evidence manually if you want durable history. The pipeline never
-commits or pushes. A fresh run without persisted evidence reassesses the catalog.
-See the [assessment guide](docs/assessment-kit.md#assess) for history and explicit
-`--override` behavior when reassessing unchanged content.
+Advice and evidence artifacts expire after 30 days. Download them or commit them
+manually for durable history; the pipeline makes no commits or pushes. See the
+[assessment guide](docs/assessment-kit.md#assess) for history and `--override` behavior.
 
 ## Run locally
 
-For local use, install the wheel into an activated Python environment, ensure
-SkillSpector and Git are on PATH, and run from the extracted root:
+Activate a Python environment with SkillSpector and Git on PATH, then run from the extracted root:
 
 ```sh
 python -m pip install wheels/*.whl
@@ -82,14 +56,8 @@ npm ci --prefix site
 npm --prefix site run build
 ```
 
-Operator commands accept `--skills`, `--evidence`, `--policy`, and `--generated`
-paths; advice uses `--evidence` as its report-output root. When changing the generated
-path, set `SKILL_EXCHANGE_GENERATED_ROOT` to that same absolute path for the Node build.
-For source links outside CI, set `SKILL_EXCHANGE_SOURCE_REPOSITORY_URL` and
-`SKILL_EXCHANGE_SOURCE_BRANCH` to the installed catalog's repository and revision.
-
-Missing scanner/provider errors: inspect the retained logs and assessment setup.
-Missing assessment outputs: inspect the assessment job's diagnostics and artifacts.
-Missing site data: confirm the generation job succeeded
-and its artifact reached the build job. Pending jobs: check the configured runner
-tags/images. Pages publishes the generated `public/` directory unchanged.
+Paths are configurable with `--skills`, `--evidence`, `--policy`, and `--generated`;
+advice uses `--evidence` for its reports. For a custom generated path, set
+`SKILL_EXCHANGE_GENERATED_ROOT` to the same absolute path for Node.
+Outside CI, set `SKILL_EXCHANGE_SOURCE_REPOSITORY_URL` and `SKILL_EXCHANGE_SOURCE_BRANCH`
+to the catalog repository and revision for source links.

@@ -142,6 +142,5 @@ This is a static exchange MVP. It does not implement a live application server, 
 
 ## Operator kit
 
-Use `deployment-kit-operator-<version>.zip` to assess an organization's skill catalog
-and build and deploy its exchange in GitLab. The included reference catalog can be
-extended or replaced. See the [operator guide](products/deployment-kit/docs/operator/README.md).
+Use `deployment-kit-operator-<version>.zip` to assess a catalog and deploy its exchange
+in GitLab. See the [operator guide](products/deployment-kit/docs/operator/README.md).

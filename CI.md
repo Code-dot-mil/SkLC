@@ -268,7 +268,4 @@ critical alerts. Those alerts are reviewed when received; the rest of the
 backlog is reviewed weekly. Alerts that cannot be fixed promptly are escalated
 to repository administrator `scotluns`.
 
-The operator ZIP bundles the same release's reference catalog and assessment wheel
-with site sources and reference GitLab CI. Operators can extend or replace the
-catalog for their exchange. PR CI also uploads an operator preview. See the
-[operator guide](products/deployment-kit/docs/operator/README.md) for configuration.
+PR CI uploads an operator ZIP preview. Setup: [operator guide](products/deployment-kit/docs/operator/README.md).

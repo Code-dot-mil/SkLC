@@ -211,19 +211,15 @@ or adjudication fails, diagnostics and available outputs are retained, and the
 index and any previous assessment remain unchanged. Exit codes match `advise`;
 duplicate assessments without `--override` and index read or write errors return `1`.
 
-The `reports` mapping records SHA-256 hashes of `skillspector.json`,
-`adjudication.json`, and `scanner.log` when assessment succeeds. These are retained
-metadata; the kit does not automatically verify report integrity. Existing index
-entries without this mapping remain readable.
+`reports` records each output's SHA-256; hashes are not automatically verified.
 
 ## Reference GitLab CI
 
-The optional GitLab profile `ci/gitlab/profile.yml` (shipped as `ci/assessment.yml`
-in the operator ZIP) supplies `.skill-advice` and
-`.skill-assessment` jobs. Set `ASSESSMENT_IMAGE`, `ASSESSMENT_RUNNER_TAG`,
-`SKILL_DIRECTORY`, `SCAN_MODE`, `ADVICE_OUTPUT`, and `ASSESSMENT_OUTPUT`, and put
-the released wheel in `wheels/`. Including pipelines own triggers and artifact
-retention; the operator kit includes a complete example.
+Include `ci/gitlab/profile.yml` (`ci/assessment.yml` in the operator ZIP) for
+`.skill-advice` and `.skill-assessment`. Put the wheel in `wheels/` and set
+`ASSESSMENT_IMAGE`, `ASSESSMENT_RUNNER_TAG`, `SKILL_DIRECTORY`, `SCAN_MODE`,
+`ADVICE_OUTPUT`, and `ASSESSMENT_OUTPUT`. The including pipeline defines triggers
+and artifact retention.
 
 ## Python callers
 

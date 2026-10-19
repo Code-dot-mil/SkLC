@@ -59,7 +59,14 @@ providers or missing configuration produce an explicit unavailable adjudication.
 
 ## Installation
 
-From the repository root, build the wheel:
+Download `skill_assessment-<version>-py3-none-any.whl` from
+[SkLC releases](https://github.com/Code-dot-mil/SkLC/releases). Calculate the file's
+SHA-256 and compare it with the asset digest GitHub displays before installing.
+The Python package version matches the release version under Python packaging
+normalization. The wheel installs assessment-kit and PyYAML; install SkillSpector
+separately for Advise and Assess. Validate needs no scanner.
+
+To build from source instead, run from the repository root:
 
 ```sh
 uv build --wheel products/assessment-kit --out-dir release/assessment-kit

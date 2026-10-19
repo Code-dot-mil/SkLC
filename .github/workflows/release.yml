@@ -68,7 +68,7 @@ jobs:
           --scan-mode static-only
       - name: Build static site
         run: npm --prefix site run build
-      - name: Build product archives
+      - name: Build product downloads
         id: release-assets
         shell: bash
         run: |
@@ -77,6 +77,11 @@ jobs:
             --repo-root . --site-dir site/dist \
             --version "$RELEASE_VERSION" \
             --output-dir "$RELEASE_DIR/assets"
+      - name: Build assessment wheel
+        shell: bash
+        run: |
+          uv build --wheel --python "$(command -v python)" \
+            products/assessment-kit --out-dir "$RELEASE_DIR/assets"
       - name: Create draft GitHub Release
         id: draft-release
         shell: bash
@@ -90,6 +95,7 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.zip" \
             "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip" \
+            "$RELEASE_DIR"/assets/*.whl \
             --verify-tag --draft --target "$SOURCE_REVISION" --title "$GITHUB_REF_NAME" \
             --notes-file "$RELEASE_DIR/release-body.md" \
             "${prerelease_args[@]}"

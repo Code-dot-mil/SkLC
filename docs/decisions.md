@@ -25,10 +25,18 @@ not be used as a fallback when `llm-assisted` is configured but unavailable.
 
 SkillSpector installation and dependency management are outside this repository's
 scope. The assessment kit requires an externally installed `skillspector` executable
-on `PATH` for advice; validation has no scanner prerequisite. The compatibility
-target is SkillSpector `>=2.10,<3` through its public CLI and JSON report format.
+on `PATH` for advice and assessment; validation has no scanner prerequisite.
+The compatibility target is SkillSpector `>=2.10,<3` through its public CLI and JSON report format.
 Version 2.10.0 is tested; later v2 releases are expected to remain compatible.
 
 ## 5. Assessment errors
 
 Define all assessment-kit exception types in `skill_assessment/errors.py`. Commands and callers import these shared types; command modules own parsing and execution, not exception definitions.
+
+## 6. Assessment distribution
+
+Publish the existing assessment-kit wheel directly on authorized SkLC releases,
+as the third product alongside the deployment and catalog ZIPs, using GitHub
+asset digests for download integrity. Its package version must correspond
+to the release version under Python packaging normalization. Use `uv build` to
+build the wheel and rely on the Python packaging tools for wheel validation.

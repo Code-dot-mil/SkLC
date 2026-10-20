@@ -1,7 +1,8 @@
 # Assessment kit
 
 Validate a local skill directory and get advisory scan findings with
-`skill-assessment validate` and `skill-assessment advise`.
+`skill-assessment validate`, `skill-assessment assess`, `skill-assessment hash`,
+and `skill-assessment advise`.
 
 ## Prerequisites
 
@@ -12,8 +13,8 @@ the assessment kit and run its commands.
 
 SkillSpector is an external prerequisite. The `validate` command does not require it.
 The compatibility target is SkillSpector `>=2.10,<3`, using its public CLI and JSON
-report format. Integration has been tested with 2.10.0; compatibility with later
-v2 releases is expected, not individually verified.
+report format. Integration has been exercised with 2.10.0 and 2.12.0; compatibility
+with other v2 releases is expected, not individually verified.
 
 The `skillspector` executable must be available on `PATH` in the environment that
 runs assessment-kit. Follow [SkillSpector's installation guidance](https://github.com/NVIDIA/SkillSpector#installation).
@@ -33,8 +34,9 @@ skillspector --version
 
 Configure SkillSpector's
 [provider environment](https://github.com/NVIDIA/SkillSpector/tree/v2.10.0#configuration)
-for default LLM-assisted scans; skill contents are sent to that provider. Advise
-also uses that configuration for a separate finding-adjudication request.
+for default LLM-assisted scans; skill contents are sent to that provider. Assess
+also uses that configuration for a separate request to review the findings
+(adjudication).
 
 ### Adjudication gateways
 
@@ -64,7 +66,7 @@ Download `skill_assessment-<version>-py3-none-any.whl` from
 SHA-256 and compare it with the asset digest GitHub displays before installing.
 The Python package version matches the release version under Python packaging
 normalization. The wheel installs assessment-kit and PyYAML; install SkillSpector
-separately for Advise and Assess. Validate needs no scanner.
+separately for Assess. Validate needs no scanner.
 
 To build from source instead, run from the repository root:
 
@@ -95,6 +97,170 @@ The command accepts a single directory, without a namespace or repository layout
 requirement. Validation reads no exchange policy and makes no scanner or provider calls.
 Exit status is `0` for valid input, `1` for invalid or unreadable input, and `2`
 for incorrect command usage. Diagnostics go to standard error on failure.
+
+## Assess
+
+### Run a scan
+
+Validate and scan one local skill directory using SkillSpector. Complete the
+[SkillSpector prerequisites](#skillspector) before running this command.
+LLM-assisted scanning is the default. Assess checks for `skillspector` on `PATH`
+before creating any files or directories, including when `--if-changed` is set.
+If it is missing, the command exits with status `3`, creates no artifacts, and
+leaves existing reports unchanged.
+
+```sh
+uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports
+uv run --no-project skill-assessment assess --skill ./my-skill --scan-mode static-only --output-dir ./reports
+```
+
+By default, scans use LLM analysis. Use `--scan-mode static-only` to scan without
+an LLM. If LLM analysis fails, the command reports an error instead of switching
+to static scanning.
+
+Each scan checks the selected skill. The scanner and subsequent adjudication request
+each have a 5-minute timeout by default. Use `--timeout SECONDS` to change each
+limit to a positive whole number of seconds. For example, `--timeout 600` allows
+up to 10 minutes per stage.
+
+### Reports and repeat runs
+
+Select an output directory outside the skill with `--output-dir`. Each successful
+assessment writes these files directly into it and displays the report paths:
+
+| File | Contents |
+| --- | --- |
+| `skillspector.json` | The scanner's JSON report. |
+| `adjudication.json` | A review of each finding, safety and coverage judgments, review status and scope, and provider and request details. |
+| `scanner.log` | Scanner diagnostics. |
+
+The BOE is the `skillspector.json` and `adjudication.json` pair. `scanner.log` is
+diagnostic output and must not be committed or included in BOE packages.
+Only these three output files are replaced. Other files in the output directory stay
+untouched, and skill inputs stay unchanged. The adjudication's `skill_sha256`
+field records the package hash described under [Hash](#hash).
+
+By default, every invocation rescans. Add `--if-changed` to reuse successful
+reports for the same skill contents and scan mode:
+
+```sh
+uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports --if-changed
+```
+
+Reuse requires the two JSON files and a matching package hash; diagnostics are optional. The scanner report
+must show that scanning succeeded in the requested mode, and adjudication must
+be completed (`not_performed` for static-only). Successful scans with coverage limitations can still qualify. Missing, malformed, failed, or mismatched reports
+trigger a new scan.
+
+The command prepares reports in a separate sibling directory before replacing
+the current files. If scanning or adjudication fails, the current reports stay
+unchanged; the error identifies the directory holding diagnostics and available
+outputs. Replacement after a successful assessment happens one file at a time,
+so it is not a transaction. Copy reports elsewhere if you need a lasting history;
+the command keeps no history or assessment index.
+
+### Shorten the source path
+
+Use `--base-dir` (or `SKILL_ASSESSMENT_BASE_DIR` for CI) to remove a matching directory prefix from `skill.source` in the
+native scanner report:
+
+```sh
+uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports --base-dir ./
+```
+
+An explicit `--base-dir` takes precedence over `SKILL_ASSESSMENT_BASE_DIR`.
+The base directory resolves relative to the working directory. Absolute source
+paths are normalized and matched at directory boundaries; a matching source
+becomes relative to that base. Already-relative, unmatched, missing, or non-string
+source values stay unchanged. Only `skill.source` is rewritten: other report
+paths, finding text, and scanner logs are not redacted. Without either setting,
+native report bytes stay unchanged.
+
+The rewrite happens after scanning and before adjudication, including retained
+failure reports when their JSON is usable. With `--if-changed`, qualifying cached
+reports have a matching absolute source rewritten without another scan or provider
+request. An already-relative cached source stays unchanged even if the base changes;
+rescan without `--if-changed` to obtain a fresh source path.
+
+### Review scope
+
+**MVP NOTICE:** Adjudication examines `SKILL.md` and scanner evidence only.
+Additional skill files are not independently reviewed. A `safe_to_use: true`
+judgment applies only to this scope and does not certify the package.
+
+The full `SKILL.md` is sent in one request. Assessment-kit does not execute it,
+follow its links, redact secrets, split it into chunks, or truncate it. If the
+input exceeds the gateway's context limit, adjudication fails.
+
+### How findings are reviewed
+
+The packaged
+[system prompt](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/src/skill_assessment/prompts/adjudicate.md)
+tells the model to treat skill text and scanner reports as evidence, never as
+instructions. It asks for a true-positive, false-positive, or uncertain judgment
+on every finding, with a reason. It explains how to read static confidence
+scores, `llm-unconfirmed` and `benign-context` tags, and the scanner's record of
+files and analysis it could not complete. These signals help the model judge the
+findings; none establishes safety on its own.
+
+Assessment-kit checks that the response covers every finding in order and that
+the safety judgment agrees with the findings and coverage judgment. It adds the
+review status and scope, provider and model, creation time, request duration,
+call counts, and token usage when the gateway supplies it. Unknown token usage
+is recorded as null, not zero. Credentials and endpoint URLs are excluded from
+this metadata.
+
+Static-only scans make no adjudication request, even if credentials are
+configured. Their adjudication report uses `status: not_performed`, null safety
+and coverage judgments, and `not_adjudicated` entries that keep each finding's
+index and rule ID. Provider, model, and token usage are null; call counts and
+duration are zero. The creation time records when the report was written.
+
+### Coverage and failures
+
+A readable scan with partial coverage still goes to adjudication. Reports can
+be saved as the current assessment even with low coverage when the scanner
+reports successful execution in the requested mode and adjudication completes.
+The kit uses the scanner's execution outcome and inference metadata, rather than
+reinterpreting its analyzer ledger. The scanner's coverage fields remain unchanged, and summaries retain
+warnings about incomplete coverage.
+
+Missing provider configuration produces `status: unavailable`. A failed request
+or invalid response produces `status: failed`. Both leave safety and coverage
+unknown (`null`) and mark findings `not_adjudicated` with a brief reason. A
+scanner failure also produces an unavailable adjudication for an LLM-assisted
+run when reports can be written. Static-only failures keep
+`status: not_performed`, with any readable findings or an empty list if no usable
+report exists. A scanner report is retained only if the scanner wrote one.
+
+### Exit status
+
+| Status | Meaning |
+| --- | --- |
+| `0` | Assessment completed, regardless of finding severity or negative safety and coverage judgments. |
+| `1` | Invalid input or a problem setting up the output directory. |
+| `2` | Incorrect command usage. |
+| `3` | Missing scanner, scanner failure, timeout, missing or malformed output, failed or degraded requested LLM analysis, or unavailable or failed adjudication. |
+
+`not_performed` alone is expected in static-only mode and does not signal a
+failure. A successful exit does not certify safety.
+
+## Hash
+
+Print the package hash without running an assessment:
+
+```sh
+uv run --no-project skill-assessment hash --skill ./my-skill
+```
+
+Success writes only the SHA-256 and a newline to stdout. Invalid directories or
+file read failures return `1` with diagnostics on stderr. This command hashes
+package bytes without validating frontmatter.
+
+The hash includes file paths and contents. It starts with
+`skill-assessment-package-v1` and a NUL byte, then processes files in sorted
+relative POSIX path order. Each path and each file's contents are preceded by
+their unsigned eight-byte big-endian byte length. Empty directories are omitted.
 
 ## Advise
 
@@ -163,75 +329,9 @@ A completed negative safety verdict remains advisory and does not change a succe
 exit to an execution error. A successful exit does not certify safety.
 Advise creates no BOE or exchange evidence.
 
-## Assess
-
-`assess` scans a local skill, produces an adjudication, and records the reports in
-the skill’s assessment history.
-
-```sh
-uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./evidence/my-skill
-uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./evidence/my-skill --override --scan-mode static-only
-```
-
-Each successful assessment retains `skillspector.json`, `adjudication.json`, and
-`scanner.log`. The index holds one assessment per `skill_sha256`, regardless of
-scan mode. Assessing unchanged content returns an error without scanning; use
-`--override` to replace its indexed assessment. Changed skill content adds a new
-hash entry, retaining assessments for other hashes.
-
-The index lists assessments newest first. Each path is relative to the index;
-consumers read metadata from the entry rather than deriving it from directory names.
-
-```json
-{
-  "boe_schema_version": 1,
-  "skill": "my-skill",
-  "assessments": [
-    {
-      "assessed_at": "2026-10-19T15:42:08Z",
-      "path": "my-skill-example",
-      "skill_sha256": "<64 hexadecimal characters>",
-      "reports": {
-        "skillspector.json": "<SHA-256>",
-        "adjudication.json": "<SHA-256>",
-        "scanner.log": "<SHA-256>"
-      }
-    }
-  ]
-}
-```
-
-`skill_sha256` records the skill's file paths and contents as metadata. It hashes
-sorted relative POSIX file paths and contents, each prefixed by its unsigned
-eight-byte big-endian byte length, following `skill-assessment-package-v1` and a
-NUL byte. Empty directories are omitted.
-
-`--scan-mode` and `--timeout` have the same behavior as in `advise`. If scanning
-or adjudication fails, diagnostics and available outputs are retained, and the
-index and any previous assessment remain unchanged. Exit codes match `advise`;
-duplicate assessments without `--override` and index read or write errors return `1`.
-
-`reports` records each output's SHA-256; hashes are not automatically verified.
-
-## Reference GitLab CI
-
-Include `ci/gitlab/profile.yml` (`ci/assessment.yml` in the operator ZIP) for
-`.skill-advice` and `.skill-assessment`. Put the wheel in `wheels/` and set
-`ASSESSMENT_IMAGE`, `ASSESSMENT_RUNNER_TAG`, `SKILL_DIRECTORY`, `SCAN_MODE`,
-`ADVICE_OUTPUT`, and `ASSESSMENT_OUTPUT`. The including pipeline defines triggers
-and artifact retention.
-
-## Python callers
-
-Python callers can catch `ScanTimeoutError` to decide whether to retry and
-`OutputDirectoryError` to choose or repair the output location. `IncompleteScanError`
-identifies partial or degraded analysis. Timeout and incomplete-analysis errors
-inherit from `ScanError`, which also covers missing scanners, process failures,
-and unreadable or malformed reports. Error types live in `skill_assessment.errors`.
-
 ## Development
 
 `uv run --extra test pytest` runs without installing SkillSpector.
 The real static scan integration test runs only when `skillspector` is on `PATH`;
-other Advise tests exercise the external process and HTTP boundaries without a
-scanner install or provider credentials.
+other assessment tests exercise the external process and HTTP boundaries without
+a scanner install or provider credentials.

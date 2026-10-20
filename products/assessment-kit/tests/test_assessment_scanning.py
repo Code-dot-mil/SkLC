@@ -1,4 +1,3 @@
-import io
 import json
 import shutil
 import subprocess
@@ -10,7 +9,6 @@ from unittest.mock import mock_open
 
 import pytest
 from skill_assessment.cli import main
-from skill_assessment.commands.advise import advise_skill
 from skill_assessment.errors import (
     IncompleteScanError,
     MissingFrontmatterError,
@@ -18,82 +16,12 @@ from skill_assessment.errors import (
     ScanError,
     ScanTimeoutError,
 )
-
-
-@pytest.fixture
-def skill(tmp_path):
-    path = tmp_path / "my-skill"
-    path.mkdir()
-    (path / "SKILL.md").write_text("---\nname: my-skill\ndescription: Example\n---\nInstructions.\n")
-    return path
-
-
-@pytest.fixture
-def gateway(monkeypatch):
-    for key in ("SKILLSPECTOR_COMPAT_BASE_URL", "SKILLSPECTOR_COMPAT_API_KEY", "AZURE_OPENAI_ENDPOINT",
-                "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEPLOYMENT", "AZURE_OPENAI_API_VERSION", "OPENAI_PROJECT_ID"):
-        monkeypatch.delenv(key, raising=False)
-    monkeypatch.setenv("SKILLSPECTOR_PROVIDER", "openai")
-    monkeypatch.setenv("SKILLSPECTOR_MODEL", "review-model")
-    monkeypatch.setenv("OPENAI_BASE_URL", "https://gateway.example/v1")
-    monkeypatch.setenv("OPENAI_API_KEY", "test-secret")
-    state = {"calls": [], "overrides": {}, "finish_reason": "stop"}
-
-    def complete(opener, request, *, timeout):
-        state["calls"].append(request)
-        if "error" in state:
-            raise state["error"]
-        payload = json.loads(request.data)
-        evidence = json.loads(payload["messages"][1]["content"])
-        result = {
-            "safe_to_use": True, "summary": "Benign examples.",
-            "coverage_sufficient": True, "coverage_reason": "Supplied context is sufficient.",
-            "findings": [{"index": index, "rule_id": issue["id"], "determination": "false_positive",
-                          "reason": "Illustrative example."}
-                         for index, issue in enumerate(evidence["report"]["issues"], 1)],
-        }
-        result.update(state["overrides"])
-        content = state.get("content", json.dumps(result))
-        response = {"model": "served-model", "choices": [{"finish_reason": state["finish_reason"],
-                                                          "message": {"content": content}}]}
-        if "usage" in state:
-            response["usage"] = state["usage"]
-        return io.BytesIO(json.dumps(response).encode())
-
-    monkeypatch.setattr(urllib.request.OpenerDirector, "open", complete)
-    return state
-
-
-@pytest.fixture
-def scanner(monkeypatch, gateway):
-    report = {
-        "execution_successful": True,
-        "analysis_completeness": {"is_complete": True},
-        "metadata": {"llm_requested": True, "llm_available": True},
-        "risk_assessment": {"score": 80, "severity": "HIGH"},
-        "issues": [{"id": "CE1", "severity": "HIGH", "location": {"file": "run.py", "start_line": 3},
-                    "explanation": "Untrusted input reaches eval", "remediation": "Parse data without eval"}],
-    }
-    state = {"report": report, "status": 1, "calls": [], "timeouts": []}
-
-    def scan(command, *, stdout, **kwargs):
-        state["calls"].append(command)
-        state["timeouts"].append(kwargs["timeout"])
-        stdout.write("scanner diagnostics\n")
-        path = Path(command[command.index("--output") + 1])
-        if state["report"] is not None:
-            path.write_text(json.dumps(state["report"]), encoding="utf-8")
-        if "error" in state:
-            raise state["error"]
-        return subprocess.CompletedProcess(command, state["status"])
-
-    monkeypatch.setattr(subprocess, "run", scan)
-    return state
+from skill_assessment.scanning import scan_skill
 
 
 @pytest.mark.parametrize(("options", "timeout"), [([], 300), (["--timeout", "600"], 600)])
 def test_cli_applies_scanner_timeout(skill, scanner, tmp_path, options, timeout):
-    code = main(["advise", "--skill", str(skill), "--output-dir", str(tmp_path / "reports"), *options])
+    code = main(["assess", "--skill", str(skill), "--output-dir", str(tmp_path / "reports"), *options])
 
     assert code == 0
     assert scanner["timeouts"] == [timeout]
@@ -104,36 +32,15 @@ def test_cli_rejects_invalid_timeout_before_scanning(skill, scanner, tmp_path, t
     output = tmp_path / "reports"
 
     with pytest.raises(SystemExit) as error:
-        main(["advise", "--skill", str(skill), "--output-dir", str(output), "--timeout", timeout])
+        main(["assess", "--skill", str(skill), "--output-dir", str(output / "current"), "--timeout", timeout])
 
     assert error.value.code == 2
     assert not scanner["calls"]
     assert not output.exists()
 
 
-def test_retains_useful_native_findings_across_runs(skill, scanner, tmp_path, monkeypatch):
-    # Arrange
-    monkeypatch.chdir(tmp_path)
-    before = (skill / "SKILL.md").read_bytes()
-
-    # Act
-    codes = [main(["advise", "--skill", str(skill)]) for _ in range(2)]
-
-    # Assert
-    assert codes == [0, 0]  # Risk findings are advice, not execution failures.
-    reports = list((tmp_path / "assessment-reports").glob("*/skillspector.json"))
-    assert len(reports) == 2
-    assert all(json.loads(path.read_text()) == scanner["report"] for path in reports)
-    assert all(path.with_name("scanner.log").read_text() for path in reports)
-    assert all(json.loads(path.with_name("adjudication.json").read_text())["status"] == "completed"
-               for path in reports)
-    assert all("--no-llm" not in command for command in scanner["calls"])
-    assert list(skill.iterdir()) == [skill / "SKILL.md"]
-    assert (skill / "SKILL.md").read_bytes() == before
-
-
 @pytest.mark.parametrize("failure", [
-    "process", "missing", "malformed", "execution", "partial",
+    "process", "missing", "malformed", "execution",
     "unavailable", "degraded", "lost-calls", "mode", "timeout",
 ])
 def test_failed_scans_retain_artifacts_and_never_retry(skill, scanner, tmp_path, failure):
@@ -150,8 +57,6 @@ def test_failed_scans_retain_artifacts_and_never_retry(skill, scanner, tmp_path,
         scanner["report"] = ["unexpected report shape"]
     elif failure == "execution":
         report["execution_successful"] = False
-    elif failure == "partial":
-        report["analysis_completeness"]["is_complete"] = False
     elif failure == "unavailable":
         report["metadata"]["llm_available"] = False
     elif failure == "degraded":
@@ -167,8 +72,8 @@ def test_failed_scans_retain_artifacts_and_never_retry(skill, scanner, tmp_path,
 
     # Act
     with pytest.raises(expected_error) as error:
-        advise_skill(skill, output)
-    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+        scan_skill(skill, output)
+    code = main(["assess", "--skill", str(skill), "--output-dir", str(output / "current")])
 
     # Assert
     assert code == 3
@@ -204,8 +109,8 @@ def test_rejects_invalid_input_before_writing_or_scanning(skill, scanner, invali
 
     # Act
     with pytest.raises(expected_error):
-        advise_skill(skill, output)
-    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+        scan_skill(skill, output)
+    code = main(["assess", "--skill", str(skill), "--output-dir", str(output / "current")])
 
     # Assert
     assert code == 1
@@ -214,9 +119,9 @@ def test_rejects_invalid_input_before_writing_or_scanning(skill, scanner, invali
     assert (skill / "SKILL.md").read_bytes() == before
 
 
-def test_rejects_multiple_skills_before_scanning(skill, scanner):
+def test_rejects_multiple_skills_before_scanning(skill, scanner, tmp_path):
     # Arrange
-    args = ["advise", "--skill", str(skill), "--skill", str(skill)]
+    args = ["assess", "--skill", str(skill), "--skill", str(skill), "--output-dir", str(tmp_path / "reports")]
 
     # Act
     with pytest.raises(SystemExit) as error:
@@ -235,8 +140,8 @@ def test_output_setup_failure_preserves_existing_file(skill, scanner, tmp_path):
 
     # Act
     with pytest.raises(OutputDirectoryError):
-        advise_skill(skill, output)
-    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+        scan_skill(skill, output)
+    code = main(["assess", "--skill", str(skill), "--output-dir", str(output / "current")])
 
     # Assert
     assert code == 1
@@ -246,7 +151,7 @@ def test_output_setup_failure_preserves_existing_file(skill, scanner, tmp_path):
 
 
 @pytest.mark.parametrize("failure", ["open", "close"])
-def test_diagnostic_storage_failure_is_an_output_error(skill, tmp_path, monkeypatch, failure):
+def test_diagnostic_storage_failure_is_an_output_error(skill, scanner, tmp_path, monkeypatch, failure):
     # Arrange: filesystem faults are injected at the diagnostic file boundary.
     monkeypatch.setenv("PATH", "")
     output = tmp_path / "reports"
@@ -265,8 +170,8 @@ def test_diagnostic_storage_failure_is_an_output_error(skill, tmp_path, monkeypa
 
     # Act
     with pytest.raises(OutputDirectoryError):
-        advise_skill(skill, output)
-    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+        scan_skill(skill, output)
+    code = main(["assess", "--skill", str(skill), "--output-dir", str(output / "current")])
 
     # Assert
     assert code == 1
@@ -282,7 +187,8 @@ def test_real_static_scan_provides_actionable_findings(skill, tmp_path):
     output = tmp_path / "reports"
 
     # Act
-    code = main(["advise", "--skill", str(skill), "--scan-mode", "static-only", "--output-dir", str(output)])
+    code = main(["assess", "--skill", str(skill), "--scan-mode", "static-only",
+                 "--output-dir", str(output / "current")])
 
     # Assert
     assert code == 0
@@ -294,27 +200,21 @@ def test_real_static_scan_provides_actionable_findings(skill, tmp_path):
     assert {path.name: path.read_bytes() for path in skill.iterdir()} == before
 
 
-def test_missing_scanner_reports_failure_without_adding_scanner_output(skill, tmp_path, monkeypatch):
-    # Arrange
+def test_missing_scanner_fails_without_creating_output(skill, tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("PATH", "")
-    output = tmp_path / "reports"
-    before = (skill / "SKILL.md").read_bytes()
+    before = set(tmp_path.rglob("*"))
+    output = tmp_path / "new" / "reports"
 
-    # Act
     with pytest.raises(ScanError) as error:
-        advise_skill(skill, output)
-    code = main(["advise", "--skill", str(skill), "--output-dir", str(output)])
+        scan_skill(skill, output)
+    assert error.value.report_dir is None
+    assert main(["assess", "--skill", str(skill), "--output-dir", str(output)]) == 3
 
-    # Assert
-    assert code == 3
-    assert error.value.report_dir.parent == output
-    logs = list(output.glob("*/scanner.log"))
-    assert len(logs) == 2
-    assert all(log.stat().st_size == 0 for log in logs)
-    assert (skill / "SKILL.md").read_bytes() == before
+    assert "SkillSpector" in capsys.readouterr().err
+    assert set(tmp_path.rglob("*")) == before
 
 
-def test_advice_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
+def test_assessment_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
     # Arrange: a standalone executable provides the scanner's public CLI contract.
     scanner_bin = tmp_path / "bin"
     scanner_bin.mkdir()
@@ -334,7 +234,8 @@ def test_advice_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
     output = tmp_path / "reports"
 
     # Act
-    code = main(["advise", "--skill", str(skill), "--scan-mode", "static-only", "--output-dir", str(output)])
+    code = main(["assess", "--skill", str(skill), "--scan-mode", "static-only",
+                 "--output-dir", str(output / "current")])
 
     # Assert
     assert code == 0
@@ -346,7 +247,8 @@ def test_advice_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
 def test_adjudicates_partial_report_with_full_skill_context(skill, scanner, gateway, tmp_path):
     scanner['report']['analysis_completeness'].update(
         is_complete=False, status='partial', coverage_percent=100,
-        ledger_exceptions=[{'reason_code': 'reference_unresolved', 'start_line': 5, 'fatal': False}],
+        ledger_exceptions=[{'outcome': 'partial', 'phase': 'reference_resolution',
+                            'reason_code': 'reference_unresolved', 'start_line': 5, 'fatal': False}],
         references=[{'evidence': 'Authn/authz checks', 'status': 'missing'}],
     )
     scanner['report']['issues'][0].update(tags=['llm-unconfirmed', 'likely-benign-context'], confidence=0.9)
@@ -355,7 +257,7 @@ def test_adjudicates_partial_report_with_full_skill_context(skill, scanner, gate
     (skill / 'private.py').write_text('DO_NOT_TRANSMIT_THIS_FILE')
     output = tmp_path / 'reports'
 
-    assert main(['advise', '--skill', str(skill), '--output-dir', str(output)]) == 3
+    assert main(['assess', '--skill', str(skill), '--output-dir', str(output / "current")]) == 0
 
     raw = next(output.glob('*/skillspector.json'))
     assert json.loads(raw.read_text()) == scanner['report']
@@ -386,7 +288,7 @@ def test_gateway_protocol_and_usage_are_retained(skill, scanner, gateway, tmp_pa
     monkeypatch.setenv('AZURE_OPENAI_API_VERSION', '2024-10-21')
     gateway['usage'] = {'prompt_tokens': 100, 'completion_tokens': 30, 'total_tokens': 130}
 
-    report = advise_skill(skill, tmp_path / 'reports')
+    report = scan_skill(skill, tmp_path / 'reports')
 
     request = gateway['calls'][0]
     if provider == 'azure_openai':
@@ -437,7 +339,7 @@ def test_adjudication_failure_is_explicit_and_preserves_native_report(
         gateway['finish_reason'] = 'length'
     output = tmp_path / 'reports'
 
-    assert main(['advise', '--skill', str(skill), '--output-dir', str(output)]) == 3
+    assert main(['assess', '--skill', str(skill), '--output-dir', str(output / "current")]) == 3
 
     raw = next(output.glob('*/skillspector.json'))
     assert json.loads(raw.read_text()) == scanner['report']
@@ -459,7 +361,7 @@ def test_true_positive_is_advice_not_execution_failure(skill, scanner, gateway, 
     }
     output = tmp_path / 'reports'
 
-    assert main(['advise', '--skill', str(skill), '--output-dir', str(output)]) == 0
+    assert main(['assess', '--skill', str(skill), '--output-dir', str(output / "current")]) == 0
 
     result = json.loads(next(output.glob('*/adjudication.json')).read_text())
     assert result['safe_to_use'] is False
@@ -483,9 +385,10 @@ def test_static_only_records_unadjudicated_findings_without_inference(skill, sca
         scanner['report'] = None
     output = tmp_path / 'reports'
 
-    code = main(['advise', '--skill', str(skill), '--scan-mode', 'static-only', '--output-dir', str(output)])
+    code = main(['assess', '--skill', str(skill), '--scan-mode', 'static-only',
+                 '--output-dir', str(output / "current")])
 
-    assert code == (3 if scenario in ('partial', 'failed', 'missing') else 0)
+    assert code == (3 if scenario in ('failed', 'missing') else 0)
     assert not gateway['calls']
     assert '--no-llm' in scanner['calls'][0]
     run = next(output.iterdir())
@@ -496,7 +399,7 @@ def test_static_only_records_unadjudicated_findings_without_inference(skill, sca
         assert json.loads((run / 'skillspector.json').read_text()) == scanner['report']
         issues = scanner['report']['issues']
     result = json.loads((run / 'adjudication.json').read_text())
-    assert set(result) == {
+    assert set(result) == ({'skill_sha256'} if code == 0 else set()) | {
         'safe_to_use', 'summary', 'coverage_sufficient', 'coverage_reason', 'findings', 'status', 'scope', 'metadata',
     }
     assert result['status'] == 'not_performed'
@@ -531,6 +434,6 @@ def test_adjudication_storage_failure_preserves_native_report(skill, scanner, tm
     output = tmp_path / 'reports'
     options = ['--scan-mode', 'static-only'] if static_only else []
 
-    assert main(['advise', '--skill', str(skill), '--output-dir', str(output), *options]) == 1
+    assert main(['assess', '--skill', str(skill), '--output-dir', str(output / "current"), *options]) == 1
 
     assert json.loads(next(output.glob('*/skillspector.json')).read_text()) == scanner['report']

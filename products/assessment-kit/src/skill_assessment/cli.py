@@ -1,6 +1,6 @@
 import argparse
 
-from .commands import advise, assess, validate
+from .commands import advise, assess, hash, validate
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -9,5 +9,6 @@ def main(argv: list[str] | None = None) -> int:
     validate.register(commands)
     advise.register(commands)
     assess.register(commands)
+    hash.register(commands)
     args = parser.parse_args(argv)
     return args.handler(args)

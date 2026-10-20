@@ -34,7 +34,7 @@ assess:
   stage: assess
   dependencies: []
   script:
-    - python -m skill_exchange.operator assess --scan-mode "$SCAN_MODE" --override
+    - python -m skill_exchange.operator assess --scan-mode "$SCAN_MODE"
   artifacts:
     when: always
     expire_in: 30 days

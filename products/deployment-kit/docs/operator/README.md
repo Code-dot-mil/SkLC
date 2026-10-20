@@ -125,27 +125,26 @@ execution, requested inference, adjudication, or evidence-writing failures stop
 dependent jobs. The failed assessment job still attempts to upload available
 diagnostics; runner interruption or timeout can prevent upload.
 
-Generation reads the newest indexed assessment for each skill without rescanning
-or verifying its hashes. Keep assessments with their matching source content.
+Generation reads current `skillspector.json` and `adjudication.json` from
+`evidence/<namespace>/<skill>/` without rescanning or verifying package hashes. Keep assessments with their matching source content.
 After success, open **Deploy > Pages** and use the displayed URL. Check the styled
 catalog, a skill page, its package ZIP, source revision link, and native scanner
 report download. See [GitLab Pages](https://docs.gitlab.com/user/project/pages/).
 
 | Location | Available evidence |
 | --- | --- |
-| Assessment job's `evidence/` artifact | Per-skill index, raw `skillspector.json`, `adjudication.json`, and `scanner.log`; failed runs retain whichever diagnostic files could be written |
-| Generate job's `.exchange/generated/` artifact | Catalog data, skill ZIPs, and per-run `skillspector.json`, scanner-derived `summary.json`, and an assessment-index copy named `boe.json` |
+| Assessment job's `evidence/` artifact | Current raw `skillspector.json`, `adjudication.json`, and `scanner.log`; failed runs retain whichever diagnostic files could be written |
+| Generate job's `.exchange/generated/` artifact | Catalog data, skill ZIPs, and per-run `skillspector.json`, scanner-derived `summary.json`, and an adjudication copy named `boe.json` |
 | Published site and `public/` artifact | Skill packages and those three per-run JSON downloads; the page displays scanner findings/risk and links the native report |
 
-To retrieve the scanner-derived summary or index copy from the site, replace
+To retrieve the scanner-derived summary or adjudication copy from the site, replace
 `skillspector.json` in the native-report download URL with `summary.json` or
-`boe.json`. The index copy references directories in the CI evidence; it is not
-a complete downloadable assessment bundle.
+`boe.json`. The adjudication copy is not a complete downloadable assessment bundle.
 
-The site does not publish adjudication or scanner logs. Download the assessment
-job's evidence to review the adjudication, including its scope and coverage
-judgment. The generated summary describes scanner risk; it is not an adjudication
-or a separate LLM-written summary. Use the raw scanner report to inspect individual model calls.
+The site publishes the adjudication copy but does not publish scanner logs.
+The generated summary describes scanner risk; it is not an adjudication
+or a separate LLM-written summary. Use the adjudication for its scope and coverage
+judgment, and the raw scanner report to inspect individual model calls.
 
 ## Retain evidence and run again
 
@@ -154,16 +153,17 @@ The template requests 30-day expiry; GitLab retention settings can keep current
 artifacts longer. A latest-artifacts link can change after another run. See
 [job artifacts](https://docs.gitlab.com/ci/jobs/job_artifacts/).
 
-For durable history, extract the archive's `evidence/` directory into the catalog
-checkout, review it, and commit it with its matching catalog revision. Keep each
-index with its report directories. The pipeline makes no commits or pushes.
+For durable history, retain each skill's `skillspector.json` and
+`adjudication.json` together with their matching catalog revision. These two files
+are the BOE; review and commit that pair when keeping evidence in the checkout.
+Keep `scanner.log` in diagnostic artifacts only. The pipeline makes no commits or pushes.
 
-Every pipeline run uses `assess --override`: unchanged skills are reassessed and
-their indexed entries replaced; changed content adds a new hash entry. This
-incurs new provider usage in LLM-assisted mode. An override replaces the prior report directory for that hash. Download or
-commit evidence before rerunning if you need to retain the earlier result.
-The standalone command's duplicate guard remains available when `--override` is
-omitted. See [assessment history](../../../assessment-kit/README.md#assess).
+Every pipeline run reassesses skills and replaces the three current report files
+only after successful scanning and adjudication. This incurs provider usage in
+LLM-assisted mode. Failed runs retain diagnostics separately and preserve current
+reports. Download or commit evidence before rerunning to retain earlier results.
+Use `--if-changed` locally to reuse valid reports for unchanged content and mode.
+See [current assessments](../../../assessment-kit/README.md#assess).
 
 ## Run locally
 
@@ -176,7 +176,7 @@ python -m pip install wheels/*.whl
 export PYTHONPATH=scripts
 export SKILL_EXCHANGE_SOURCE_REPOSITORY_URL="<gitlab-project-url>"
 export SKILL_EXCHANGE_SOURCE_BRANCH="$(git rev-parse HEAD)"
-python -m skill_exchange.operator assess --scan-mode static-only --override
+python -m skill_exchange.operator assess --scan-mode static-only
 python -m skill_exchange.operator generate --scan-mode static-only
 npm ci --prefix site
 npm --prefix site run build

@@ -54,11 +54,15 @@ def validate_scan_execution(report: dict, returncode: int, report_dir: Path) -> 
         raise ScanError("SkillSpector execution failed", report_dir)
 
 
-def validate_scan_completeness(report: dict, report_dir: Path, *, static_only: bool) -> None:
+def validate_scan_completeness(
+    report: dict, report_dir: Path, *, static_only: bool, require_complete: bool = True,
+) -> None:
     """Enforce the requested scan mode after contextual adjudication."""
     metadata = report["metadata"]
     completeness = report["analysis_completeness"]
-    if completeness.get("is_complete") is not True or metadata.get("llm_requested") is not (not static_only):
+    if (require_complete and completeness.get("is_complete") is not True) or (
+        metadata.get("llm_requested") is not (not static_only)
+    ):
         raise IncompleteScanError("requested analysis was incomplete or changed mode", report_dir)
     if not static_only and (
         metadata.get("llm_available") is not True
@@ -69,7 +73,9 @@ def validate_scan_completeness(report: dict, report_dir: Path, *, static_only: b
         raise IncompleteScanError("requested analysis was incomplete or degraded", report_dir)
 
 
-def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = 300) -> Path:
+def advise_skill(
+    skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = 300, require_complete: bool = True,
+) -> Path:
     """Validate and scan one skill, retaining native output even on failure."""
     skill = skill.resolve()
     validate_skill(skill)
@@ -103,7 +109,7 @@ def advise_skill(skill: Path, output_dir: Path, *, static_only: bool = False, ti
     adjudication = adjudicate_report(
         report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, timeout=timeout, static_only=static_only,
     )
-    validate_scan_completeness(report, report_dir, static_only=static_only)
+    validate_scan_completeness(report, report_dir, static_only=static_only, require_complete=require_complete)
     if not static_only and adjudication["status"] != "completed":
         raise IncompleteScanError(f"Adjudication {adjudication['status']}", report_dir)
     return report_path

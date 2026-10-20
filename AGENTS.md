@@ -31,7 +31,7 @@ These instructions apply to this repository.
 
 - Keep the GitHub Actions workflows self-contained under `.github/workflows/`.
 - `lint` and `test` should cover site, tooling, tests, policy, lockfile, or CI changes.
-- Site generation reads verified exact-content tracked BOE; it must not run assessments or write new evidence.
+- Prebuilt site generation reads verified exact-content tracked BOE. Operator site generation reads the preceding assessment job's latest per-skill output without verifying hashes. Neither path runs assessments or writes new evidence.
 - Node jobs must not generate exchange data; they consume artifacts produced by Python jobs.
 
 ## Local Development

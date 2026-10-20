@@ -137,7 +137,7 @@ Assessment-kit does not truncate inputs; gateway context-limit errors produce a
 failed adjudication.
 
 The system prompt is packaged in
-[`prompts/adjudicate.md`](src/skill_assessment/prompts/adjudicate.md). It explains
+[`prompts/adjudicate.md`](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/src/skill_assessment/prompts/adjudicate.md). It explains
 static confidence, `llm-unconfirmed`, benign-context tags, and ledger exceptions.
 The response is checked for a verdict on every finding and consistency between
 the safety flag, findings, and coverage. The adjudication adds code-generated
@@ -190,7 +190,12 @@ consumers read metadata from the entry rather than deriving it from directory na
     {
       "assessed_at": "2026-10-19T15:42:08Z",
       "path": "my-skill-example",
-      "skill_sha256": "<64 hexadecimal characters>"
+      "skill_sha256": "<64 hexadecimal characters>",
+      "reports": {
+        "skillspector.json": "<SHA-256>",
+        "adjudication.json": "<SHA-256>",
+        "scanner.log": "<SHA-256>"
+      }
     }
   ]
 }
@@ -205,6 +210,16 @@ NUL byte. Empty directories are omitted.
 or adjudication fails, diagnostics and available outputs are retained, and the
 index and any previous assessment remain unchanged. Exit codes match `advise`;
 duplicate assessments without `--override` and index read or write errors return `1`.
+
+`reports` records each output's SHA-256; hashes are not automatically verified.
+
+## Reference GitLab CI
+
+Include `ci/gitlab/profile.yml` (`ci/assessment.yml` in the operator ZIP) for
+`.skill-advice` and `.skill-assessment`. Put the wheel in `wheels/` and set
+`ASSESSMENT_IMAGE`, `ASSESSMENT_RUNNER_TAG`, `SKILL_DIRECTORY`, `SCAN_MODE`,
+`ADVICE_OUTPUT`, and `ASSESSMENT_OUTPUT`. The including pipeline defines triggers
+and artifact retention.
 
 ## Python callers
 

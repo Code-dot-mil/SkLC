@@ -31,7 +31,7 @@ def assess_skill(
     existing = next((entry for entry in index["assessments"] if entry["skill_sha256"] == digest), None)
     if existing is not None and not override:
         raise ValueError(f"Assessment already exists at {output_dir / existing['path']}; use --override to replace it")
-    report = advise_skill(skill, output_dir, static_only=static_only, timeout=timeout)
+    report = advise_skill(skill, output_dir, static_only=static_only, timeout=timeout, require_complete=False)
     assessment = report.parent
     if existing is not None:
         assessment = output_dir / existing["path"]
@@ -44,6 +44,8 @@ def assess_skill(
         "assessed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "path": existing["path"] if existing is not None else assessment.name,
         "skill_sha256": digest,
+        "reports": {name: hashlib.sha256((assessment / name).read_bytes()).hexdigest()
+                    for name in ("skillspector.json", "adjudication.json", "scanner.log")},
     })
     index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
     return assessment

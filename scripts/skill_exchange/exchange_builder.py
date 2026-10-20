@@ -40,6 +40,7 @@ def build_exchange(
     generated_dir: Path,
     scan_modes: tuple[str, ...],
     boe_dir: Path | None = None,
+    boe_reader=None,
 ) -> dict[str, Any]:
     boe_dir = boe_dir if boe_dir is not None else generated_dir / "boe"
     generated_dir.mkdir(parents=True, exist_ok=True)
@@ -69,7 +70,8 @@ def build_exchange(
 
     for skill, _validation in valid_skills:
         for mode in scan_modes:
-            cached_boe = read_latest_tracked_boe(boe_dir=boe_dir, skill=skill, mode=mode)
+            reader = read_latest_tracked_boe if boe_reader is None else boe_reader
+            cached_boe = reader(boe_dir=boe_dir, skill=skill, mode=mode)
             if cached_boe is None:
                 missing_boes.append(f"{skill.metadata.display_id} ({mode})")
                 continue

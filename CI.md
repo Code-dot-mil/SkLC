@@ -156,9 +156,10 @@ This creates the public tag and starts release preparation; it does not publish
 the release. The workflow runs the Python and site checks, generates catalog
 data from tracked BOE that matches each skill's content, and builds the site. Missing evidence fails
 the build without running a scanner. The workflow then creates an unpublished
-draft containing exactly three assets under the same version:
+draft containing exactly four assets under the same version:
 
 - `deployment-kit-prebuilt-<version>.zip`
+- `deployment-kit-operator-<version>.zip`
 - `skill-catalog-<version>.zip`
 - `skill_assessment-<version>-py3-none-any.whl`
 
@@ -266,3 +267,5 @@ its default dependency and ecosystem labels and assigns update pull requests to
 critical alerts. Those alerts are reviewed when received; the rest of the
 backlog is reviewed weekly. Alerts that cannot be fixed promptly are escalated
 to repository administrator `scotluns`.
+
+PR CI uploads an operator ZIP preview. Setup: [operator guide](products/deployment-kit/docs/operator/README.md).

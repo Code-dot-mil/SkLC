@@ -11,8 +11,10 @@
   changes separately and explain necessary exceptions. Preserve readability and
   required behavior rather than compressing code to meet the target.
 - **Respect responsibility boundaries.** Keep related decisions together and
-  follow existing ownership conventions. Add indirection when it reduces the work
-  needed to understand or change the code. Preserve unrelated and concurrent work.
+  apply the [product-boundary contract](docs/product-boundaries.md) when assessing
+  ownership, dependencies, composition, CI, and test scope. Add indirection when
+  it reduces the work needed to understand or change the code. Preserve unrelated
+  and concurrent work.
 - **Use existing tool capabilities.** Consult the supported public interface
   before adding wrappers or validators. Let standard tools own their format and
   build mechanics; verify the inputs, integration, failure handling, and consumer

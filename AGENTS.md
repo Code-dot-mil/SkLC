@@ -5,6 +5,7 @@ These instructions apply to this repository.
 ## Development Workflow
 
 - Before implementing or reviewing code, read [CODING_STANDARDS.md](CODING_STANDARDS.md). Use the originating task and later accepted decisions to establish scope.
+- Before planning, implementing, or reviewing changes to product structure, dependencies, packaging, CI, or tests, read and apply [product boundaries](docs/product-boundaries.md). It is the normative contract for ownership, permitted composition, and consumer independence.
 - For substantial planning, roadmap decomposition, or expanding implementation scope, use [scope-maintainable-contribution](.agents/skills/scope-maintainable-contribution/SKILL.md).
 - For implementing agreed code changes, use [implement](.agents/skills/implement/SKILL.md).
 - When adding, revising, or reviewing tests, use [durable-behavior-tests](.agents/skills/durable-behavior-tests/SKILL.md).

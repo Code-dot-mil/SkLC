@@ -79,9 +79,9 @@ unresolved findings, false positives, scope, and limitations.
 - `docs/architecture.md` documents the current component, evidence, catalog-build, and CI flows.
 - `docs/roadmap.md` defines the Q3 2026 target product, GitHub release, and downstream delivery plan.
 - `GOVERNANCE.md` describes exchange roles and generated-output boundaries.
-- `products/deployment-kit/` owns the Python catalog runtime and its tests; `site/` contains its site build.
+- `products/deployment-kit/operator/` owns the Python catalog runtime, its tests, and the site build.
 - `maintainer/` owns upstream packaging, release orchestration, and their tests.
-- `site/` contains the Astro static site.
+- `products/deployment-kit/operator/site/` contains the Astro static site.
 - `products/skill-catalog/` contains skill packages included in the exchange.
 - `products/assessment-kit/` owns the standalone assessment CLI and its tests.
 
@@ -97,7 +97,7 @@ Install dependencies:
 
 ```sh
 uv sync --extra test
-npm ci --prefix site
+npm ci --prefix products/deployment-kit/operator/site
 ```
 
 ## Local Workflow
@@ -120,7 +120,7 @@ Build the static site from freshly generated local data:
 just build
 ```
 
-Local `just` generation writes to `.exchange/local-generated/` while current assessment reports remain read-only. Use `uv` directly for Python-only checks and `npm --prefix site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
+Local `just` generation writes to `.exchange/local-generated/` while current assessment reports remain read-only. Use `uv` directly for Python-only checks and `npm --prefix products/deployment-kit/operator/site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
 
 Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details.
 

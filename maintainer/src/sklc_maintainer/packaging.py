@@ -70,8 +70,8 @@ def package_operator(source: Path, catalog_path: Path, assessments_path: Path,
     from skill_assessment.hashing import skill_digest
     from skill_assessment.reports import is_current_assessment
 
-    operator = source / "products/deployment-kit"
-    roots = {source / "site" / name: f"site/{name}" for name in (
+    operator = source / "products/deployment-kit/operator"
+    roots = {operator / "site" / name: f"site/{name}" for name in (
         "src", "scripts", "public/favicon.ico", "package.json", "package-lock.json",
         "astro.config.mjs", "tsconfig.json", ".npmrc",
     )}
@@ -179,13 +179,13 @@ def main() -> None:
             mode.add_argument("--version")
             mode.add_argument("--stage", action="store_true")
             command.add_argument("--site-dir", type=Path,
-                                 default=Path("site/dist"))
+                                 default=Path("products/deployment-kit/operator/site/dist"))
     args = parser.parse_args()
     if getattr(args, "version", None) is not None:
         validate_version(args.version)
     revision = subprocess.check_output(["git", "-C", str(args.repo_root), "rev-parse", "HEAD"], text=True).strip()
     committed = subprocess.check_output([
-        "git", "-C", str(args.repo_root), "archive", "--format=tar", revision, "products", "site",
+        "git", "-C", str(args.repo_root), "archive", "--format=tar", revision, "products",
     ])
     with tempfile.TemporaryDirectory(prefix="sklc-source-") as temporary:
         source = Path(temporary)

@@ -2,10 +2,10 @@
 .exchange/local-generated/
 /release/
 /assessment-reports/
-site/dist/
-site/.astro/
-site/public/downloads/
-site/node_modules/
+products/deployment-kit/operator/site/dist/
+products/deployment-kit/operator/site/.astro/
+products/deployment-kit/operator/site/public/downloads/
+products/deployment-kit/operator/site/node_modules/
 .superpowers/
 .DS_Store
 .pytest_cache/

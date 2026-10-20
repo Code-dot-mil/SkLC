@@ -19,11 +19,11 @@ package = false
 
 [tool.uv.sources]
 skill-assessment = { path = "products/assessment-kit", editable = true }
-skill-deployment = { path = "products/deployment-kit", editable = true }
+skill-deployment = { path = "products/deployment-kit/operator", editable = true }
 sklc-maintainer = { path = "maintainer", editable = true }
 
 [tool.pytest.ini_options]
-testpaths = ["products/assessment-kit/tests", "products/deployment-kit/tests", "maintainer/tests"]
+testpaths = ["products/assessment-kit/tests", "products/deployment-kit/operator/tests", "maintainer/tests"]
 
 [tool.ruff]
 target-version = "py312"

@@ -224,9 +224,9 @@ jobs:
       matrix:
         include:
           - check: lint
-            command: npm --prefix site run lint
+            command: npm --prefix products/deployment-kit/operator/site run lint
           - check: test
-            command: npm --prefix site run test
+            command: npm --prefix products/deployment-kit/operator/site run test
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -235,7 +235,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install site dependencies
-        run: npm ci --prefix site
+        run: npm ci --prefix products/deployment-kit/operator/site
       - name: Run check
         run: ${{ matrix.command }}
 
@@ -329,9 +329,9 @@ jobs:
         with:
           node-version: "22"
       - name: Install site dependencies
-        run: npm ci --prefix site
+        run: npm ci --prefix products/deployment-kit/operator/site
       - name: Build static site
-        run: SKILL_EXCHANGE_GENERATED_ROOT="$GITHUB_WORKSPACE/.exchange/generated" npm --prefix site run build
+        run: SKILL_EXCHANGE_GENERATED_ROOT="$GITHUB_WORKSPACE/.exchange/generated" npm --prefix products/deployment-kit/operator/site run build
       - name: Set up Python for packaging
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -341,7 +341,7 @@ jobs:
           PYTHONPATH: maintainer/src
         run: >-
           python -m sklc_maintainer.packaging prebuilt --stage
-          --repo-root . --site-dir site/dist
+          --repo-root . --site-dir products/deployment-kit/operator/site/dist
           --output-dir "$RUNNER_TEMP/static-site"
       - name: Upload static site
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

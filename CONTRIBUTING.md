@@ -12,9 +12,9 @@ implementing, and reviewing contributions.
 
 Exchange-site developers maintain:
 
-- Python runtime under `products/deployment-kit/src/skill_exchange/` and
+- Python runtime under `products/deployment-kit/operator/src/skill_exchange/` and
   upstream tooling under `maintainer/`.
-- The Astro site under `site/`.
+- The Astro site under `products/deployment-kit/operator/site/`.
 - GitHub Actions workflows under `.github/workflows/`.
 - Product-owned configuration and customer CI.
 - Developer and operator documentation.
@@ -30,7 +30,7 @@ Install project dependencies:
 
 ```sh
 uv sync --extra test
-npm ci --prefix site
+npm ci --prefix products/deployment-kit/operator/site
 ```
 
 Site generation reads current adjudicated assessments. No scanner installation or credentials are required.
@@ -51,7 +51,7 @@ just build
 just ci-local
 ```
 
-Use `uv` directly for Python-only commands and `npm --prefix site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
+Use `uv` directly for Python-only commands and `npm --prefix products/deployment-kit/operator/site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
 
 `just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds leave current assessment reports untouched.
 
@@ -74,12 +74,12 @@ Keep Python code focused on exchange validation, evidence verification, generate
 Site code must pass:
 
 ```sh
-npm --prefix site run lint
-npm --prefix site run test
-SKILL_EXCHANGE_GENERATED_ROOT="$PWD/.exchange/local-generated" npm --prefix site run build
+npm --prefix products/deployment-kit/operator/site run lint
+npm --prefix products/deployment-kit/operator/site run test
+SKILL_EXCHANGE_GENERATED_ROOT="$PWD/.exchange/local-generated" npm --prefix products/deployment-kit/operator/site run build
 ```
 
-Node-based tests belong under `site/tests/`. Python pytest should not depend on Node, npm install state, or `site/node_modules`.
+Node-based tests belong under `products/deployment-kit/operator/site/tests/`. Python pytest should not depend on Node, npm install state, or `products/deployment-kit/operator/site/node_modules`.
 
 Set `SKILL_EXCHANGE_GENERATED_ROOT` explicitly to the generated-data directory for every site command. Missing data fails the build; an explicitly selected directory containing an empty index renders an empty catalog.
 
@@ -101,7 +101,7 @@ When changing CI:
 
 Do not hand-edit generated exchange data under `.exchange/generated/`. Current reports under `products/skill-catalog-assessments/` are durable generated evidence. Derived site data such as `index.json`, `assessments/`, and `zips/` should be regenerated locally or by CI and not committed.
 
-Do not commit local caches or build output such as `site/dist/`, `site/.astro/`, `site/node_modules/`, `.pytest_cache/`, or `.venv/`.
+Do not commit local caches or build output such as `products/deployment-kit/operator/site/dist/`, `products/deployment-kit/operator/site/.astro/`, `products/deployment-kit/operator/site/node_modules/`, `.pytest_cache/`, or `.venv/`.
 
 ## Documentation
 

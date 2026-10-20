@@ -20,13 +20,13 @@ python-test:
     uv run --extra test pytest
 
 site-lint:
-    npm --prefix site run lint
+    npm --prefix products/deployment-kit/operator/site run lint
 
 site-test:
-    npm --prefix site run test
+    npm --prefix products/deployment-kit/operator/site run test
 
 site-build:
-    SKILL_EXCHANGE_GENERATED_ROOT="$PWD/{{local_generated}}" npm --prefix site run build
+    SKILL_EXCHANGE_GENERATED_ROOT="$PWD/{{local_generated}}" npm --prefix products/deployment-kit/operator/site run build
 
 lint: python-lint site-lint
 

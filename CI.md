@@ -44,7 +44,7 @@ The workflow checks and builds the site in three steps:
    generation; nonfatal partial coverage and negative safety judgments remain
    visible. Generation runs no scanner or provider and writes no evidence.
 3. **Build and package the site.** The `static-site` job downloads the generated
-   data and uses Node.js to build `site/dist/`, with the generated directory selected
+   data and uses Node.js to build `products/deployment-kit/operator/site/dist/`, with the generated directory selected
    explicitly through `SKILL_EXCHANGE_GENERATED_ROOT`. It then runs
    `python -m sklc_maintainer.packaging prebuilt --stage` to assemble the site, deployment
    guides, and GitLab Pages job in a fresh directory under `RUNNER_TEMP`.
@@ -333,7 +333,7 @@ alert backlog. Do not add a scheduled CI job that duplicates Dependabot.
 The configuration in `.github/dependabot.yml` covers two dependency groups:
 
 - **Python:** the root `pyproject.toml` and `uv.lock`, using the `uv` ecosystem.
-- **Site:** `site/package.json` and `site/package-lock.json`, using the `npm`
+- **Site:** `products/deployment-kit/operator/site/package.json` and `products/deployment-kit/operator/site/package-lock.json`, using the `npm`
   ecosystem.
 
 Dependabot checks for version updates every Monday. It groups minor and patch

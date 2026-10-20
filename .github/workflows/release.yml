@@ -51,13 +51,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --no-cache-dir uv
-          npm ci --prefix site
+          npm ci --prefix products/deployment-kit/operator/site
       - name: Run repository checks
         run: |
           uv run --extra test ruff check maintainer products
           uv run --extra test pytest
-          npm --prefix site run lint
-          npm --prefix site run test
+          npm --prefix products/deployment-kit/operator/site run lint
+          npm --prefix products/deployment-kit/operator/site run test
       - name: Generate exchange data from current assessments
         run: >-
           uv run python -m skill_exchange.cli generate
@@ -65,7 +65,7 @@ jobs:
           --evidence products/skill-catalog-assessments
           --generated .exchange/generated
       - name: Build static site
-        run: SKILL_EXCHANGE_GENERATED_ROOT="$GITHUB_WORKSPACE/.exchange/generated" npm --prefix site run build
+        run: SKILL_EXCHANGE_GENERATED_ROOT="$GITHUB_WORKSPACE/.exchange/generated" npm --prefix products/deployment-kit/operator/site run build
       - name: Build product downloads
         id: release-assets
         shell: bash
@@ -73,7 +73,7 @@ jobs:
           PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip"
           PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging assessments --output "$RELEASE_DIR/build-inputs/skill-catalog-assessments-$RELEASE_VERSION.zip"
           python -m sklc_maintainer.packaging prebuilt \
-            --repo-root . --site-dir site/dist \
+            --repo-root . --site-dir products/deployment-kit/operator/site/dist \
             --version "$RELEASE_VERSION" \
             --output-dir "$RELEASE_DIR/assets"
       - name: Build assessment wheel

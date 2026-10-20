@@ -598,7 +598,7 @@ provides-extras = ["test"]
 [[package]]
 name = "skill-deployment"
 version = "0.1.0"
-source = { editable = "products/deployment-kit" }
+source = { editable = "products/deployment-kit/operator" }
 dependencies = [
     { name = "pyyaml" },
     { name = "skill-assessment" },
@@ -637,7 +637,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.2" },
     { name = "ruff", marker = "extra == 'test'", specifier = ">=0.17.1" },
     { name = "skill-assessment", editable = "products/assessment-kit" },
-    { name = "skill-deployment", editable = "products/deployment-kit" },
+    { name = "skill-deployment", editable = "products/deployment-kit/operator" },
     { name = "sklc-maintainer", editable = "maintainer" },
 ]
 provides-extras = ["test"]

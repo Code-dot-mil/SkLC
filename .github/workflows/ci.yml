@@ -297,6 +297,31 @@ jobs:
           test -s .exchange/generated/index.json
           test -n "$(find .exchange/generated/assessments -type f -name 'adjudication.json' -print -quit)"
           test -n "$(find .exchange/generated/zips -type f -name '*.zip' -print -quit)"
+      - name: Build operator kit preview
+        run: |
+          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output "$RUNNER_TEMP/operator-catalog.zip"
+          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging assessments --output "$RUNNER_TEMP/skill-catalog-assessments.zip" \
+            --source-dir "$RUNNER_TEMP/current-assessments"
+          uv build --wheel --python 3.12 products/assessment-kit --out-dir "$RUNNER_TEMP/operator"
+          version=$(python -c 'import tomllib; print(tomllib.load(open("products/assessment-kit/pyproject.toml", "rb"))["project"]["version"])')
+          uv run python -m sklc_maintainer.packaging operator --version "$version" \
+            --catalog "$RUNNER_TEMP/operator-catalog.zip" \
+            --assessments "$RUNNER_TEMP/skill-catalog-assessments.zip" --wheel "$RUNNER_TEMP"/operator/*.whl \
+            --output-dir "$RUNNER_TEMP/operator"
+      - name: Upload operator kit preview
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: ${{ runner.temp }}/operator/deployment-kit-operator-*.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload current assessment download
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: ${{ runner.temp }}/skill-catalog-assessments.zip
+          archive: false
+          if-no-files-found: error
+
       - name: Upload exchange data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

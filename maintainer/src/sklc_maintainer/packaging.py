@@ -85,14 +85,13 @@ def package_operator(source: Path, catalog_path: Path, assessments_path: Path,
             if path.is_file():
                 suffix = path.relative_to(root).as_posix() if root.is_dir() else ""
                 files[f"{destination}/{suffix}".rstrip("/")] = path.read_bytes()
-    assets = source / "products/deployment-kit"
     files.update({
-        ".gitlab-ci.yml": (assets / "ci/gitlab/operator/.gitlab-ci.yml").read_bytes(),
-        "ci/assessment.yml": (assets / "ci/gitlab/operator/assessment.yml").read_bytes(),
-        "README.md": (assets / "docs/operator/README.md").read_bytes()
-        .replace(b"../../containers/assessment/README.md", b"assessment/container/README.md")
+        ".gitlab-ci.yml": (operator / "ci/gitlab/.gitlab-ci.yml").read_bytes(),
+        "ci/assessment.yml": (operator / "ci/gitlab/assessment.yml").read_bytes(),
+        "README.md": (operator / "docs/README.md").read_bytes()
+        .replace(b"../containers/assessment/README.md", b"assessment/container/README.md")
         .replace(b"../../../assessment-kit/README.md", b"assessment/README.md"),
-        "ci/configure_runtime_trust.py": (assets / "ci/gitlab/operator/configure_runtime_trust.py").read_bytes(),
+        "ci/configure_runtime_trust.py": (operator / "ci/gitlab/configure_runtime_trust.py").read_bytes(),
         "assessment/README.md": (source / "products/assessment-kit/README.md").read_bytes(),
         f"assessment/{wheel.name}": wheel.read_bytes(),
         "assessment/requirements.txt": f"./assessment/{wheel.name}\n".encode(),
@@ -100,9 +99,9 @@ def package_operator(source: Path, catalog_path: Path, assessments_path: Path,
         ".gitignore": (operator / ".gitignore").read_bytes(),
     })
     for name in ("Dockerfile", ".dockerignore", "README.md"):
-        content = (assets / "containers/assessment" / name).read_bytes()
+        content = (operator / "containers/assessment" / name).read_bytes()
         files[f"assessment/container/{name}"] = content.replace(
-            b"../../../assessment-kit/README.md", b"../README.md",
+            b"../../../../assessment-kit/README.md", b"../README.md",
         )
     names = set()
     with ZipFile(catalog_path) as catalog:
@@ -141,12 +140,12 @@ def package_operator(source: Path, catalog_path: Path, assessments_path: Path,
 def stage_prebuilt(source: Path, site_dir: Path, output: Path) -> Path:
     shutil.copytree(site_dir, output / "public")
     (output / "public/.gitkeep").unlink(missing_ok=True)
-    prebuilt = source / "products/deployment-kit"
-    shutil.copy2(prebuilt / "ci/gitlab/prebuilt/.gitlab-ci.yml", output / ".gitlab-ci.yml")
-    shutil.copy2(prebuilt / "docs/prebuilt/README.md", output / "README.md")
+    prebuilt = source / "products/deployment-kit/prebuilt"
+    shutil.copy2(prebuilt / "ci/gitlab/.gitlab-ci.yml", output / ".gitlab-ci.yml")
+    shutil.copy2(prebuilt / "docs/README.md", output / "README.md")
     (output / "docs").mkdir()
     for name in ("install.md", "deploy-gitlab-pages.md", "deploy-static-hosting.md"):
-        shutil.copy2(prebuilt / "docs/prebuilt" / name, output / "docs" / name)
+        shutil.copy2(prebuilt / "docs" / name, output / "docs" / name)
     return output
 
 

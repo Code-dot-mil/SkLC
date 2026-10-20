@@ -75,7 +75,7 @@ copying upstream packages again. Commit your catalog and matching evidence toget
 
 ## Build and publish the assessment image
 
-Follow the [assessment image guide](../../containers/assessment/README.md) to
+Follow the [assessment image guide](../containers/assessment/README.md) to
 build for the runner's architecture, verify the scanner, publish the image, and
 record its digest. The supplied image runs as a nonroot user and allows the job
 to install the packaged wheel. The runner must make its checkout writable to
@@ -196,6 +196,53 @@ writes `assessment.md` by summarizing its existing reports without another scan.
 Paths are configurable with `--skills`, `--evidence`, and `--generated`.
 For a custom generated path, set `SKILL_EXCHANGE_GENERATED_ROOT` to the same
 absolute path for Node. Local output is in `site/dist/`.
+
+## Apply an update
+
+Review and commit your instance before updating. Verify the new ZIP digest as
+for installation. From the installed kit root, replace upstream-owned component
+directories before extraction so files removed by upstream disappear too:
+
+```sh
+rm -rf -- build site src assessment ci upstream
+unzip -o deployment-kit-operator-<version>.zip -d .
+python -m pip install --upgrade --force-reinstall . -r assessment/requirements.txt
+```
+
+The disposable `build/` directory can retain removed Python modules from earlier
+installs. Remove it when replacing the upstream runtime so those modules cannot
+return in the installed package.
+
+The archive and replacement list contain no live `skills/` or `evidence/` paths.
+Updated upstream skills and their paired reports appear only in `upstream/`;
+decide explicitly whether to copy any into the live catalog. The requirement file
+selects the exact bundled wheel. Regenerate and rebuild after updating.
+
+Supported customization is your skill catalog and its assessments. If you replace
+another component, you own that entire component. Omit its paths from the removal
+command **and** exclude them from extraction on every update. For a customized UI:
+
+```sh
+rm -rf -- build src assessment ci upstream
+unzip -o deployment-kit-operator-<version>.zip -d . -x 'site/*'
+python -m pip install --upgrade --force-reinstall . -r assessment/requirements.txt
+```
+
+Use the complete ownership boundary for each component:
+
+| Component | Omit from replacement | Exclude from extraction |
+| --- | --- | --- |
+| Site UI | `site` | `site/*` |
+| Customer CI | `ci`, `.gitlab-ci.yml` | `ci/*`, `.gitlab-ci.yml` |
+| Assessment tooling and its CI | `assessment`, `ci`, `.gitlab-ci.yml` | `assessment/*`, `ci/*`, `.gitlab-ci.yml` |
+| Deployment runtime | `build`, `src`, `pyproject.toml` | `src/*`, `pyproject.toml` |
+
+Root files such as `.gitlab-ci.yml` and `pyproject.toml` are replaced by extraction;
+exclude them with their component. Combine all applicable exclusions in one unzip
+command. Use the installation procedure owned by your customized assessment or
+runtime component when those components are excluded. You are responsible for
+compatibility and incorporating desired upstream changes into components you own;
+we do not merge incremental customizations.
 
 ## Troubleshooting
 

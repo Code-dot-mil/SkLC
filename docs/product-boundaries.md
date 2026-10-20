@@ -23,16 +23,32 @@ declares its external prerequisites.
 
 ## Directory structure
 
-Operator owns catalog generation, its Python package, tests and fixtures, and
-Astro site source under `products/deployment-kit/operator/`. Prebuilt consumes
-generated static output and owns deployment instructions and deploy-only CI.
-Upstream tooling uses Operator generation and site builds to assemble Prebuilt;
-no shared build runtime lives at the deployment-product root.
+The intended source layout is:
 
-Mode assets currently live under `products/deployment-kit/ci/gitlab/{operator,prebuilt}/`,
-`containers/assessment/`, and `docs/{operator,prebuilt}/`. Tests and fixtures follow
-the capability they exercise. Catalog source and assessments remain separate
-products; upstream packaging and release tooling live under `maintainer/`.
+```text
+products/
+  assessment-kit/
+  skill-catalog/
+  skill-catalog-assessments/
+  deployment-kit/
+    prebuilt/
+    operator/
+      src/
+      tests/
+      site/
+      pyproject.toml
+  lifecycle/          when its guidance shape is accepted
+maintainer/
+.github/workflows/
+```
+
+Deployment-mode assets live within their mode, such as
+`deployment-kit/operator/docs/` and `deployment-kit/operator/ci/gitlab/`.
+Operator owns catalog generation, its Python package, tests and fixtures, and the
+Astro site source. Prebuilt contains generated static output, deployment
+instructions, and deploy-only CI. Upstream tooling uses Operator generation and
+site builds to assemble Prebuilt; no shared build runtime lives at the deployment
+product root. Tests and fixtures follow the capability they exercise.
 
 ## CI and composition
 

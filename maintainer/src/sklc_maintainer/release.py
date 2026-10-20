@@ -137,15 +137,15 @@ def check_ready(*, version: str, expected_commit: str) -> dict[str, str]:
 
 
 def _draft_asset_digests(assets: list[GitReleaseAsset], version: str) -> dict[str, str]:
-    """Require three product ZIPs and the assessment wheel with GitHub digests."""
+    """Require four product ZIPs and the assessment wheel with GitHub digests."""
     expected_assets = {f"deployment-kit-{mode}-{version}.zip" for mode in ("prebuilt", "operator")}
-    expected_assets.add(f"skill-catalog-{version}.zip")
+    expected_assets.update({f"skill-catalog-{version}.zip", f"skill-catalog-assessments-{version}.zip"})
     wheels = [
         asset.name for asset in assets
         if asset.name.startswith("skill_assessment-") and asset.name.endswith(".whl")
     ]
-    if len(assets) != 4 or len(wheels) != 1 or {asset.name for asset in assets} != expected_assets | set(wheels):
-        raise ReleaseError("draft must contain exactly three versioned product ZIPs and the assessment wheel")
+    if len(assets) != 5 or len(wheels) != 1 or {asset.name for asset in assets} != expected_assets | set(wheels):
+        raise ReleaseError("draft must contain exactly four versioned product ZIPs and the assessment wheel")
     for asset in assets:
         if asset.state != "uploaded" or asset.size <= 0:
             raise ReleaseError(f"draft asset is incomplete: {asset.name}")

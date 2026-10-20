@@ -74,7 +74,7 @@ The runner must preserve a writable home and Python's user site configuration.
 Normal operation requires no privileged container or Docker socket.
 
 Configure provider settings and masked credentials only as runtime GitLab
-variables, following [assessment-kit setup](../../../assessment-kit/README.md).
+variables, following [assessment-kit setup](../../../../assessment-kit/README.md).
 Do not supply credentials as build arguments or copy them into the image.
 Runtime access is needed for wheel dependencies, the selected provider, and
 SkillSpector's OSV dependency lookups; static-only scanning still makes OSV

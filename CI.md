@@ -147,12 +147,20 @@ To package the current commit locally, run this from the repository root:
 PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output release/skill-catalog.zip
 ```
 
-Assessment packaging uses the same committed catalog selection and copies the current
-JSON pairs unchanged. Its explicit `--source-dir` option accepts staged CI reports.
-Operator assembly consumes the catalog ZIP, assessment ZIP, and exact wheel through
-`sklc_maintainer.packaging operator`. Prebuilt assembly consumes a static site build;
-`--stage` prepares CI's directory artifact and `--version` creates the release ZIP.
-Release checks and draft verification stay in `sklc_maintainer.release`.
+The `exchange-data` job packages its validated current JSON pairs as
+`skill-catalog-assessments.zip` and uses that same archive, the catalog ZIP, and
+the assessment wheel to assemble the Operator preview. Changed-skill PRs therefore
+receive matching source and reports from the same run. The standalone catalog
+job remains independent of assessment. The pair archive contains its README and
+`<skill>/skillspector.json` plus `<skill>/adjudication.json`; scanner logs remain
+job diagnostics. Releases use `python -m sklc_maintainer.packaging assessments` on the
+committed current pairs. Its explicit `--source-dir` option selects the validated
+staged reports in CI; report bytes are copied unchanged. Operator assembly uses
+`uv run python -m sklc_maintainer.packaging operator` with the catalog, assessments
+and wheel inputs. Prebuilt assembly uses the same CLI’s `prebuilt` command with
+a supplied static build; `--stage` prepares CI’s directory artifact and `--version`
+creates the versioned ZIP. Release checks and draft verification stay in
+`sklc_maintainer.release`.
 
 ## Releases
 
@@ -165,12 +173,13 @@ flowchart TD
     R --> Q["Run check-ready<br/>Checks clean checkout, successful CI,<br/>release notes, and unused tag"]
     Q --> T["Maintainer pushes version tag"]
     T --> V["Release workflow repeats checks<br/>and rebuilds from tagged commit"]
-    V --> G["Create draft with three ZIPs + assessment wheel"]
+    V --> G["Create draft with four ZIPs + assessment wheel"]
     G --> H["Run check-draft<br/>Checks tag, notes, assets,<br/>and successful preparation workflow"]
     H --> P["Maintainer publishes existing draft"]
     P --> D["deployment-kit-prebuilt-VERSION.zip"]
     P --> C["skill-catalog-VERSION.zip"]
     P --> O["deployment-kit-operator-VERSION.zip"]
+    P --> E["skill-catalog-assessments-VERSION.zip"]
     P --> A["skill_assessment-VERSION-py3-none-any.whl"]
 ```
 
@@ -234,11 +243,12 @@ This creates the public tag and starts release preparation; it does not publish
 the release. The workflow runs the Python and site checks, generates catalog
 data from tracked BOE that matches each skill's content, and builds the site. Missing evidence fails
 the build without running a scanner. The workflow then creates an unpublished
-draft containing exactly four assets under the same version:
+draft containing exactly five assets under the same version:
 
 - `deployment-kit-prebuilt-<version>.zip`
 - `deployment-kit-operator-<version>.zip`
 - `skill-catalog-<version>.zip`
+- `skill-catalog-assessments-<version>.zip`
 - `skill_assessment-<version>-py3-none-any.whl`
 
 The assessment-kit package version must match the release version under Python
@@ -309,7 +319,7 @@ recorded decision or a separate security or acceptance gate.
 ## Prebuilt Deployment
 
 The GitLab Pages template at
-`products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml` publishes the package's
+`products/deployment-kit/prebuilt/ci/gitlab/.gitlab-ci.yml` publishes the package's
 existing `public/` directory. It requires a Linux runner that can run job images
 and has the tag configured in `PAGES_RUNNER_TAG`.
 
@@ -345,3 +355,5 @@ its default dependency and ecosystem labels and assigns update pull requests to
 critical alerts. Those alerts are reviewed when received; the rest of the
 backlog is reviewed weekly. Alerts that cannot be fixed promptly are escalated
 to repository administrator `scotluns`.
+
+PR CI uploads an operator ZIP preview. Setup: [operator guide](products/deployment-kit/operator/docs/README.md).

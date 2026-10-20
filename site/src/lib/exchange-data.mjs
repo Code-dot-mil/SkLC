@@ -1,18 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const repositoryRoot = process.env.SKILL_EXCHANGE_REPOSITORY_ROOT || resolve(process.cwd(), "..");
-const generatedRoot = process.env.SKILL_EXCHANGE_GENERATED_ROOT || resolve(repositoryRoot, ".exchange", "generated");
+const generatedRoot = process.env.SKILL_EXCHANGE_GENERATED_ROOT;
+if (!generatedRoot) throw new Error("Set SKILL_EXCHANGE_GENERATED_ROOT to the generated site data directory.");
 
-export const exchangeIndex = readGeneratedJson("index.json", { skills: [] });
-export const scannerRunsTable = readGeneratedJson("tables/scanner_runs.json", { rows: [] });
-export const scannerFindingsTable = readGeneratedJson("tables/scanner_findings.json", { rows: [] });
-export const scannerArtifactsTable = readGeneratedJson("tables/scanner_artifacts.json", { rows: [] });
-
-function readGeneratedJson(relativePath, fallback) {
-  const path = resolve(generatedRoot, relativePath);
-  if (!existsSync(path)) {
-    return fallback;
-  }
-  return JSON.parse(readFileSync(path, "utf-8"));
-}
+export const exchangeIndex = JSON.parse(readFileSync(resolve(generatedRoot, "index.json"), "utf-8"));
+export const scannerRunsTable = { rows: exchangeIndex.skills.flatMap((skill) => skill.scanner_runs) };
+export const scannerFindingsTable = { rows: exchangeIndex.skills.flatMap((skill) => skill.scanner_findings) };
+export const scannerArtifactsTable = { rows: exchangeIndex.skills.flatMap((skill) => skill.scanner_artifacts) };

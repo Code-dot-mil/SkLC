@@ -20,7 +20,7 @@ def repository(tmp_path, monkeypatch):
     git("config", "user.name", "CI Test")
     git("config", "user.email", "ci@example.invalid")
     for name in ("a", "b"):
-        skill = tmp_path / "catalog" / "ns" / name
+        skill = tmp_path / "catalog" / name
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text(f"---\nname: {name}\ndescription: Test package\n---\nInstructions.\n")
         (skill / "reference.md").write_text("Supporting instructions")
@@ -71,13 +71,13 @@ else:
 def test_selection_tracks_supporting_changes_and_deletions_and_rejects_invalid_refs(repository):
     root, git, run, calls = repository
     base = git("rev-parse", "HEAD")
-    (root / "catalog/ns/a/reference.md").unlink()
-    shutil.rmtree(root / "catalog/ns/b")
+    (root / "catalog/a/reference.md").unlink()
+    shutil.rmtree(root / "catalog/b")
     git("add", "-A")
     git("commit", "-qm", "change support and remove package")
     run("select", "--skills", "catalog", "--output-dir", "selection", "--base-sha", base)
-    assert (root / "selection/changed-skills.nul").read_bytes() == b"catalog/ns/a\0catalog/ns/b\0"
-    assert (root / "selection/current-skills.nul").read_bytes() == b"catalog/ns/a\0"
+    assert (root / "selection/changed-skills.nul").read_bytes() == b"catalog/a\0catalog/b\0"
+    assert (root / "selection/current-skills.nul").read_bytes() == b"catalog/a\0"
     base = git("rev-parse", "HEAD")
     (root / "catalog/README.md").write_text("Unrelated documentation")
     git("add", "-A")
@@ -87,10 +87,6 @@ def test_selection_tracks_supporting_changes_and_deletions_and_rejects_invalid_r
     for invalid in ("invalid", ""):
         run("select", "--skills", "catalog", "--output-dir", "invalid", "--base-sha", invalid, success=False)
     run("select", "--skills", "missing", "--output-dir", "invalid", success=False)
-    duplicate = root / "catalog/other/a"
-    duplicate.mkdir(parents=True)
-    (duplicate / "SKILL.md").write_text("duplicate package basename")
-    run("select", "--skills", "catalog", "--output-dir", "invalid", success=False)
     assert not (root / "invalid").exists() and not calls()
 
 
@@ -130,7 +126,7 @@ def test_pruning_retains_live_bytes_notes_and_symlinks_and_handles_last_skill_re
     assert sorted(path.name for path in (root / "reports/retired-with-notes").iterdir()) == ["notes.md"]
     assert (outside / "skillspector.json").read_text() == "untouched"
     for name in ("a", "b"):
-        shutil.rmtree(root / "catalog" / "ns" / name)
+        shutil.rmtree(root / "catalog" / name)
     run("select", "--skills", "catalog", "--output-dir", "selection")
     run("assess", "--selection", "selection/current-skills.nul", "--reports", "reports",
         "--before-sha", "invalid", success=False)

@@ -1,8 +1,8 @@
 # Operator kit
 
 Assess a skill catalog and publish its exchange with the supplied GitLab pipeline.
-The kit includes reference skills, the assessment wheel, an assessment-image
-Dockerfile, and the site sources. Start here after extracting the operator ZIP.
+The kit includes upstream skills and assessments, the assessment
+wheel, an assessment-image Dockerfile, and the site sources. Start here after extracting the operator ZIP.
 
 ## Before you start
 
@@ -49,14 +49,29 @@ git push -u origin "<default-branch>"
 ```
 
 The destination must be outside the extracted directory. Confirm that
-`.gitlab-ci.yml` and `.exchange/` were copied. Use the default branch selected for
+`.gitlab-ci.yml`, `src/`, and `assessment/` were copied. Use the default branch selected for
 the project, which may be named `main`.
 
-Retain, extend, or replace the reference catalog under `skills/ai4sdlc/`.
-Place packages in `skills/<namespace>/<skill>/`, including supporting files and a
-`SKILL.md` with a matching name and nonempty description. Configure categories,
-tags, and display settings through `.exchange/`. Commit catalog changes before
-running the pipeline so source links identify the assessed revision.
+Create your local catalog directories:
+
+```sh
+mkdir -p skills evidence
+```
+
+Place your own complete packages in `skills/<skill>/`, with matching
+`name` and nonempty `description` in `SKILL.md`. To serve upstream developer
+skills, copy all, some, or none from `upstream/skills/`. Copy each selected
+skill's matching JSON pair from `upstream/evidence/<skill>/` at the same time.
+For example, to include the secure code review skill:
+
+```sh
+cp -R upstream/skills/python-secure-code-review skills/
+cp -R upstream/evidence/python-secure-code-review evidence/
+```
+
+The `upstream/` directory contains included skills and assessments; generation reads
+only `skills/` and `evidence/`. Review existing same-named local packages before
+copying upstream packages again. Commit your catalog and matching evidence together.
 
 ## Build and publish the assessment image
 
@@ -86,7 +101,7 @@ when that runner meets their requirements. GitLab explains
 | `ASSESSMENT_RUNNER_TAG` | Required: trusted container runner with assessor/provider access |
 | `BUILD_RUNNER_TAG` | Required: container runner able to install npm dependencies |
 | `PAGES_RUNNER_TAG` | Required: container runner for the Pages job |
-| `SCAN_MODE` | `llm-assisted` (default) or explicitly `static-only` |
+| `SCAN_MODE` | `llm-assisted` (default) requests model assessment; `static-only` omits model requests |
 | `NODE_IMAGE` | Defaults to `node:22`; replacement must provide Node >=22.22.0 and npm |
 | `PAGES_IMAGE` | Defaults to `alpine:3.24.2`; replace for your registry if needed |
 | `ASSESSMENT_CA_CERTIFICATES` | Optional **File** variable containing only verified extra public CA certificates in PEM format; see the image guide |
@@ -101,8 +116,9 @@ so it receives protected variables. Use environment scope `*` for these jobs.
 See [project variables](https://docs.gitlab.com/ci/variables/#for-a-project).
 Do not enter credentials in source files or the New pipeline form.
 
-To omit model requests, set `SCAN_MODE=static-only`. **This is not recommended**
-due to a consistently high rate of false positives that require manual review.
+Static-only assessment is available locally for diagnostics and retains unresolved
+findings and limitations in the shared summary. Publishing requires a completed
+LLM-assisted pair; setting `SCAN_MODE=static-only` in this pipeline stops generation.
 Failed LLM-assisted assessment never switches to static-only. Package downloads
 and scanner network lookups may still need network access in either mode.
 
@@ -118,33 +134,26 @@ the run. The supplied workflow accepts only this web action on the default
 branch. Pushes, schedules, merge requests, and API triggers do not start it.
 See [GitLab's manual pipeline guide](https://docs.gitlab.com/ci/pipelines/#run-a-pipeline-manually).
 
-The flow is **Assess → Generate → Build → Pages**. Assess scans each skill once
-and records its adjudication. Findings, completed negative judgments, and
+The flow is **Assess → Generate → Build → Pages**. Assess reuses current reports
+and scans changed skills, recording adjudication. Use `assess-catalog --force` to
+reassess every skill. Findings, completed negative judgments, and
 nonfatal coverage gaps remain advisory evidence and allow publication. Scanner
 execution, requested inference, adjudication, or evidence-writing failures stop
 dependent jobs. The failed assessment job still attempts to upload available
 diagnostics; runner interruption or timeout can prevent upload.
 
 Generation reads current `skillspector.json` and `adjudication.json` from
-`evidence/<namespace>/<skill>/` without rescanning or verifying package hashes. Keep assessments with their matching source content.
+`evidence/<skill>/`, verifies the shared package hash, and preserves the paired assessment
+status and its limitations. Keep assessments with
+their matching source content. Generation runs no scanner and writes no evidence.
 After success, open **Deploy > Pages** and use the displayed URL. Check the styled
-catalog, a skill page, its package ZIP, source revision link, and native scanner
-report download. See [GitLab Pages](https://docs.gitlab.com/user/project/pages/).
+catalog, a skill page, its package ZIP, and two JSON report downloads. See [GitLab Pages](https://docs.gitlab.com/user/project/pages/).
 
-| Location | Available evidence |
-| --- | --- |
-| Assessment job's `evidence/` artifact | Current raw `skillspector.json`, `adjudication.json`, `scanner.log`, and action-based `assessment.md`; failed runs retain whichever diagnostic files could be written |
-| Generate job's `.exchange/generated/` artifact | Catalog data, skill ZIPs, and per-run `skillspector.json`, scanner-derived `summary.json`, and an adjudication copy named `boe.json` |
-| Published site and `public/` artifact | Skill packages and those three per-run JSON downloads; the page displays scanner findings/risk and links the native report |
-
-To retrieve the scanner-derived summary or adjudication copy from the site, replace
-`skillspector.json` in the native-report download URL with `summary.json` or
-`boe.json`. The adjudication copy is not a complete downloadable assessment bundle.
-
-The site publishes the adjudication copy but does not publish scanner logs.
-The generated summary describes scanner risk; it is not an adjudication
-or a separate LLM-written summary. Use the adjudication for its scope and coverage
-judgment, and the raw scanner report to inspect individual model calls.
+The site shows adjudication guidance, its exact summary, status, coverage judgment,
+disposition counts, and limitations, alongside the original scanner display.
+Consumers can download `skillspector.json` and `adjudication.json`. Scanner logs
+remain job diagnostics. The assessment job retains the CLI action summary in
+`assessment.md` for review without opening the site.
 
 ## Retain evidence and run again
 
@@ -153,16 +162,15 @@ The template requests 30-day expiry; GitLab retention settings can keep current
 artifacts longer. A latest-artifacts link can change after another run. See
 [job artifacts](https://docs.gitlab.com/ci/jobs/job_artifacts/).
 
-For durable history, retain each skill's `skillspector.json` and
-`adjudication.json` together with their matching catalog revision. These two files
-are the BOE; review and commit that pair when keeping evidence in the checkout.
-Keep `scanner.log` in diagnostic artifacts only. The pipeline makes no commits or pushes.
+For durable history, extract the archive's `evidence/` directory into the catalog
+checkout, review it, and commit it with its matching catalog revision. Keep each JSON pair with its matching skill content. The pipeline makes no commits or pushes.
 
-Every pipeline run reassesses skills and replaces the three current report files
-only after successful scanning and adjudication. This incurs provider usage in
-LLM-assisted mode. Failed runs retain diagnostics separately and preserve current
+Pipeline and local assessment runs reuse valid current reports by default and
+scan skills whose content or requested mode has changed. Use
+`assess-catalog --force` to reassess all skills. Scanning in LLM-assisted mode
+incurs provider usage and replaces current reports only after successful scanning
+and adjudication. Failed runs retain diagnostics separately and preserve current
 reports. Download or commit evidence before rerunning to retain earlier results.
-Use `--if-changed` locally to reuse valid reports for unchanged content and mode.
 See [current assessments](../../../assessment-kit/README.md#assess).
 
 ## Run locally
@@ -172,23 +180,20 @@ the [assessment prerequisites](../../../assessment-kit/README.md#prerequisites).
 Use Node.js 22.22.0 or later. Run from the installed kit root:
 
 ```sh
-python -m pip install wheels/*.whl
-export PYTHONPATH=scripts
-export SKILL_EXCHANGE_SOURCE_REPOSITORY_URL="<gitlab-project-url>"
-export SKILL_EXCHANGE_SOURCE_BRANCH="$(git rev-parse HEAD)"
-python -m skill_exchange.operator assess --scan-mode static-only
-python -m skill_exchange.operator generate --scan-mode static-only
+python -m pip install --upgrade --force-reinstall . -r assessment/requirements.txt
+python -m skill_exchange.cli assess-catalog --scan-mode llm-assisted
+python -m skill_exchange.cli generate
 npm ci --prefix site
-npm --prefix site run build
+SKILL_EXCHANGE_GENERATED_ROOT="$PWD/.exchange/generated" npm --prefix site run build
 ```
 
-For LLM-assisted assessment, configure the provider and use `--scan-mode
-llm-assisted` in both commands. For private CA trust, follow the image guide's
+Configure the provider before requesting `llm-assisted` assessment. Use
+`--scan-mode static-only` for local diagnostics and summarize those reports;
+these reports are not eligible for site generation. For private CA trust, follow the image guide's
 local helper instructions before the wheel installation. Each assessment also
-writes `assessment.md` with required remediation, unresolved findings, and false
-positives from the current reports.
+writes `assessment.md` by summarizing its existing reports without another scan.
 
-Paths are configurable with `--skills`, `--evidence`, `--policy`, and `--generated`.
+Paths are configurable with `--skills`, `--evidence`, and `--generated`.
 For a custom generated path, set `SKILL_EXCHANGE_GENERATED_ROOT` to the same
 absolute path for Node. Local output is in `site/dist/`.
 

@@ -12,7 +12,7 @@ The Q3 priority is the smallest release path that proves this model: GitHub publ
 
 - **Skill lifecycle guidance:** a parallel guidance and research track that will become a versioned guidance bundle published from the Code-dot-mil AI4SDLC GitHub after the team agrees on the minimum useful lifecycle guidance. It does not gate the assessment kit, initial catalog, or deployment kit.
 - **Assessment kit:** standalone CLI with commands and reference CI for validating and assessing skills, producing current native reports, adjudication, and action-based summaries.
-- **Initial skill catalog:** complete skill packages for developer installation and skill-exchange use, starting with Secure Code Review, Unit Test Generation, Inline Documentation, and Commit Message and PR Description. Future releases will select the published set through maintainer policy and may offer associated assessment evidence as a separate download.
+- **Initial skill catalog:** complete skill packages for developer installation and skill-exchange use, starting with Secure Code Review, Unit Test Generation, Inline Documentation, and Commit Message and PR Description. Matching assessment evidence is a separate download; operators explicitly copy the included upstream skills and assessments they want to serve.
 - **Deployment kit:** provides the reference implementation for the skill exchange site. It has two modes:
   - **Prebuilt:** a ready-to-deploy static site with deployment CI and documentation.
   - **Operator:** site source, build tooling, and reference CI for configuring, building, and deploying a skill exchange from released components.
@@ -155,7 +155,7 @@ A customer can obtain the initial skill catalog for use in a GitLab-hosted skill
 - A short README explaining download, unzip, and workspace installation.
 - One ZIP with a native GitHub Release asset digest.
 
-Assessment, BOE packaging, policy-derived selection, and site generation are
+Assessment, BOE packaging, catalog selection, and site generation are
 outside the initial download milestone.
 
 #### 3.3.3 Team delivery tasks
@@ -173,10 +173,11 @@ outside the initial download milestone.
 
 #### 3.3.5 Future capabilities
 
-- Select the published skill set through maintainer policy, while distributing complete skill packages.
+- Distribute complete skill packages and let operators select included upstream skills and assessments by explicit copy.
 - Optionally distribute BOE and native reports separately, associated with the exact skill contents they describe.
 
-Evidence packaging and consumer requirements remain to be defined.
+The separate current-assessment download associates each JSON pair with the exact
+skill contents it describes.
 
 ### 3.4 Release milestone — Assessment kit foundation
 
@@ -305,20 +306,19 @@ An operator can install released components in their GitLab environment, configu
 
 Included:
 
-- Compatible released catalog and assessment-kit artifacts. The initial catalog is used as the reference test input, not as a structural dependency.
+- Compatible released catalog and assessment-kit artifacts. Operators copy all, some, or none of the included upstream skills and matching assessments alongside their own skills.
 - Reference site source and build tooling.
-- Reference GitLab CI that reuses the assessment CI profile and adds site build and deployment. Assessment retention uses job artifacts and documented manual source-control steps unless later automation is justified by demonstrated customer need.
+- Reference GitLab CI that installs the included assessment wheel and deployment runtime, then adds site build and deployment. Assessment retention uses job artifacts and documented manual source-control steps unless later automation is justified by demonstrated customer need.
 - Operator installation, configuration, and troubleshooting documentation.
 
 Excluded:
 
-- An operator-owned local overlay.
-- Preservation of operator changes across product updates.
+- Incremental customization of upstream components; operators take ownership of each whole component they replace.
 
 #### 3.7.3 Team delivery tasks
 
 1. Assemble the operator release from compatible released catalog and assessment-kit artifacts plus the deployment kit's site and operator assets.
-2. Reuse the released assessment CI profile and add site-build and deployment jobs.
+2. Include the assessment runtime and add site-build and deployment jobs.
 3. Document runner, credential, assessor-access, catalog input validation, build, and deployment requirements.
 4. Install the release in a clean GitLab project, resolve in-scope gaps, and document supported environment constraints or deferred needs.
 
@@ -329,32 +329,30 @@ Excluded:
 - The operator pipeline makes no source-control changes by default.
 - Every required customer-provided runner, credential, and configuration value is documented.
 
-### 3.8 Post-Q3 milestone — Operator-managed updates
+### 3.8 Operator-managed updates
 
 #### 3.8.1 Customer outcome
 
-An operator can add locally owned skills, BOE, and catalog policy, then apply a supported full product update without modifying that local content.
+An operator can serve their own skills and assessments alongside any selected
+upstream skills, then update the kit while preserving that live catalog.
 
 #### 3.8.2 Scope
 
 Included:
 
-- An operator-owned `local/` overlay for skills, BOE, and catalog policy.
-- Explicit precedence between released catalog content and the operator-owned overlay.
-- Verified and staged full operator-release updates.
-- Applied-version records plus update and recovery documentation.
+- Live `skills/` and `evidence/` directories owned by the operator and absent from update archives.
+- Included upstream skills and matching assessments copied explicitly at installation or later review.
+- Whole replacement of upstream-owned components after verifying the archive digest.
+- Whole-component ownership and update exclusions for a customized UI, CI, assessment tooling, or deployment runtime.
 
 ```text
-catalog/                Compatible released catalog content
-site/                   Released site source and build tooling
-wheels/                 Released assessment kit and dependencies
-ci/                     Reference GitLab CI
-docs/
-
-local/                  Operator-owned; updates preserve this subtree
-  skills/
-  boe/
-  catalog-policy.yaml
+skills/                 Operator's live skill packages
+evidence/               Matching assessment JSON pairs
+upstream/               Included upstream skills and assessments
+site/                   Site source and build tooling
+src/                    Deployment runtime
+assessment/             Exact assessment wheel, requirement and image recipe
+ci/                     Reference customer CI
 ```
 
 Excluded:
@@ -362,19 +360,18 @@ Excluded:
 - Compatibility guarantees for arbitrary custom sites or deployment implementations.
 - Offline or air-gapped operation.
 - Historical skill serving or compatibility with obsolete assessor-output formats.
-- Assessment-kit-only partial updates until full update proof is accepted and demonstrated customer need justifies the added support.
+- Incremental merging of customized components or a separate updater service.
 
 #### 3.8.3 Team delivery tasks
 
-1. Define and document the ownership boundary between released content and the `local/` subtree.
-2. Implement update staging, integrity verification, product replacement, local-content preservation, and applied-version recording.
-3. Support full updates and catalog-only updates. Define assessment-kit-only updates only after full update proof is accepted and demonstrated customer need justifies the added support.
-4. Document update, recovery, and operator-ownership procedures.
-5. Test each supported update path in a clean GitLab project containing operator-owned skills, BOE, and policy.
+1. Assemble update archives without live `skills/` or `evidence/` paths.
+2. Document digest verification and clean replacement of upstream-owned component directories before extraction, removing obsolete files.
+3. Document complete replacement and extraction exclusions for components the operator owns.
+4. Exercise installation with all, some, and none of the included upstream skills and assessments alongside customer skills, followed by a full update and a customized-component update.
 
 #### 3.8.4 Acceptance evidence
 
-- Full updates leave the operator-owned `local/` subtree unchanged.
-- A catalog-only update can be applied without disturbing local overlays or released components outside the catalog.
-- An operator can update the delivered products while retaining the local overlay.
-- A failed verification leaves the installed release and local content unchanged.
+- Updates preserve live skill packages and matching assessment bytes.
+- Removed upstream files disappear under the documented replacement procedure.
+- A customized whole component remains unchanged when excluded from replacement and extraction.
+- Included source and the exact assessment wheel install and rebuild outside the upstream checkout.

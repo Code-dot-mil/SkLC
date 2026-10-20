@@ -3,7 +3,9 @@ name = "skill-exchange-local"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "PyYAML>=6.0.2",
+  "skill-assessment",
+  "skill-deployment",
+  "sklc-maintainer",
 ]
 
 [project.optional-dependencies]
@@ -12,16 +14,16 @@ test = [
   "ruff>=0.17.1",
 ]
 
-[build-system]
-requires = ["setuptools>=84.0.0"]
-build-backend = "setuptools.build_meta"
+[tool.uv]
+package = false
 
-[tool.setuptools.packages.find]
-where = ["scripts"]
+[tool.uv.sources]
+skill-assessment = { path = "products/assessment-kit", editable = true }
+skill-deployment = { path = "products/deployment-kit", editable = true }
+sklc-maintainer = { path = "maintainer", editable = true }
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "products/assessment-kit/tests", "maintainer/tests"]
-pythonpath = ["scripts", "products/assessment-kit/src"]
+testpaths = ["products/assessment-kit/tests", "products/deployment-kit/tests", "maintainer/tests"]
 
 [tool.ruff]
 target-version = "py312"

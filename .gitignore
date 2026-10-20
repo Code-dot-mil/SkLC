@@ -1,7 +1,4 @@
 .exchange/generated/*
-!.exchange/generated/.gitkeep
-!.exchange/generated/boe/
-!.exchange/generated/boe/**
 .exchange/local-generated/
 /release/
 /assessment-reports/
@@ -19,5 +16,5 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# Diagnostic output is not assessment evidence.
+# Assessment diagnostics are local/CI output, not BOE.
 scanner.log

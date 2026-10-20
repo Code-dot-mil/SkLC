@@ -1,8 +1,13 @@
 # Skill Exchange Site
 
-Skill Exchange Site is a static catalog for publishing agent skills with review evidence, risk signals, and downloadable runtime bundles. The goal is to make skill sharing boring and inspectable: every listed skill should have clear metadata, policy validation, scanner output, and a generated bill of evidence before it is promoted through the exchange.
+Skill Exchange Site serves agent skills with optional assessments. Browse names
+and descriptions, read full instructions, and download a skill. Open an assessment
+for required remediation, unresolved findings, false positives, scope, and
+limitations, with downloads of the original report pair.
 
-This repository is intentionally self-contained. The site, exchange builder, policy files, and GitHub Actions workflows all live here. Customer-facing GitLab deployment templates are packaged separately under `products/deployment-kit/`.
+The prebuilt kit serves four developer skills as a static introduction. The
+Operator kit can assess and serve a consumer's own skills. Product source and
+release composition follow [product boundaries](docs/product-boundaries.md).
 
 ## Use the prebuilt site
 
@@ -41,8 +46,9 @@ artifact contains the same layout.
 ## Assess a local skill
 
 The [assessment kit](products/assessment-kit/README.md) provides a standalone
-`skill-assessment` CLI with `validate`, `hash`, `assess`, and `summarize` commands to explain required remediation, unresolved findings,
-and false positives.
+`skill-assessment` CLI with `validate`, `hash`, `assess`, and `summarize` commands.
+Summarize explains remediation, unresolved findings, and false positives from
+existing paired reports.
 Install its wheel from an SkLC release without the checkout or site tooling;
 compare its SHA-256 with the GitHub asset digest, then follow the assessment kit
 installation and usage guide.
@@ -53,25 +59,31 @@ The [roadmap](docs/roadmap.md) describes the intended assessment, catalog, and d
 
 The current site builds from skill packages and existing tracked evidence:
 
-1. Skills live under `skills/<namespace>/<skill-id>/`, with metadata and instructions in `SKILL.md`.
-2. Python validates exchange metadata, checks existing BOE against exact skill content, and creates site records and skill ZIPs.
+1. Skills live under `products/skill-catalog/<skill-id>/`, with metadata and instructions in `SKILL.md`.
+2. Python validates skill content, checks current adjudicated assessments against exact skill content, and creates site records and skill ZIPs.
 3. Astro consumes those records and builds the static catalog.
 
-Tracked BOE lives under `.exchange/generated/boe/`. Site generation does not run a scanner or create new BOE. Missing or invalid matching evidence fails generation. New assessment tooling is planned in the roadmap.
+Current reports live under `products/skill-catalog-assessments/<skill-name>/`. Site generation requires paired native findings and completed adjudication for the exact skill content. Generation is read-only and runs no scanner. Nonfatal partial coverage and negative safety judgments remain visible advisory results.
+
+The tracked assessment catalog contains the current JSON pair for each of the
+four catalog skills, with its interpretation guide.
+Developers can use `skill-assessment summarize` to review required remediation,
+unresolved findings, false positives, scope, and limitations.
 
 ## Repository Map
 
-- `.exchange/` stores exchange policy, display configuration, tags, categories, and generated catalog output.
+- `.exchange/` contains derived local and CI catalog output.
 - `.github/workflows/ci.yml` validates the codebase and builds preview catalog artifacts.
 - `CI.md` documents validation, packaging, and release behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
 - `docs/architecture.md` documents the current component, evidence, catalog-build, and CI flows.
 - `docs/roadmap.md` defines the Q3 2026 target product, GitHub release, and downstream delivery plan.
 - `GOVERNANCE.md` describes exchange roles and generated-output boundaries.
-- `scripts/skill_exchange/` contains Python catalog and release tooling.
+- `products/deployment-kit/` owns the Python catalog runtime and its tests; `site/` contains its site build.
+- `maintainer/` owns upstream packaging, release orchestration, and their tests.
 - `site/` contains the Astro static site.
-- `skills/` contains skill packages included in the exchange.
-- `tests/` contains Python tests for exchange tooling and CI behavior.
+- `products/skill-catalog/` contains skill packages included in the exchange.
+- `products/assessment-kit/` owns the standalone assessment CLI and its tests.
 
 ## Developer Setup
 
@@ -108,22 +120,13 @@ Build the static site from freshly generated local data:
 just build
 ```
 
-Select existing LLM-assisted evidence when available:
-
-```sh
-just generate llm-assisted
-just build llm-assisted
-```
-
-The mode selects existing evidence; it does not start a scan.
-
-Local `just` generation writes to `.exchange/local-generated/` so developers do not accidentally rewrite tracked CI-produced BOE. Use `uv` directly for Python-only checks and `npm --prefix site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
+Local `just` generation writes to `.exchange/local-generated/` while current assessment reports remain read-only. Use `uv` directly for Python-only checks and `npm --prefix site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
 
 Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details.
 
 ## CI Workflow
 
-- `CI` runs lint and tests, reads verified tracked BOE, builds the site, and uploads catalog artifacts.
+- `CI` runs lint and tests, reads current adjudicated assessments, builds the site, and uploads catalog artifacts.
 - GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
 
 See [CI.md](CI.md) for the full configuration reference.

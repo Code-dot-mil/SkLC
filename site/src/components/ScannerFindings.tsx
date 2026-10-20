@@ -30,6 +30,7 @@ type Finding = {
   explanation?: string;
   remediation?: string;
   code_snippet?: string;
+  false_positive?: boolean;
 };
 
 type Artifact = {
@@ -139,12 +140,19 @@ export default function ScannerFindings({
             <button className="dialog-close" aria-label="Close">Close</button>
           </form>
           <h2>Scanner Runs</h2>
+          <p>This table shows results from SkillSpector, a security scanner from NVIDIA.</p>
+          <p>It has two modes:</p>
+          <ul>
+            <li><strong>Static-only:</strong> A faster scan that skips the scanner’s AI checks.</li>
+            <li><strong>LLM-assisted:</strong> Uses AI to help understand what the skill does and look for problems.</li>
+          </ul>
           <p>
-            Each run records the output from SkillSpector, a third-party external scanner from NVIDIA.
-            Static-only mode skips LLM review and is faster but lower confidence. LLM-assisted mode adds semantic review when configured.
+            SkillSpector uses tags to describe its findings, but those tags don’t clearly identify false positives:
+            warnings that aren’t real problems. We use a second AI assistant to review the findings.
+            When it decides a warning is a false alarm, we add an <strong>Adjudicated as False Positive</strong> tag beside it.
           </p>
           <p>
-            More details about findings and methodology are available on the{" "}
+            Learn more on the{" "}
             <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">
               NVIDIA SkillSpector GitHub page <span aria-hidden="true">↗</span>
             </a>.
@@ -277,8 +285,11 @@ export default function ScannerFindings({
                       <strong>{finding.native_issue_id}</strong>
                       <span className="muted"> {finding.category || "Uncategorized"}</span>
                     </div>
-                    <span className={`risk risk-${String(finding.severity || "unknown").toLowerCase()}`}>
-                      {finding.severity || "Unknown"}
+                    <span className="pill-row">
+                      <span className={`risk risk-${String(finding.severity || "unknown").toLowerCase()}`}>
+                        {finding.severity || "Unknown"}
+                      </span>
+                      {finding.false_positive && <span className="risk flag">Adjudicated as False Positive</span>}
                     </span>
                   </header>
                   <p><strong>{finding.pattern || "Finding"}</strong></p>

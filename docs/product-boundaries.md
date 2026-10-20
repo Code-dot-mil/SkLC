@@ -23,27 +23,15 @@ declares its external prerequisites.
 
 ## Directory structure
 
-The intended source layout is:
+The current source layout keeps the Python runtime, package metadata, and tests
+under `products/deployment-kit/`, with its Astro source at root `site/`.
+Mode assets live under `products/deployment-kit/ci/gitlab/{operator,prebuilt}/`,
+`containers/assessment/`, and `docs/{operator,prebuilt}/`.
 
-```text
-products/
-  assessment-kit/
-  skill-catalog/
-  skill-catalog-assessments/
-  deployment-kit/
-    site/
-    prebuilt/
-    operator/
-  lifecycle/          when its guidance shape is accepted
-maintainer/
-.github/workflows/
-```
-
-Deployment-mode assets live within their mode, such as
-`deployment-kit/operator/docs/` and `deployment-kit/operator/ci/gitlab/`.
-Shared site source lives under `deployment-kit/site/`; other shared deployment
-capabilities live at the deployment-product level. Tests and fixtures follow the
-ownership of the capability they exercise.
+The deployment product owns generation and the site build; Prebuilt consumes its
+static output and owns deploy-only instructions and CI. Tests and fixtures follow
+the capability they exercise. Upstream packaging and release tooling live under
+`maintainer/`; catalog source and assessments remain separate products.
 
 ## CI and composition
 
@@ -93,7 +81,7 @@ instance also exercises its customer-side build and CI as documented.
 | Capability | Owner |
 | --- | --- |
 | Upstream-only Operator ZIP assembler and its tests | `maintainer/` |
-| Generator shipped to customers and also invoked by upstream CI | Deployment product |
+| Generator shipped to customers and also invoked by upstream CI | Deployment product’s Operator mode |
 | GitLab job building a customer's Operator instance | Deployment product's `operator/` mode |
 | Source skills copied into a deployment-kit deliverable | Originating catalog product; explicitly included during assembly |
 | Assessment validation tests and their fixtures | Assessment product |

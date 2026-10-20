@@ -15,7 +15,7 @@ ARM runner. The build context allows only the Dockerfile and its ignore file.
 
 ```sh
 docker build --platform linux/amd64 \
-  --tag assessment-runtime:skillspector-2.10.0 containers/assessment
+  --tag assessment-runtime:skillspector-2.10.0 assessment/container
 docker run --rm --platform linux/amd64 \
   assessment-runtime:skillspector-2.10.0 skillspector --version
 ```
@@ -35,7 +35,7 @@ roots as an optional BuildKit secret:
 ```sh
 docker build --platform linux/amd64 \
   --secret id=build_ca_bundle,src=./build-ca-bundle.pem \
-  --tag assessment-runtime:skillspector-2.10.0 containers/assessment
+  --tag assessment-runtime:skillspector-2.10.0 assessment/container
 ```
 
 The bundle overrides Git and pip trust only during that build step. An invalid
@@ -67,7 +67,8 @@ entrypoint, so GitLab can run its usual shell scripts.
 
 The default user is UID/GID 10001, with a writable home and `/workspace`.
 `PIP_USER=1` and the user executable directory on `PATH` let the existing
-`python -m pip install wheels/*.whl` job command install the supplied wheel
+`python -m pip install --upgrade --force-reinstall . -r assessment/requirements.txt`
+job command install the supplied components
 without root. SkillSpector is installed globally in files owned by root.
 The runner must preserve a writable home and Python's user site configuration.
 Normal operation requires no privileged container or Docker socket.

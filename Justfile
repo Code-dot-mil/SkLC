@@ -5,14 +5,16 @@ default:
 
 local_generated := ".exchange/local-generated"
 
-generate scan_mode="static-only":
-    uv run python -m skill_exchange.cli publish-local --generated-dir {{local_generated}} --scan-mode {{scan_mode}}
+generate:
+    uv run python -m skill_exchange.cli generate \
+        --skills products/skill-catalog --evidence products/skill-catalog-assessments \
+        --generated {{local_generated}}
 
 python-lint:
-    uv run --extra test ruff check scripts tests products/assessment-kit
+    uv run --extra test ruff check maintainer products
 
 python-lint-fix:
-    uv run --extra test ruff check --fix scripts tests products/assessment-kit
+    uv run --extra test ruff check --fix maintainer products
 
 python-test:
     uv run --extra test pytest
@@ -30,9 +32,9 @@ lint: python-lint site-lint
 
 test: python-test site-test
 
-build scan_mode="static-only":
-    just generate {{scan_mode}}
+build:
+    just generate
     just site-build
 
-ci-local scan_mode="static-only": lint test
-    just build {{scan_mode}}
+ci-local: lint test
+    just build

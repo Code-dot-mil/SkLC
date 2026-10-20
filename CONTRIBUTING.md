@@ -1,6 +1,6 @@
 # Contributing To Skill Exchange Site
 
-This guide is for developers changing the skill exchange application, CI, policy tooling, documentation, or static site. It is not the workflow for publishing a skill package to the exchange.
+This guide is for developers changing the skill exchange application, CI, deployment tooling, documentation, or static site. It is not the workflow for publishing a skill package to the exchange.
 
 For skill governance and skill review roles, see `GOVERNANCE.md`.
 
@@ -12,14 +12,15 @@ implementing, and reviewing contributions.
 
 Exchange-site developers maintain:
 
-- Python tooling under `scripts/skill_exchange/`.
+- Python runtime under `products/deployment-kit/src/skill_exchange/` and
+  upstream tooling under `maintainer/`.
 - The Astro site under `site/`.
 - GitHub Actions workflows under `.github/workflows/`.
-- Exchange policy files under `.exchange/`.
+- Product-owned configuration and customer CI.
 - Developer and operator documentation.
 - Tests for validation, generated data, CI behavior, site behavior, and security-sensitive rendering.
 
-Skill packages under `skills/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
+Skill packages under `products/skill-catalog/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
 
 ## First-Time Setup
 
@@ -32,7 +33,7 @@ uv sync --extra test
 npm ci --prefix site
 ```
 
-Site generation reads existing tracked BOE. No scanner installation or credentials are required.
+Site generation reads current adjudicated assessments. No scanner installation or credentials are required.
 
 ## Local Checks
 
@@ -52,9 +53,9 @@ just ci-local
 
 Use `uv` directly for Python-only commands and `npm --prefix site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
 
-`just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds do not rewrite tracked CI-produced BOE bundles.
+`just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds leave current assessment reports untouched.
 
-The default evidence mode is `static-only`. `just generate llm-assisted` and `just build llm-assisted` select existing LLM-assisted evidence. Generation fails when matching evidence is missing or invalid; it does not produce new evidence.
+Generation reads `products/skill-catalog-assessments/<skill-name>/`. Use `--evidence` with `python -m skill_exchange.cli generate` for a separate current-report root. Missing, stale, or mismatched report pairs fail generation; nonfatal partial coverage remains visible. Generation produces no evidence.
 
 ## Python Tooling
 
@@ -75,12 +76,12 @@ Site code must pass:
 ```sh
 npm --prefix site run lint
 npm --prefix site run test
-npm --prefix site run build
+SKILL_EXCHANGE_GENERATED_ROOT="$PWD/.exchange/local-generated" npm --prefix site run build
 ```
 
 Node-based tests belong under `site/tests/`. Python pytest should not depend on Node, npm install state, or `site/node_modules`.
 
-The site must be able to build from deploy-time generated artifacts. When `.exchange/generated/` data is absent, the site should render a valid empty catalog rather than failing import resolution.
+Set `SKILL_EXCHANGE_GENERATED_ROOT` explicitly to the generated-data directory for every site command. Missing data fails the build; an explicitly selected directory containing an empty index renders an empty catalog.
 
 ## CI Changes
 
@@ -98,7 +99,7 @@ When changing CI:
 
 ## Generated Files
 
-Do not hand-edit generated exchange data under `.exchange/generated/`. BOE bundles under `.exchange/generated/boe/` are durable generated evidence. Derived site data such as `index.json`, `tables/`, `skills/`, `scanner-runs/`, and `zips/` should be regenerated locally or by CI and not committed.
+Do not hand-edit generated exchange data under `.exchange/generated/`. Current reports under `products/skill-catalog-assessments/` are durable generated evidence. Derived site data such as `index.json`, `assessments/`, and `zips/` should be regenerated locally or by CI and not committed.
 
 Do not commit local caches or build output such as `site/dist/`, `site/.astro/`, `site/node_modules/`, `.pytest_cache/`, or `.venv/`.
 

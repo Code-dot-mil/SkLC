@@ -2,8 +2,7 @@
 
 Each `<skill-name>/` directory contains the latest successful `skillspector.json`
 and `adjudication.json` pair for that catalog skill. These two files are its BOE.
-The adjudication records `skill_sha256`; Git preserves earlier assessments. Catalog skill names
-must be unique across namespaces because this product uses a flat directory layout.
+The adjudication records `skill_sha256`; Git preserves earlier assessments.
 
 The independent main assessment job maintains this evidence for the catalog's
 current skill contents, using the checked-out assessment kit in LLM-assisted mode.

@@ -27,10 +27,10 @@ For the next three substantive contributions, record skills used, the initial ou
 - This repository is a static skill exchange: Python reads tracked evidence and builds generated data, and Astro builds the static site.
 - The standalone assessment CLI lives under `products/assessment-kit/` and must not depend on site or exchange tooling.
 - Define assessment commands in `skill_assessment/commands/<command>.py`. Each module owns its command name, option flags, argument parsing, and execution through `register(subparsers)` and `run(args)`; `cli.py` only registers and dispatches commands.
-- Skill packages live under `skills/<namespace>/<skill-id>/`.
-- Exchange policy lives under `.exchange/`.
-- Generated exchange data lives under `.exchange/generated/` and should be produced by the local publish command or CI, not hand-authored.
-- Durable generated evidence is limited to BOE bundles under `.exchange/generated/boe/`. Other generated site data is derived and should not be committed.
+- Skill packages live under `products/skill-catalog/<skill-id>/`.
+- The runtime and tests live under `products/deployment-kit/`, and the site under `site/`; upstream packaging and release tooling live under `maintainer/`.
+- Generated exchange data lives under `.exchange/generated/` and should be produced by the generate command or CI, not hand-authored.
+- Durable generated evidence lives under `products/skill-catalog-assessments/`. Other generated site data is derived and should not be committed.
 
 ## Configuration Rules
 
@@ -46,7 +46,7 @@ For the next three substantive contributions, record skills used, the initial ou
 
 - Keep the GitHub Actions workflows self-contained under `.github/workflows/`.
 - `lint` and `test` should cover site, tooling, tests, policy, lockfile, or CI changes.
-- Prebuilt site generation reads verified exact-content tracked BOE. Operator site generation reads the preceding assessment job's latest per-skill output without verifying hashes. Neither path runs assessments or writes new evidence.
+- Prebuilt and Operator site generation read current paired assessments, verify exact skill content with the shared public hash, and preserve advisory partial coverage. Generation runs no assessments and writes no evidence.
 - Node jobs must not generate exchange data; they consume artifacts produced by Python jobs.
 
 ## Local Development
@@ -54,15 +54,15 @@ For the next three substantive contributions, record skills used, the initial ou
 - Use `just lint`, `just test`, and `just build` for local cross-stack workflows.
 - Use `uv run --extra test pytest` for Python tests.
 - Use `npm --prefix site run test` for Node-based site tests.
-- Use `uv run python -m skill_exchange.cli publish-local --scan-mode static-only` to generate local exchange output directly.
-- Prefer `.exchange/local-generated/` for local generated site data. Do not rewrite `.exchange/generated/boe/` for local convenience.
+- Use `just generate` for upstream catalog generation with explicit source and evidence paths.
+- Prefer `.exchange/local-generated/` for local generated site data. Keep current reports under `products/skill-catalog-assessments/` read-only during generation.
 
 ## Boundaries
 
 - Do not leave red-green scaffolding or placeholder tests in the repository. Tests must prove real behavior, not merely lock package script strings, command spelling, or implementation trivia.
 - Python tests must not invoke Node or npm. Node-dependent behavior belongs in `site/tests/` and must run through `npm --prefix site run test`.
 - Do not hide Python generation in npm scripts or Node builds in Python tooling. Use `just` when local developer convenience needs to orchestrate both stacks.
-- Remove local generated artifacts after experiments. Do not leave ignored derived `.exchange/generated/` output, caches, or build directories around as hidden workspace state. Treat `.exchange/generated/boe/` as durable evidence and do not delete or rewrite it casually.
+- Remove local generated artifacts after experiments. Do not leave ignored derived `.exchange/generated/` output, caches, or build directories around as hidden workspace state. Treat current assessments under `products/skill-catalog-assessments/` as durable evidence and replace them through the assessment command.
 - Do not commit `site/dist/`, `site/.astro/`, `site/node_modules/`, `.pytest_cache/`, `.venv/`, or other local build/cache output.
 - Keep documentation free of local machine paths and local workspace state.
 - Pass PR/MR prose through structured arguments or literal body files.

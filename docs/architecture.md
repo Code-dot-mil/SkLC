@@ -4,33 +4,38 @@ The normative [product-boundary contract](product-boundaries.md) defines ownersh
 source layout, permitted composition, and consumer-independence expectations for
 architecture changes.
 
-The current site builds from skill packages, exchange policy, and previously generated BOE. Future product boundaries and capabilities are described in the [roadmap](roadmap.md).
+The site builds from skill packages and current adjudicated assessments.
 
 ```mermaid
 flowchart LR
-  skills[Skill packages] --> builder[Python catalog builder]
-  evidence[Tracked BOE] --> builder
-  policy[Exchange policy] --> builder
-  builder --> data[Site records and skill ZIPs]
-  data --> astro[Astro build]
-  astro --> site[Static site]
+  skills[Skill packages] --> builder[Python generator]
+  evidence[Current paired assessments] --> builder
+  builder --> data[Generated site data and downloads]
+  data --> astro[Astro static build]
 ```
 
-## Evidence and catalog generation
+The builder discovers `products/skill-catalog/<skill-id>/`, validates names and descriptions,
+and reads `products/skill-catalog-assessments/<skill-name>/`. Each directory contains the unchanged native `skillspector.json`,
+paired `adjudication.json`. These two files form the BOE; scanner logs are
+diagnostic output for local runs and CI artifacts. The shared public assessment hash
+must match `adjudication.skill_sha256`. Git owns history; generation selects no
+historical report and runs no scanner or provider.
 
-The builder discovers skills under `skills/<namespace>/<skill-id>/`, validates exchange metadata, and selects a successful BOE for the exact current content and requested scan mode. It verifies companion hashes, scanner identity and configuration, report completeness, and agreement between the report and recorded risk summary. Missing or invalid evidence fails generation.
+Native execution must be usable and adjudication completed. Every finding must
+pair by its one-based position and rule identity. Nonfatal partial native coverage,
+uncertain findings, and negative safety judgments remain advisory. Generated
+records contain skill identity, description, full instructions, package files,
+catalog metadata, adjudication, and native display
+rows. The site summary shows the exact adjudication text, status, coverage judgment,
+disposition counts, and limitations; the existing native scanner display remains
+evidence separate from safety guidance. The assessment product owns eligibility
+and hashing. Reports are copied byte for byte and remain separate downloads.
 
-Existing BOE bundles use `skill-exchange-boe/v0` and contain:
-
-- `boe.json`: skill identity, provenance, scan key, and recorded risk.
-- `skillspector.json`: the native scanner report.
-- `summary.json`: risk, reason, and confidence flags.
-- `scanner-config.json`: recorded scanner configuration.
-- `hashes.json`: integrity hashes for the other four files.
-
-The builder reads these bundles without modifying them. It has no scanner dependency and does not create new evidence. Its index, detail records, tables, scanner-run downloads, and ZIPs are disposable projections for the site.
-
-`publish-local` reads `.exchange/generated/boe/` by default. `--boe-dir` selects another evidence directory; `--generated-dir` selects the derived output directory. `just generate` writes derived output to `.exchange/local-generated/`.
+`--evidence` selects another current-report root; `--generated` selects
+derived output. `just generate` writes to `.exchange/local-generated/`. Operator
+generation uses the same reader and freshness rule with its preceding job's
+reports. Intentional static-only CLI scans retain diagnostics but do not supply
+completed adjudication for a site build.
 
 ## Builds and downloads
 

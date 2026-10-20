@@ -38,7 +38,7 @@ readiness command from the candidate checkout, supplying the SHA selected from
 GitHub rather than deriving it from local `HEAD`. See `CI.md` for authentication.
 
 ```sh
-uv run --group release python -m skill_exchange.release check-ready \
+uv run --group release python -m sklc_maintainer.release check-ready \
   --version <version> --expected-commit <expected-commit-sha>
 ```
 
@@ -85,7 +85,7 @@ calling `check-ready` again. Do not move the tag or replace assets to bypass a f
 From the clean candidate checkout, run the draft gate with the same version and SHA:
 
 ```sh
-uv run --group release python -m skill_exchange.release check-draft \
+uv run --group release python -m sklc_maintainer.release check-draft \
   --version <version> --expected-commit <expected-commit-sha>
 ```
 

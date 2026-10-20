@@ -32,15 +32,11 @@ def select(skills: Path, output: Path, base_sha: str | None) -> None:
         for item in changed_files.split(b"\0"):
             if item:
                 relative = Path(os.fsdecode(item)).relative_to(skills)
-                if len(relative.parts) > 2:
-                    changed.add(skills / relative.parts[0] / relative.parts[1])
+                if len(relative.parts) > 1:
+                    changed.add(skills / relative.parts[0])
     else:
-        changed = {path.parent for path in skills.glob("*/*/SKILL.md") if path.is_file()}
+        changed = {path.parent for path in skills.glob("*/SKILL.md") if path.is_file()}
     current = sorted(path for path in changed if (path / "SKILL.md").is_file())
-    if current:
-        names = [path.parent.name for path in skills.glob("*/*/SKILL.md") if path.is_file()]
-        if len(names) != len(set(names)):
-            raise ValueError("Skill basenames must be unique across namespaces")
     output.mkdir(parents=True, exist_ok=True)
     (output / "changed-files.nul").write_bytes(changed_files)
     write_paths(output / "changed-skills.nul", sorted(changed))

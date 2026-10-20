@@ -28,7 +28,6 @@ test("built site links and assets work unchanged at root and nested hosting path
   const env = {
     ...process.env,
     ASTRO_TELEMETRY_DISABLED: "1",
-    SKILL_EXCHANGE_REPOSITORY_ROOT: root,
     SKILL_EXCHANGE_GENERATED_ROOT: resolve(root, ".exchange/generated"),
   };
   const astroPackage = JSON.parse(readFileSync(resolve(dependencies, "astro/package.json"), "utf-8"));
@@ -41,6 +40,16 @@ test("built site links and assets work unchanged at root and nested hosting path
   }
 
   const dist = resolve(fixtureSite, "dist");
+  const renderedText = (page) => readFileSync(resolve(dist, page, "index.html"), "utf-8")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "")
+    .replace(/<[^>]*>/g, " ");
+  const detail = renderedText("skills/example");
+  for (const expected of ["Fixture adjudication summary", "Adjudication status", "Coverage sufficient", "external references were not assessed", "2026"]) {
+    assert.ok(detail.includes(expected), `missing assessment outcome: ${expected}`);
+  }
+  const html = readFileSync(resolve(dist, "skills/example/index.html"), "utf-8");
+  assert.ok(!/<script[^>]*>alert\(1\)/.test(html), "summary HTML must stay inert");
+  assert.ok(!html.includes('href="https://untrusted.example/"'), "summary links must stay inert");
   assert.ok(statSync(resolve(dist, "assets")).isDirectory());
   assert.ok(!existsSync(resolve(dist, "_astro")));
   for (const mount of ["/", "/group/project/"]) {
@@ -61,7 +70,7 @@ test("built site links and assets work unchanged at root and nested hosting path
       try {
         const deployment = `http://127.0.0.1:${server.address().port}${mount}`;
         const targets = new Set();
-        for (const page of ["", "index.html", "skills/ai4sdlc/example/", "skills/ai4sdlc/example/index.html"]) {
+        for (const page of ["", "index.html", "skills/example/", "skills/example/index.html"]) {
           const document = new URL(page, deployment);
           const response = await fetch(document);
           assert.equal(response.status, 200, document.href);
@@ -81,10 +90,11 @@ test("built site links and assets work unchanged at root and nested hosting path
             targets.add(target.pathname.slice(mount.length));
           }
         }
-        assert.ok(targets.has("skills/ai4sdlc/example/"), "catalog detail link was not checked");
+        assert.ok(targets.has("skills/example/"), "catalog detail link was not checked");
         assert.ok(targets.has(""), "back-to-catalog link was not checked");
         assert.ok(targets.has("downloads/example.zip"), "skill download was not checked");
-        assert.ok(targets.has("downloads/scanner-runs/run-1/skillspector.json"), "scanner download was not checked");
+        assert.ok(targets.has("downloads/assessments/example/skillspector.json"), "scanner download was not checked");
+        assert.ok(targets.has("downloads/assessments/example/adjudication.json"), "adjudication download was not checked");
         assert.ok([...targets].some((path) => path.startsWith("assets/") && path.endsWith(".css")));
         assert.ok([...targets].some((path) => path.startsWith("assets/") && path.endsWith(".js")));
       } finally {
@@ -103,26 +113,32 @@ function writeFixture(root) {
     writeFileSync(destination, value);
   };
   const timestamp = "2026-01-01T00:00:00Z";
-  write("index.json", JSON.stringify({ skills: [{
-    namespace: "ai4sdlc", skill_id: "example", display_id: "ai4sdlc/example", name: "example",
-    description: "Portable site test skill", tags: [], recommendation: "SAFE", confidence_flags: [],
-    last_updated: timestamp, first_observed: timestamp, last_scanned: timestamp,
-    scan_mode: "static-only", content_hash: "abc123", skill_files: [],
-    skill_md_content: "---\nname: example\ndescription: Portable site test skill\n---\n# Example\n",
+  const example = {
+    skill_id: "example", name: "Example skill",
+    description: "Portable site test skill", last_updated: timestamp, first_observed: timestamp, last_scanned: timestamp,
+    skill_files: [{ path: "SKILL.md", size_bytes: 100 }],
+    skill_md_content: "---\nname: example\ndescription: Portable site test skill\n---\n# Example instructions\nRead the complete instructions before use.\n",
     download_path: "downloads/example.zip",
+    assessment_downloads: {
+      skillspector: "downloads/assessments/example/skillspector.json",
+      adjudication: "downloads/assessments/example/adjudication.json",
+    },
+    recommendation: "SAFE", risk: "LOW", confidence_flags: [], tags: [],
+    scanner_runs: [{ id: "example-run", skill_id: "example", scanner_name: "skillspector", scanner_version: "2", scan_mode: "llm-assisted", last_scanned: timestamp }],
+    scanner_findings: [],
+    scanner_artifacts: [{ scanner_run_id: "example-run", artifact_kind: "native_report", download_path: "downloads/assessments/example/skillspector.json" }],
+    adjudication: {
+      status: "completed", summary: "Fixture adjudication summary. <script>alert(1)</script> [untrusted](https://untrusted.example/)",
+      coverage_sufficient: true, coverage_reason: "Skill package reviewed", scope: "external references were not assessed",
+    },
+    dispositions: { true_positive: 1, uncertain: 2, false_positive: 3 },
+  };
+  write("index.json", JSON.stringify({ skills: [example, {
+    ...example, skill_id: "review", name: "Review code",
+    description: "Find defects in Python code", scanner_runs: [], scanner_artifacts: [],
   }] }));
-  write("tables/scanner_runs.json", JSON.stringify({ rows: [{
-    id: "run-1", namespace: "ai4sdlc", skill_id: "example", last_scanned: timestamp,
-    scanner_name: "skillspector", scan_mode: "static-only", content_hash: "abc123",
-    display_risk: "Low", confidence_flags: [], native_severity: "LOW", native_score: 0,
-  }] }));
-  write("tables/scanner_findings.json", JSON.stringify({ rows: [] }));
-  write("tables/scanner_artifacts.json", JSON.stringify({ rows: [{
-    id: "run-1:native_report", scanner_run_id: "run-1", artifact_kind: "native_report",
-    path: ".exchange/generated/scanner-runs/run-1/skillspector.json",
-    download_path: "downloads/scanner-runs/run-1/skillspector.json",
-  }] }));
-  write("scanner-runs/run-1/skillspector.json", "{}\n");
+  write("assessments/example/skillspector.json", "{}\n");
+  write("assessments/example/adjudication.json", "{}\n");
   // An empty, valid ZIP: this test checks serving, not skill-package contents.
   write("zips/example.zip", Buffer.from("504b0506000000000000000000000000000000000000", "hex"));
 }

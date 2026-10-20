@@ -5,7 +5,7 @@ import LocalDate from "./LocalDate";
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 
 type Skill = {
-  display_id: string;
+  skill_id: string;
   name: string;
   description: string;
   category?: string;
@@ -89,22 +89,22 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
     return skills.filter((skill) => {
       const recommendationMatches = recommendation === "all" || skill.recommendation === recommendation;
       const categoryMatches = category === "all" || (skill.category || "uncategorized") === category;
-      const text = [skill.display_id, skill.name, skill.description, skill.category, ...skill.tags].join(" ").toLowerCase();
+      const text = [skill.skill_id, skill.name, skill.description, skill.category, ...skill.tags].join(" ").toLowerCase();
       return recommendationMatches && categoryMatches && (!normalized || text.includes(normalized));
     }).sort((left, right) => {
       if (sort === "recommendation") {
         return (
           (recommendationRank[right.recommendation] ?? 0) - (recommendationRank[left.recommendation] ?? 0) ||
-          left.display_id.localeCompare(right.display_id)
+          left.skill_id.localeCompare(right.skill_id)
         );
       }
       if (sort === "last_updated") {
-        return Date.parse(right.last_updated || "") - Date.parse(left.last_updated || "") || left.display_id.localeCompare(right.display_id);
+        return Date.parse(right.last_updated || "") - Date.parse(left.last_updated || "") || left.skill_id.localeCompare(right.skill_id);
       }
       if (sort === "last_scanned") {
-        return Date.parse(right.last_scanned || "") - Date.parse(left.last_scanned || "") || left.display_id.localeCompare(right.display_id);
+        return Date.parse(right.last_scanned || "") - Date.parse(left.last_scanned || "") || left.skill_id.localeCompare(right.skill_id);
       }
-      return left.display_id.localeCompare(right.display_id);
+      return left.skill_id.localeCompare(right.skill_id);
     });
   }, [category, query, recommendation, skills, sort]);
 
@@ -159,7 +159,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
       ) : (
         <div className="skill-grid">
           {filtered.map((skill) => (
-            <article className="skill-card" key={skill.display_id}>
+            <article className="skill-card" key={skill.skill_id}>
               <div className="skill-card-topline">
                 <RecommendationPills
                   recommendation={skill.recommendation}
@@ -168,7 +168,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
                 />
                 <span className="category-chip">{skill.category || "uncategorized"}</span>
               </div>
-              <h3><a href={`skills/${skill.display_id}/`}>{skill.display_id}</a></h3>
+              <h3><a href={`skills/${skill.skill_id}/`}>{skill.skill_id}</a></h3>
               <p>{skill.description}</p>
               {skill.tags.length > 0 && (
                 <div className="tag-row">
@@ -180,7 +180,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
               <dl className="trust-list compact">
                 <div>
                   <dt>Risk</dt>
-                  <dd>{skill.risk || recommendationToRisk(skill.recommendation)}</dd>
+                  <dd>{skill.risk || "Unknown"}</dd>
                 </div>
                 <div>
                   <dt>Last scanned</dt>
@@ -195,7 +195,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
                   <dd>{skill.scanner_provenance?.name || "SkillSpector"}</dd>
                 </div>
               </dl>
-              <a className="card-action" href={`skills/${skill.display_id}/`}>View skill instructions</a>
+              <a className="card-action" href={`skills/${skill.skill_id}/`}>View skill instructions</a>
             </article>
           ))}
         </div>
@@ -209,26 +209,13 @@ function formatRecommendation(value: string) {
     return "Avoid installing";
   }
   if (value === "CAUTION") {
-    return "Use caution";
+    return "Human Review Advised";
   }
   if (value === "SAFE") {
     return "Safe to use";
   }
   if (value === "BLOCK") {
     return "Avoid installing";
-  }
-  return "Unknown";
-}
-
-function recommendationToRisk(value: string) {
-  if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
-    return "High";
-  }
-  if (value === "CAUTION") {
-    return "Medium";
-  }
-  if (value === "SAFE") {
-    return "Low";
   }
   return "Unknown";
 }

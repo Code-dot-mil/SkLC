@@ -644,6 +644,10 @@ pre {
   font-size: 0.75rem;
 }
 
+.icon-button:not(.compact) {
+  font: 400 16px/1 Arial, sans-serif;
+}
+
 .centered-action {
   display: flex;
   justify-content: center;

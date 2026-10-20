@@ -302,3 +302,15 @@ SkillSpector.
 The real static scan integration test runs only when `skillspector` is on `PATH`;
 other assessment tests exercise the external process and HTTP boundaries without
 a scanner install or provider credentials.
+
+
+## Python consumers
+
+Installed-package consumers can use `skill_assessment.hashing.skill_digest` for
+exact package hashing, `skill_assessment.reports.is_current_assessment` to check
+whether a pair is eligible for the requested content and mode, and
+`skill_assessment.commands.summarize.summarize` for the shared action summary.
+The assessment kit owns current-pair validation and finding association. Consumers
+retain the original JSON pair; the deployment site also passes through native
+fields for its existing scanner display. Its safety guidance comes from completed
+adjudication, while `summarize` retains the CLI action summary.

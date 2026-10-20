@@ -20,7 +20,7 @@ jobs:
     permissions:
       contents: write
     env:
-      PYTHONPATH: scripts
+      PYTHONPATH: maintainer/src
     steps:
       - name: Check out tagged revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,10 +36,10 @@ jobs:
         shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
-          python -m skill_exchange.release validate-version --version "$version"
+          python -m sklc_maintainer.release validate-version --version "$version"
           source_revision="$(git rev-parse HEAD)"
           release_dir="$(mktemp -d "$RUNNER_TEMP/sklc-release.XXXXXX")"
-          python -m skill_exchange.release release-notes \
+          python -m sklc_maintainer.release release-notes \
             --version "$version" --notes-file RELEASE_NOTES.md \
             --output "$release_dir/release-body.md"
           printf 'RELEASE_VERSION=%s\nSOURCE_REVISION=%s\nRELEASE_DIR=%s\n' \
@@ -54,26 +54,25 @@ jobs:
           npm ci --prefix site
       - name: Run repository checks
         run: |
-          uv run --extra test ruff check scripts tests products/assessment-kit
+          uv run --extra test ruff check maintainer products
           uv run --extra test pytest
           npm --prefix site run lint
           npm --prefix site run test
-      - name: Generate exchange data from tracked BOE
-        env:
-          SKILL_EXCHANGE_SOURCE_REPOSITORY_URL: "${{ github.server_url }}/${{ github.repository }}"
-          SKILL_EXCHANGE_SOURCE_BRANCH: "${{ env.SOURCE_REVISION }}"
+      - name: Generate exchange data from current assessments
         run: >-
-          uv run python -m skill_exchange.cli publish-local
-          --generated-dir .exchange/generated
-          --scan-mode static-only
+          uv run python -m skill_exchange.cli generate
+          --skills products/skill-catalog
+          --evidence products/skill-catalog-assessments
+          --generated .exchange/generated
       - name: Build static site
-        run: npm --prefix site run build
+        run: SKILL_EXCHANGE_GENERATED_ROOT="$GITHUB_WORKSPACE/.exchange/generated" npm --prefix site run build
       - name: Build product downloads
         id: release-assets
         shell: bash
         run: |
-          bash scripts/package-skill-catalog.sh "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip"
-          python -m skill_exchange.release build \
+          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip"
+          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging assessments --output "$RELEASE_DIR/build-inputs/skill-catalog-assessments-$RELEASE_VERSION.zip"
+          python -m sklc_maintainer.packaging prebuilt \
             --repo-root . --site-dir site/dist \
             --version "$RELEASE_VERSION" \
             --output-dir "$RELEASE_DIR/assets"
@@ -84,8 +83,9 @@ jobs:
             products/assessment-kit --out-dir "$RELEASE_DIR/assets"
       - name: Build operator kit
         run: >-
-          python scripts/package-operator.py --version "$RELEASE_VERSION"
+          uv run python -m sklc_maintainer.packaging operator --version "$RELEASE_VERSION"
           --catalog "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip"
+          --assessments "$RELEASE_DIR/build-inputs/skill-catalog-assessments-$RELEASE_VERSION.zip"
           --wheel "$RELEASE_DIR"/assets/*.whl --output-dir "$RELEASE_DIR/assets"
       - name: Create draft GitHub Release
         id: draft-release

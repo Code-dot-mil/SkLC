@@ -1,104 +1,75 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const testDir = dirname(fileURLToPath(import.meta.url));
-const script = resolve(testDir, "../scripts/copy-downloads.mjs");
+const script = resolve(dirname(fileURLToPath(import.meta.url)), "../scripts/copy-downloads.mjs");
 
-test("copy-downloads rejects artifact sources outside the generated scanner tree", () => {
-  const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-copy-downloads-"));
-  const siteDir = resolve(root, "site");
-  const generatedTables = resolve(root, ".exchange", "generated", "tables");
-  mkdirSync(siteDir, { recursive: true });
-  mkdirSync(generatedTables, { recursive: true });
-  writeFileSync(resolve(root, "secret.txt"), "secret\n");
-  writeFileSync(
-    resolve(generatedTables, "scanner_artifacts.json"),
-    JSON.stringify({
-      rows: [
-        {
-          path: "secret.txt",
-          download_path: "/downloads/scanner-runs/run-1/secret.txt",
-        },
-      ],
-    }),
-  );
+function fixture(t) {
+  const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-downloads-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const site = resolve(root, "site");
+  const generated = resolve(root, "custom-data");
+  mkdirSync(site);
+  mkdirSync(resolve(generated, "zips"), { recursive: true });
+  mkdirSync(resolve(generated, "assessments/example"), { recursive: true });
+  const skill = {
+    download_path: "downloads/example.zip",
+    assessment_downloads: {
+      skillspector: "downloads/assessments/example/skillspector.json",
+      adjudication: "downloads/assessments/example/adjudication.json",
+    },
+  };
+  writeFileSync(resolve(generated, "zips/example.zip"), "package");
+  for (const filename of ["skillspector.json", "adjudication.json"]) {
+    writeFileSync(resolve(generated, "assessments/example", filename), JSON.stringify({ report: filename }));
+  }
+  return { root, site, generated, skill };
+}
 
-  const completed = runCopyDownloads(siteDir);
-
-  assert.notEqual(completed.status, 0);
-  assert.match(completed.stderr, /outside \.exchange\/generated\/scanner-runs/);
-});
-
-test("copy-downloads rejects destinations outside public downloads", () => {
-  const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-copy-downloads-"));
-  const siteDir = resolve(root, "site");
-  const scannerRun = resolve(root, ".exchange", "generated", "scanner-runs", "run-1");
-  const generatedTables = resolve(root, ".exchange", "generated", "tables");
-  mkdirSync(siteDir, { recursive: true });
-  mkdirSync(scannerRun, { recursive: true });
-  mkdirSync(generatedTables, { recursive: true });
-  writeFileSync(resolve(scannerRun, "skillspector.json"), "{}\n");
-  writeFileSync(
-    resolve(generatedTables, "scanner_artifacts.json"),
-    JSON.stringify({
-      rows: [
-        {
-          path: ".exchange/generated/scanner-runs/run-1/skillspector.json",
-          download_path: "/../src/pages/overwrite.astro",
-        },
-      ],
-    }),
-  );
-
-  const completed = runCopyDownloads(siteDir);
-
-  assert.notEqual(completed.status, 0);
-  assert.match(completed.stderr, /outside public\/downloads/);
-});
-
-for (const generatedName of ["generated", "local-generated"]) {
-  test(`copy-downloads reads downloads from ${generatedName}`, () => {
-    const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-copy-downloads-"));
-    const siteDir = resolve(root, "site");
-    const scannerRun = resolve(root, ".exchange", generatedName, "scanner-runs", "run-1");
-    const generatedTables = resolve(root, ".exchange", generatedName, "tables");
-    mkdirSync(siteDir, { recursive: true });
-    mkdirSync(scannerRun, { recursive: true });
-    mkdirSync(generatedTables, { recursive: true });
-    writeFileSync(resolve(scannerRun, "skillspector.json"), "{\"risk\":\"low\"}\n");
-    writeFileSync(
-      resolve(generatedTables, "scanner_artifacts.json"),
-      JSON.stringify({
-        rows: [
-          {
-            path: generatedName === "generated"
-              ? "/previous/checkout/.exchange/generated/scanner-runs/run-1/skillspector.json"
-              : `.exchange/${generatedName}/scanner-runs/run-1/skillspector.json`,
-            download_path: "/downloads/scanner-runs/run-1/skillspector.json",
-          },
-        ],
-      }),
-    );
-
-    const completed = runCopyDownloads(siteDir, { SKILL_EXCHANGE_GENERATED_ROOT: resolve(root, ".exchange", generatedName) });
-
-    assert.equal(completed.status, 0, completed.stderr);
-    assert.equal(
-      readFileSync(resolve(siteDir, "public", "downloads", "scanner-runs", "run-1", "skillspector.json"), "utf-8"),
-      "{\"risk\":\"low\"}\n",
-    );
+function run({ site, generated, skill }) {
+  writeFileSync(resolve(generated, "index.json"), JSON.stringify({ skills: [skill] }));
+  return spawnSync(process.execPath, [script], {
+    cwd: site, env: { ...process.env, SKILL_EXCHANGE_GENERATED_ROOT: generated }, encoding: "utf-8",
   });
 }
 
-function runCopyDownloads(siteDir, env = {}) {
-  return spawnSync("node", [script], {
-    cwd: siteDir,
-    env: { ...process.env, ...env },
-    encoding: "utf-8",
+test("copies the skill package and exact report pair from a configured generated root", (t) => {
+  const data = fixture(t);
+  const result = run(data);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(readFileSync(resolve(data.site, "public/downloads/example.zip"), "utf-8"), "package");
+  for (const filename of ["skillspector.json", "adjudication.json"]) {
+    assert.deepEqual(JSON.parse(readFileSync(resolve(data.site, "public/downloads/assessments/example", filename))), { report: filename });
+  }
+});
+
+for (const escape of ["../secret.zip", "../assessments/example/skillspector.json"]) {
+  test(`rejects a download escaping its generated source: ${escape}`, (t) => {
+    const data = fixture(t);
+    data.skill.download_path = `downloads/${escape}`;
+    const result = run(data);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /outside generated product data/);
   });
 }
+
+test("rejects report symlinks outside generated assessments", (t) => {
+  const data = fixture(t);
+  const report = resolve(data.generated, "assessments/example/skillspector.json");
+  rmSync(report);
+  writeFileSync(resolve(data.root, "secret.json"), "secret");
+  symlinkSync(resolve(data.root, "secret.json"), report);
+  const result = run(data);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /outside generated product data/);
+});
+
+test("fails when an indexed assessment report is missing", (t) => {
+  const data = fixture(t);
+  rmSync(resolve(data.generated, "assessments/example/adjudication.json"));
+  assert.notEqual(run(data).status, 0);
+});

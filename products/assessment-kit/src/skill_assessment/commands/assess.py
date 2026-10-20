@@ -1,13 +1,11 @@
 import json
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 
-from ..adjudication import validate_verdict
 from ..errors import OutputDirectoryError, ScanError
 from ..hashing import skill_digest
-from ..reports import load_scanner_report, validate_assessment_report
+from ..reports import is_current_assessment
 from ..scanning import (
     require_scanner,
     scan_skill,
@@ -15,42 +13,6 @@ from ..scanning import (
     strip_source_base,
 )
 from .validate import validate_skill
-
-
-def is_current_assessment(output_dir: Path, digest: str, *, static_only: bool) -> bool:
-    """Only reuse a successful assessment of these bytes in this mode."""
-    try:
-        report = load_scanner_report(output_dir / "skillspector.json")
-        validate_assessment_report(report, output_dir, static_only=static_only)
-        adjudication = json.loads((output_dir / "adjudication.json").read_text(encoding="utf-8"))
-        timestamp = datetime.fromisoformat(adjudication["metadata"]["created_at"])
-        if timestamp.tzinfo is None:
-            return False
-        for key in ("summary", "coverage_reason", "scope"):
-            if not isinstance(adjudication[key], str) or not adjudication[key].strip():
-                return False
-        if static_only:
-            if adjudication["safe_to_use"] is not None or adjudication["coverage_sufficient"] is not None:
-                return False
-            findings = adjudication["findings"]
-            if not isinstance(findings, list) or len(findings) != len(report["issues"]):
-                return False
-            for index, (finding, issue) in enumerate(zip(findings, report["issues"], strict=True), 1):
-                if (finding["index"] != index or finding["rule_id"] != issue.get("id", issue.get("rule_id"))
-                        or finding["determination"] != "not_adjudicated"
-                        or not isinstance(finding["reason"], str) or not finding["reason"].strip()):
-                    return False
-        else:
-            validate_verdict({key: adjudication[key] for key in (
-                "safe_to_use", "summary", "coverage_sufficient", "coverage_reason", "findings",
-            )}, report["issues"])
-        return (
-            adjudication.get("skill_sha256") == digest
-            and adjudication.get("status") == ("not_performed" if static_only else "completed")
-        )
-    except (OSError, ValueError, KeyError, TypeError, AttributeError, ScanError):
-        # Missing, malformed, or failed reports require a new scan, never a skip.
-        return False
 
 
 def assess_skill(

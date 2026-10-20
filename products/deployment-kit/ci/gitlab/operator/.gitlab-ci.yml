@@ -1,7 +1,7 @@
 include:
   - local: ci/assessment.yml
 
-stages: [advise, assess, generate, build, deploy]
+stages: [assess, generate, build, deploy]
 
 workflow:
   rules:
@@ -17,29 +17,31 @@ variables:
   SKILL_EXCHANGE_SOURCE_REPOSITORY_URL: "$CI_PROJECT_URL"
   SKILL_EXCHANGE_SOURCE_BRANCH: "$CI_COMMIT_SHA"
 
-advise:
-  extends: .skill-advice
-  stage: advise
-  script:
-    - python -m skill_exchange.operator advise --evidence advice --scan-mode "$SCAN_MODE"
-  artifacts:
-    when: always
-    expire_in: 30 days
-    paths: [advice/]
+.operator-runtime:
+  extends: .assessment-runtime
+  before_script:
+    - |
+      if [ "${ASSESSMENT_CA_CERTIFICATES+x}" = x ]; then
+        ASSESSMENT_TRUST_DIR="$(mktemp -d)"
+        python ci/configure_runtime_trust.py "$ASSESSMENT_TRUST_DIR/ca-bundle.pem"
+        export SSL_CERT_FILE="$ASSESSMENT_TRUST_DIR/ca-bundle.pem"
+        export REQUESTS_CA_BUNDLE="$SSL_CERT_FILE" PIP_CERT="$SSL_CERT_FILE"
+      fi
+    - !reference [.assessment-runtime, before_script]
 
 assess:
-  extends: .skill-assessment
+  extends: .operator-runtime
   stage: assess
   dependencies: []
   script:
-    - python -m skill_exchange.operator assess --scan-mode "$SCAN_MODE"
+    - python -m skill_exchange.operator assess --scan-mode "$SCAN_MODE" --override
   artifacts:
     when: always
     expire_in: 30 days
     paths: [evidence/]
 
 generate:
-  extends: .assessment-runtime
+  extends: .operator-runtime
   stage: generate
   dependencies: [assess]
   script:

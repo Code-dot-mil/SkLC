@@ -27,11 +27,22 @@ def main():
     files.update({
         ".gitlab-ci.yml": Path("products/deployment-kit/ci/gitlab/operator/.gitlab-ci.yml").read_bytes(),
         "ci/assessment.yml": Path("products/assessment-kit/ci/gitlab/profile.yml").read_bytes(),
-        "README.md": Path("products/deployment-kit/docs/operator/README.md").read_bytes(),
+        "README.md": Path("products/deployment-kit/docs/operator/README.md").read_bytes()
+        .replace(b"../../containers/assessment/README.md", b"containers/assessment/README.md")
+        .replace(b"../../../assessment-kit/README.md", b"docs/assessment-kit.md"),
+        "ci/configure_runtime_trust.py": Path(
+            "products/deployment-kit/ci/gitlab/operator/configure_runtime_trust.py"
+        ).read_bytes(),
         "docs/assessment-kit.md": Path("products/assessment-kit/README.md").read_bytes(),
         f"wheels/{args.wheel.name}": args.wheel.read_bytes(),
         "VERSION": (args.version + "\n").encode(),
     })
+    image_root = Path("products/deployment-kit/containers/assessment")
+    for name in ("Dockerfile", ".dockerignore", "README.md"):
+        content = (image_root / name).read_bytes()
+        if name == "README.md":
+            content = content.replace(b"../../../assessment-kit/README.md", b"../../docs/assessment-kit.md")
+        files[f"containers/assessment/{name}"] = content
     with ZipFile(args.catalog) as catalog:
         for item in catalog.infolist():
             path = PurePosixPath(item.filename)

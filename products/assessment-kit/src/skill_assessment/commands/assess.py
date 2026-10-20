@@ -31,7 +31,7 @@ def assess_skill(
     existing = next((entry for entry in index["assessments"] if entry["skill_sha256"] == digest), None)
     if existing is not None and not override:
         raise ValueError(f"Assessment already exists at {output_dir / existing['path']}; use --override to replace it")
-    report = advise_skill(skill, output_dir, static_only=static_only, timeout=timeout)
+    report = advise_skill(skill, output_dir, static_only=static_only, timeout=timeout, require_complete=False)
     assessment = report.parent
     if existing is not None:
         assessment = output_dir / existing["path"]

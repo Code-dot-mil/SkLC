@@ -20,7 +20,7 @@ build-backend = "setuptools.build_meta"
 where = ["scripts"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "products/assessment-kit/tests"]
+testpaths = ["tests", "products/assessment-kit/tests", "maintainer/tests"]
 pythonpath = ["scripts", "products/assessment-kit/src"]
 
 [tool.ruff]

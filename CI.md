@@ -9,7 +9,8 @@ Two GitHub Actions workflows validate and prepare releases for this repository:
 ## GitHub Validation
 
 The `CI` workflow runs on every pull request targeting `main` and every push to
-`main`. All jobs use GitHub-hosted Ubuntu runners.
+`main`. Validation and packaging use GitHub-hosted Ubuntu runners; main catalog
+assessments use a self-hosted runner.
 
 ```mermaid
 flowchart TD
@@ -37,8 +38,8 @@ The workflow checks and builds the site in three steps:
 2. **Generate catalog data.** The `exchange-data` job uses Python to read the
    tracked bill of evidence (BOE) for each skill. Each BOE must record a successful
    assessment and match the skill's current content exactly. Missing or invalid
-   evidence fails the build. CI does not run a scanner or create replacement
-   evidence.
+   evidence fails the build. This site-generation job does not run a scanner or
+   create replacement evidence.
 3. **Build and package the site.** The `static-site` job downloads the generated
    data and uses Node.js to build `site/dist/`. It then runs
    `python -m skill_exchange.release stage` to assemble the site, deployment
@@ -55,6 +56,79 @@ creates the downloadable ZIP and includes hidden files such as `.gitlab-ci.yml`.
 Unzip it once to get `public/`, documentation, and the deployment job. The package
 has the same layout as a release ZIP. This preview build creates no tag or GitHub
 Release.
+
+## Main catalog assessments
+
+Upstream policy lives in `sklc_maintainer.assessments`: `select` writes the
+NUL-delimited package manifests, `assess` invokes the public assessment CLI,
+`prune` removes obsolete reports only after successful main assessment, and
+`summarize` combines retained PR summaries. The workflow keeps these phases,
+runner/credential conditions, artifacts, and pair-only Git writes visible.
+Selection uses the existing namespaced package paths, rejecting duplicate basenames; validation, hashing and report
+interpretation stay in assessment-kit. An existing empty catalog selects no
+packages and permits obsolete-report cleanup; a missing root or invalid comparison
+commit fails. Main assessment stops at the first failure; PR assessment continues
+the selected packages and retains partial results for its always-run summary.
+
+The independent `catalog-assessments` job maintains source-controlled assessments
+of the catalog skills after pushes to `main`. Its
+self-hosted runner must provide Bash, Python, pip, and SkillSpector `>=2.10,<3`
+on `PATH`. The job selects Python 3.12, installs uv, and invokes the checked-out
+assessment kit with explicit `--scan-mode llm-assisted`. Reusing
+matching successful reports avoids unnecessary provider requests; the job still
+checks every current skill. Incoming changes to either BOE file force a fresh
+assessment of that skill; an initial push with no preceding commit assesses all
+skills, and comparison failures stop the job. Both assessment jobs set `SKILL_ASSESSMENT_BASE_DIR`
+to the checkout root so matching native source paths are repository-relative.
+
+Configure `SKILLSPECTOR_PROVIDER`, `SKILLSPECTOR_MODEL`, and the selected gateway's
+variables and credential secrets described in the
+[assessment kit](products/assessment-kit/README.md#adjudication-gateways).
+`RUNNER_CA_BUNDLE_PATH` supplies the runner's optional custom certificate bundle.
+Credentials remain in Actions secrets; no provider-specific settings are embedded
+in skill content or customer downloads.
+
+The successful `skillspector.json` and `adjudication.json` pair is the BOE,
+committed only under
+`products/skill-catalog-assessments/<skill-name>/`. Duplicate names across namespaces
+fail before scanning. `scanner.log` is ignored by Git and retained only in local
+output and CI diagnostic artifacts. After all scans succeed, the three output files
+are removed from obsolete skill directories; unrelated files are preserved and
+empty obsolete directories are removed. The job uses `GITHUB_TOKEN` with `contents: write`; its push
+[does not trigger another workflow run](https://docs.github.com/en/actions/concepts/security/github_token).
+Repository branch protection must permit that write. Concurrent assessment jobs
+are serialized; if another writer advances main, a non-fast-forward push fails
+without overwriting their work. Reports and failure diagnostics are uploaded even
+when the job fails. Unchanged reports skip successfully without another provider call.
+
+Site generation continues to consume the existing tracked BOE until the assessment
+reader migration. Node jobs consume Python-generated artifacts.
+
+## Pull request assessment review
+
+Same-repository PRs run a read-only assessment review on the configured assessment
+runner. Changes anywhere inside a skill package, including supporting files and
+deleted files, select that package. Deleted skill packages are recorded but do not
+invoke the scanner. Unrelated changes skip scanner setup and provider requests.
+Fork PRs receive an explicit skipped notice on a hosted runner, with no assessment
+runner or provider credentials. The workflow uses `pull_request`, checks out the PR
+head without persisted Git credentials, and never commits or posts comments.
+
+The `pr-assessments` artifact contains temporary `reports/<skill-name>/` outputs,
+mirrored `summaries/` Markdown, combined `summary.md`, and NUL-delimited manifests:
+`changed-skills.nul` includes deletions; `current-skills.nul` selects packages still
+present in the PR head. The combined Markdown also appears in the Actions summary.
+The summaries emphasize required remediation, unresolved findings, and false
+positives, including assessment scope and limitations. Failed scans retain their
+diagnostics and any readable report pairs for review.
+
+At the reader cutover, preview generation can copy unchanged main reports into a
+temporary current-assessment directory, then replace changed entries with
+`reports/<skill-name>/`. Removed packages are absent from the PR source discovery.
+The current generator remains unchanged until that cutover.
+
+Provider configuration is shared with the main job through a YAML anchor, a
+[supported workflow facility](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases).
 
 ## Skill Catalog Download
 

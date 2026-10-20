@@ -25,9 +25,9 @@ not be used as a fallback when `llm-assisted` is configured but unavailable.
 
 SkillSpector installation and dependency management are outside this repository's
 scope. The assessment kit requires an externally installed `skillspector` executable
-on `PATH` for advice and assessment; validation has no scanner prerequisite.
+on `PATH` for assessment; validation, hashing, and summaries need no scanner.
 The compatibility target is SkillSpector `>=2.10,<3` through its public CLI and JSON report format.
-Version 2.10.0 is tested; later v2 releases are expected to remain compatible.
+Versions 2.10.0 and 2.12.0 have been exercised; other v2 releases are expected to remain compatible.
 
 ## 5. Assessment errors
 

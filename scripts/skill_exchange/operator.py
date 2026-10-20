@@ -40,7 +40,7 @@ def read_assessment_boe(*, boe_dir, skill, mode):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("advise", "assess", "generate"))
+    parser.add_argument("command", choices=("assess", "generate"))
     parser.add_argument("--skills", type=Path, default=Path("skills"))
     parser.add_argument("--evidence", type=Path, default=Path("evidence"))
     parser.add_argument("--policy", type=Path, default=Path(".exchange"))
@@ -61,6 +61,9 @@ def main() -> None:
             if args.if_changed:
                 command.append("--if-changed")
             subprocess.run(command, check=True)
+            with (output / "assessment.md").open("w", encoding="utf-8") as summary:
+                subprocess.run(["skill-assessment", "summarize", "--assessment-dir", str(output)],
+                               stdout=summary, check=True)
     if args.command == "generate":
         result = build_exchange(skills_root=args.skills, exchange_dir=args.policy,
                                 generated_dir=args.generated, scan_modes=(args.scan_mode,),

@@ -1,8 +1,20 @@
 # Assessment kit
 
-Validate a local skill directory and get advisory scan findings with
-`skill-assessment validate`, `skill-assessment assess`, `skill-assessment hash`,
-and `skill-assessment advise`.
+Assess a skill during development, understand which findings need action, and
+check the revised skill. The kit produces a SkillSpector report and adjudication,
+then translates them into a human-friendly, action-based summary.
+
+After installation and provider setup:
+
+```sh
+skill-assessment assess --skill ./my-skill --output-dir ./reports
+skill-assessment summarize --assessment-dir ./reports
+```
+
+Address confirmed findings and investigate unresolved findings, then assess the
+revised skill with the same commands. False-positive determinations explain why
+no remediation is needed for those findings. `validate` checks a package's
+frontmatter; `hash` identifies its contents.
 
 ## Prerequisites
 
@@ -262,76 +274,31 @@ The hash includes file paths and contents. It starts with
 relative POSIX path order. Each path and each file's contents are preceded by
 their unsigned eight-byte big-endian byte length. Empty directories are omitted.
 
-## Advise
+## Summarize
 
-Validate and scan one local skill directory using SkillSpector. Complete the
-[SkillSpector prerequisites](#skillspector) before running this command.
-LLM-assisted scanning is the default.
+Produce a human-friendly, action-based Markdown summary of the SkillSpector
+report and adjudication:
 
 ```sh
-uv run --no-project skill-assessment advise --skill ./my-skill
-uv run --no-project skill-assessment advise --skill ./my-skill --scan-mode static-only --output-dir ./reports
+skill-assessment summarize --assessment-dir ./reports > assessment.md
 ```
 
-By default, scans use LLM analysis. Use `--scan-mode static-only` to scan without
-an LLM. If LLM analysis fails, the command reports an error instead of switching
-to static scanning.
+The directory must contain `skillspector.json` and `adjudication.json`. The summary
+starts with the number of true-positive findings that need remediation, followed
+by counts of unresolved findings and false positives. It includes the review
+status, scope, and limitations. True positives and unresolved findings have detailed
+entries; false positives have shorter entries. Findings from static-only scans
+or unavailable or failed adjudication remain unresolved.
 
-Each scan checks the selected skill. The scanner and subsequent adjudication request
-each have a 5-minute timeout by default. Use `--timeout SECONDS` to change each
-limit to a positive whole number of seconds. For example, `--timeout 600` allows
-up to 10 minutes per stage.
-
-Each run creates a new directory inside `./assessment-reports/`, or inside the
-directory you specify with `--output-dir`. This location must be outside the skill.
-The command displays retained report paths. `skillspector.json` preserves the raw
-native report; `scanner.log` retains diagnostics. Both scan modes produce
-`adjudication.json` with the same fields: findings, safety and coverage judgments,
-status, scope, and inference metadata. LLM-assisted runs adjudicate each finding.
-Static-only runs record `status: not_performed`, null safety and coverage judgments,
-and `not_adjudicated` entries preserving each finding's index and rule ID.
-Provider and model fields and token usage are null, inference call counts and
-duration are zero, and the creation timestamp records when the artifact was written.
-Static-only runs make no adjudication request, even when provider credentials are
-configured. Existing runs and skills stay unchanged.
-
-**MVP: adjudication examines SKILL.md and scanner evidence only; additional skill
-files are not independently reviewed.** The full SKILL.md is sent in one request,
-without execution, following links, secret redaction, or chunking. A model's
-`safe_to_use: true` is limited to that scope and does not certify the package.
-Assessment-kit does not truncate inputs; gateway context-limit errors produce a
-failed adjudication.
-
-The system prompt is packaged in
-[`prompts/adjudicate.md`](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/src/skill_assessment/prompts/adjudicate.md). It explains
-static confidence, `llm-unconfirmed`, benign-context tags, and ledger exceptions.
-The response is checked for a verdict on every finding and consistency between
-the safety flag, findings, and coverage. The adjudication adds code-generated
-status, scope, provider/model, timestamp, duration, attempted/successful call
-counts, and token usage when the gateway supplies it. Unknown usage is not zero.
-Credentials and endpoint URLs are not included in adjudication metadata.
-
-Readable partial LLM-assisted scans still reach adjudication, but retain their incomplete
-scanner status and exit code 3. Missing configuration produces `status: unavailable`;
-request or response failures produce `status: failed`. Both use `safe_to_use: null`,
-unknown coverage, and `not_adjudicated` findings with a brief reason. Scanner
-failures also produce an unavailable adjudication in LLM-assisted mode when artifacts
-can be written. Static-only failures retain `status: not_performed`, with any readable
-findings, or an empty findings list when no usable report exists. Scan failure and
-incompleteness still return exit code 3 in either mode; `not_performed` alone is not
-an execution failure. Raw scanner reports are retained only if the scanner emitted them.
-
-Exit status is `0` when Advise completes, regardless of finding severity, `1` for
-invalid input or output setup, `2` for incorrect usage, and `3` for a missing scanner,
-scanner failure, timeout, missing/malformed output, incomplete coverage, or
-unavailable/degraded requested LLM analysis, or unavailable/failed adjudication.
-A completed negative safety verdict remains advisory and does not change a successful
-exit to an execution error. A successful exit does not certify safety.
-Advise creates no BOE or exchange evidence.
+The command reads the reports without changing them. It needs no package hash or
+scanner installation. Exit status is `0` for a rendered summary, `1` for
+unreadable or mismatched reports, and `2` for incorrect command usage. Markdown
+goes to stdout and errors go to stderr.
 
 ## Development
 
-`uv run --extra test pytest` runs without installing SkillSpector.
+From this product directory, `uv run --extra test pytest` runs without installing
+SkillSpector.
 The real static scan integration test runs only when `skillspector` is on `PATH`;
 other assessment tests exercise the external process and HTTP boundaries without
 a scanner install or provider credentials.

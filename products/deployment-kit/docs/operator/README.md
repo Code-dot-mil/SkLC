@@ -133,7 +133,7 @@ report download. See [GitLab Pages](https://docs.gitlab.com/user/project/pages/)
 
 | Location | Available evidence |
 | --- | --- |
-| Assessment job's `evidence/` artifact | Current raw `skillspector.json`, `adjudication.json`, and `scanner.log`; failed runs retain whichever diagnostic files could be written |
+| Assessment job's `evidence/` artifact | Current raw `skillspector.json`, `adjudication.json`, `scanner.log`, and action-based `assessment.md`; failed runs retain whichever diagnostic files could be written |
 | Generate job's `.exchange/generated/` artifact | Catalog data, skill ZIPs, and per-run `skillspector.json`, scanner-derived `summary.json`, and an adjudication copy named `boe.json` |
 | Published site and `public/` artifact | Skill packages and those three per-run JSON downloads; the page displays scanner findings/risk and links the native report |
 
@@ -184,8 +184,9 @@ npm --prefix site run build
 
 For LLM-assisted assessment, configure the provider and use `--scan-mode
 llm-assisted` in both commands. For private CA trust, follow the image guide's
-local helper instructions before the wheel installation. `advise` is an
-independent local command, not a deployment stage or assessment prerequisite.
+local helper instructions before the wheel installation. Each assessment also
+writes `assessment.md` with required remediation, unresolved findings, and false
+positives from the current reports.
 
 Paths are configurable with `--skills`, `--evidence`, `--policy`, and `--generated`.
 For a custom generated path, set `SKILL_EXCHANGE_GENERATED_ROOT` to the same

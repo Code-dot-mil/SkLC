@@ -11,7 +11,7 @@ The Q3 priority is the smallest release path that proves this model: GitHub publ
 ### 2.1 Products
 
 - **Skill lifecycle guidance:** a parallel guidance and research track that will become a versioned guidance bundle published from the Code-dot-mil AI4SDLC GitHub after the team agrees on the minimum useful lifecycle guidance. It does not gate the assessment kit, initial catalog, or deployment kit.
-- **Assessment kit:** standalone CLI with commands and reference CI for validating and assessing skills, producing native assessor output, and maintaining BOE manifests.
+- **Assessment kit:** standalone CLI with commands and reference CI for validating and assessing skills, producing current native reports, adjudication, and action-based summaries.
 - **Initial skill catalog:** complete skill packages for developer installation and skill-exchange use, starting with Secure Code Review, Unit Test Generation, Inline Documentation, and Commit Message and PR Description. Future releases will select the published set through maintainer policy and may offer associated assessment evidence as a separate download.
 - **Deployment kit:** provides the reference implementation for the skill exchange site. It has two modes:
   - **Prebuilt:** a ready-to-deploy static site with deployment CI and documentation.
@@ -24,7 +24,7 @@ Each product has its own release artifact, but products and components are not i
 | Product | Release artifact | Uses another product? | Primary use-case |
 |---|---|---|---|
 | Skill lifecycle guidance | Code-dot-mil AI4SDLC GitHub guidance | No | Help users understand and apply the skill lifecycle. |
-| Assessment kit | Python wheel, usage documentation, and optional GitLab CI profile | No | Validate skills, run assessments, and produce BOE. |
+| Assessment kit | Python wheel, usage documentation, and optional GitLab CI profile | No | Validate skills, hash packages, assess, and summarize reports. |
 | Skill catalog | Complete skill packages in one ZIP | No | Install skills or supply a skill exchange. |
 | Deployment kit - prebuilt | `deployment-kit-prebuilt` with deployment-only GitLab CI | Released catalog artifacts and optional assessment-kit artifacts | Deploy GitLab Pages or a static hosted site from released static site artifacts. |
 | Deployment kit - operator | `deployment-kit-operator` with reference GitLab CI | Compatible SkLC release artifacts for skill catalog, assessment kit, and assessment artifacts | Build and deploy GitLab Pages or a static hosted site from released catalog and assessment-kit inputs. |
@@ -182,24 +182,25 @@ Evidence packaging and consumer requirements remain to be defined.
 
 #### 3.4.1 Customer outcome
 
-A customer can install the assessment kit and assess their own skills, retaining native assessor output and BOE manifests.
+A customer can install the assessment kit and assess their own skills, retaining current native reports, adjudication, and Markdown summaries.
 
 #### 3.4.2 Scope
 
 Included:
 
-- Three public commands:
+- Four public commands:
   - `validate` checks that skill packages are valid.
-  - `advise` produces native assessor reports and author-facing advice. It does not create a BOE or decide publication.
-  - `assess` records one successful assessment per skill content hash in the BOE index; `--override` explicitly replaces the assessment for that hash.
-- One explicitly selected skill per invocation, using SkillSpector for advice and assessment.
+  - `hash` prints the package SHA-256.
+  - `summarize` explains required remediation, unresolved findings, and false positives from paired reports.
+  - `assess` replaces current flat reports after successful analysis; `--if-changed` reuses matching successful requested-mode output.
+- One explicitly selected skill per invocation, using SkillSpector for assessment.
 - Supported assessor versions and unchanged native assessor output.
 
 Excluded:
 
 - Reference CI and provider integrations.
 - Publication decisions or catalog-policy evaluation.
-- Catalog assembly, site build, deployment, commits, pushes, or provider API calls in the core assessment runtime.
+- Catalog assembly, site build, deployment, commits, pushes, or provider calls unrelated to assessment.
 - A required namespace or fixed repository layout beyond valid skill packages.
 
 #### 3.4.3 Team delivery tasks
@@ -207,18 +208,17 @@ Excluded:
 Deliver these steps as separate PRs, each with its behavior tests and usage guidance:
 
 1. Installable wheel and validation.
-2. Single-skill advice.
+2. Single-skill scanning and adjudication.
 3. Assessment evidence.
 4. Wheel release integration.
 
 #### 3.4.4 Acceptance evidence
 
 - A developer obtains the assessment-kit artifact from GitHub Releases, verifies its checksums, installs the wheel in an isolated local environment, configures the assessment kit, and runs it against a local skill package without the catalog, site, deployment kit, GitLab project, or GitLab CI.
-- The local run produces advice artifacts, native reports, and a per-skill assessment index.
+- The local run produces current native reports, adjudication with the package hash, and an action-based summary.
 
 #### 3.4.5 Future capabilities
 
-- `verify-boe` is deferred until version 2; it is not a prerequisite for the operator foundation.
 - Assess multiple explicitly selected skills in one invocation.
 - Discover skill packages recursively below a selected root.
 - Support reusable configuration files, machine-readable advice manifests, and additional assessors as consumer needs are established.
@@ -227,16 +227,15 @@ Deliver these steps as separate PRs, each with its behavior tests and usage guid
 
 #### 3.5.1 Customer outcome
 
-A customer can use a supported assessment-kit GitLab CI profile for skill advice and assessment without designing the jobs themselves.
+A customer can use a supported assessment-kit GitLab CI profile for skill assessment and summaries without designing the jobs themselves.
 
 #### 3.5.2 Scope
 
 Included:
 
-- A minimal reference GitLab CI profile with separate advice and assessment jobs. Customers provide the skill directory, output locations, assessor settings, and credentials.
-- Advice-job artifacts containing the native scanner report, adjudication, and scanner log, without a BOE.
-- Assessment-job artifacts containing the assessor's original reports and the updated BOE.
-- Documentation for manually persisting assessment reports and the updated BOE index.
+- A minimal reference GitLab CI assessment job. Customers provide the skill directory, output locations, assessor settings, and credentials.
+- Assessment-job artifacts containing native reports, adjudication, scanner diagnostics, and an action-based Markdown summary.
+- Documentation for manually retaining current reports and summaries when durable history is needed.
 
 Excluded:
 
@@ -247,23 +246,24 @@ Excluded:
 #### 3.5.3 Team delivery tasks
 
 1. Package the reference GitLab CI as a later assessment-kit release.
-2. Test advice and assessment with explicit skill and output locations, customer-provided assessor settings and credentials, and job-artifact retention.
-3. Document runner, credential, assessor-access, CI configuration, and manual BOE persistence requirements.
+2. Test assessment and action-based summaries with explicit skill and output locations, customer-provided settings and credentials, and artifact retention.
+3. Document runner, credential, assessor-access, CI configuration, and manual artifact-retention requirements.
 
 #### 3.5.4 Acceptance evidence
 
 - A developer configures the reference CI in a clean GitLab project using the shipped documentation.
-- The advice job retains the documented advice and native reports without producing a BOE.
-- The assessment job retains native reports and the updated per-skill assessment index.
+- The assessment job scans once and retains reports, diagnostics, and the action-based summary.
 - The assessment job makes no source-control changes.
 
 ### 3.6 Deferred internal milestone — Catalog assessment automation
 
 #### 3.6.1 Maintainer outcome
 
-SkLC maintainers use the in-repository assessment kit to advise on proposed skill changes and maintain assessment records for the initial catalog.
+SkLC maintainers use assessment summaries to give developers actionable feedback
+on proposed skill changes. After merge, automation maintains the repository's
+assessment report and adjudication pair for consumers of the published skill.
 
-This milestone is not part of the Q3 MVP unless BOE is required for an accepted catalog release.
+This milestone is not part of the Q3 MVP unless retained assessment evidence is required for an accepted catalog release.
 
 #### 3.6.2 Scope
 
@@ -273,7 +273,7 @@ Included:
 - Advice for proposed skill changes before merge.
 - Assessment after skill changes reach `main`.
 - An approved maintainer runner for jobs that require assessor access.
-- Source-controlled native assessor reports and BOE manifests for the initial catalog.
+- Source-controlled native assessor reports and adjudication for the initial catalog.
 
 Excluded:
 
@@ -285,15 +285,15 @@ Excluded:
 
 1. Install and secure the maintainer assessment runner with the required assessor access.
 2. Adapt maintainer GitHub Actions to set up and invoke the assessment kit from the current checkout.
-3. Run advice for proposed skill changes and assessment after skill changes reach `main`.
-4. Store native assessment reports and updated BOE indexes in the source-controlled initial catalog.
+3. Assess proposed skill changes for developer feedback and assess after merge to maintain repository evidence.
+4. Store the native assessment report and adjudication pair in the source-controlled initial catalog.
 5. Keep jobs that do not require assessor access on GitHub-hosted runners.
 
 #### 3.6.4 Acceptance evidence
 
-- Maintainer advice and assessment workflows set up and use the assessment kit from the current checkout.
-- Advice on a proposed skill change does not create a BOE or alter catalog policy.
-- Assessment after a skill change reaches `main` stores native reports and an updated per-skill assessment index in the initial catalog.
+- Maintainer assessment workflows set up and use the assessment kit from the current checkout.
+- Assessment summaries on a proposed skill change do not alter catalog policy.
+- Assessment after a skill change reaches `main` stores the native assessment report and adjudication pair in the initial catalog.
 
 ### 3.7 Release milestone — Operator foundation
 
@@ -307,7 +307,7 @@ Included:
 
 - Compatible released catalog and assessment-kit artifacts. The initial catalog is used as the reference test input, not as a structural dependency.
 - Reference site source and build tooling.
-- Reference GitLab CI that reuses the assessment CI profile and adds site build and deployment. BOE persistence uses job artifacts and documented manual source-control steps unless later automation is justified by demonstrated customer need.
+- Reference GitLab CI that reuses the assessment CI profile and adds site build and deployment. Assessment retention uses job artifacts and documented manual source-control steps unless later automation is justified by demonstrated customer need.
 - Operator installation, configuration, and troubleshooting documentation.
 
 Excluded:
@@ -325,7 +325,7 @@ Excluded:
 #### 3.7.4 Acceptance evidence
 
 - A developer obtains the operator release from GitHub Releases and installs it in a clean GitLab project using the shipped documentation.
-- The reference pipeline runs advice and formal assessment for the installed catalog's skills, retains assessment indexes and reports as artifacts, builds the site, and produces a GitLab Pages artifact.
+- The reference pipeline assesses each installed skill once, summarizes required actions, retains reports and diagnostics as artifacts, builds the site, and produces a GitLab Pages artifact.
 - The operator pipeline makes no source-control changes by default.
 - Every required customer-provided runner, credential, and configuration value is documented.
 

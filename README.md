@@ -41,7 +41,8 @@ artifact contains the same layout.
 ## Assess a local skill
 
 The [assessment kit](products/assessment-kit/README.md) provides a standalone
-`skill-assessment` CLI with `validate`, `advise`, and `assess` commands.
+`skill-assessment` CLI with `validate`, `hash`, `assess`, and `summarize` commands to explain required remediation, unresolved findings,
+and false positives.
 Install its wheel from an SkLC release without the checkout or site tooling;
 compare its SHA-256 with the GitHub asset digest, then follow the assessment kit
 installation and usage guide.

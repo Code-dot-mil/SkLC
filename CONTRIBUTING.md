@@ -4,6 +4,10 @@ This guide is for developers changing the skill exchange application, CI, policy
 
 For skill governance and skill review roles, see `GOVERNANCE.md`.
 
+For product ownership, source layout, composition, CI, and test boundaries, apply
+the normative [product-boundary contract](docs/product-boundaries.md) when planning,
+implementing, and reviewing contributions.
+
 ## Development Scope
 
 Exchange-site developers maintain:

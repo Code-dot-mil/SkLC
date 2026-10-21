@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pair Programming"
+  short_description: "Delegate implementation to native subagents"
+  default_prompt: "Use $pair-programming to delegate implementation to native subagents, then iterate with the implementer through verification."

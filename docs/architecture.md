@@ -1,5 +1,9 @@
 # Static Skill Exchange Architecture
 
+The normative [product-boundary contract](product-boundaries.md) defines ownership,
+source layout, permitted composition, and consumer-independence expectations for
+architecture changes.
+
 The current site builds from skill packages, exchange policy, and previously generated BOE. Future product boundaries and capabilities are described in the [roadmap](roadmap.md).
 
 ```mermaid

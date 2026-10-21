@@ -2,6 +2,20 @@
 
 These instructions apply to this repository.
 
+## Development Workflow
+
+- Before implementing or reviewing code, read [CODING_STANDARDS.md](CODING_STANDARDS.md). Use the originating task and later accepted decisions to establish scope.
+- Before planning, implementing, or reviewing changes to product structure, dependencies, packaging, CI, or tests, read and apply [product boundaries](docs/product-boundaries.md). It is the normative contract for ownership, permitted composition, and consumer independence.
+- For substantial planning, roadmap decomposition, or expanding implementation scope, use [scope-maintainable-contribution](.agents/skills/scope-maintainable-contribution/SKILL.md).
+- For implementing agreed code changes, use [implement](.agents/skills/implement/SKILL.md).
+- When adding, revising, or reviewing tests, use [durable-behavior-tests](.agents/skills/durable-behavior-tests/SKILL.md).
+- For branch, PR, or local-change reviews, use [code-review](.agents/skills/code-review/SKILL.md) with the originating task and current accepted decisions.
+- When writing or editing skills or agent instructions, use [writing-for-agents](.agents/skills/writing-for-agents/SKILL.md).
+- For requested pair programming or delegated coding, use [pair-programming](.agents/skills/pair-programming/SKILL.md).
+- For a requested session retrospective, use [retro](.agents/skills/retro/SKILL.md).
+
+For the next three substantive contributions, record skills used, the initial outcome, additions removed at the first checkpoint, acceptance evidence, and maintainer corrections in the existing task or PR notes. After the third contribution, assess whether the guidance reduced correction burden before adding more instructions.
+
 ## Release Requests
 
 - When asked to check release readiness, prepare a release, create a draft, or publish, read `.agents/skills/sklc-release-process/SKILL.md` before starting release checks or a general project review. Follow its stage-specific commands instead of duplicating their checks manually.
@@ -24,6 +38,7 @@ These instructions apply to this repository.
 - Do not add organization-specific or provider-specific environment variable names. Prefer generic image registry variables and runner tag variables.
 - Do not add silent fallbacks anywhere in the codebase. Hidden substitution masks defects. If fallback behavior is truly required, make it explicit in code, document the precedence, test the intended behavior, and fail closed when no valid value is available.
 - Do not commit secrets, tokens, endpoint credentials, or generated bot credentials.
+- Keep authentication material out of diagnostic output; redact request headers and credential-bearing exception details before displaying them.
 - Docker image references must remain configurable. Use the existing image registry, repository, tag, and full-image override variables instead of hardcoding a network-specific registry.
 - Customer-facing GitLab Pages templates under `products/deployment-kit/` must keep runner routing configurable through `PAGES_RUNNER_TAG`.
 
@@ -50,3 +65,4 @@ These instructions apply to this repository.
 - Remove local generated artifacts after experiments. Do not leave ignored derived `.exchange/generated/` output, caches, or build directories around as hidden workspace state. Treat `.exchange/generated/boe/` as durable evidence and do not delete or rewrite it casually.
 - Do not commit `site/dist/`, `site/.astro/`, `site/node_modules/`, `.pytest_cache/`, `.venv/`, or other local build/cache output.
 - Keep documentation free of local machine paths and local workspace state.
+- Pass PR/MR prose through structured arguments or literal body files.

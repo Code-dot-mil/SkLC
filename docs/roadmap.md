@@ -19,7 +19,7 @@ The Q3 priority is the smallest release path that proves this model: GitHub publ
 
 ### 2.2 How the products fit together
 
-Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Documented file formats and commands allow the products to work together without sharing code. Each product defines the formats it needs; add shared schemas and examples when products need a common serialized format.
+Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Product interfaces and deployment-kit composition follow the normative [product-boundary contract](product-boundaries.md). Each product defines the formats it needs; add shared schemas and examples when products need a common serialized format.
 
 | Product | Release artifact | Uses another product? | Primary use-case |
 |---|---|---|---|
@@ -50,19 +50,8 @@ flowchart LR
 
 Solid arrows show how released products are used together. Dotted arrows show where lifecycle guidance may later inform the products. The guidance track is parallel and non-gating until its minimum useful shape is accepted. Each product still stands alone.
 
-The source tree follows the same product boundaries:
-
-```text
-products/
-  assessment-kit/
-  skill-catalog/
-  deployment-kit/
-    site/
-    prebuilt/
-    operator/
-  lifecycle/          deferred until the guidance shape is accepted
-maintainer/
-```
+The [product-boundary contract](product-boundaries.md#directory-structure) defines
+the source layout and separates consumer products from upstream maintainer tooling.
 
 ## 3. Release strategy
 

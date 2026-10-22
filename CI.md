@@ -8,13 +8,15 @@ Two GitHub Actions workflows validate and prepare releases for this repository:
 
 ## GitHub Validation
 
-The `CI` workflow runs on every pull request targeting `main` and every push to
-`main`. Validation and packaging use GitHub-hosted Ubuntu runners; provider
-assessment jobs use a self-hosted runner.
+The `CI` workflow runs on every pull request, including PRs targeting another
+branch in a stack, and every push to `main`. PR validation and packaging use the
+PR head commit. Every PR attempts all product builds, regardless of changed paths.
+Validation and packaging use GitHub-hosted Ubuntu runners; provider assessment
+jobs use a self-hosted runner.
 
 ```mermaid
 flowchart TD
-    A["Pull request to main<br/>or push to main"]
+    A["Pull request to any branch<br/>or push to main"]
     A --> P["Python lint + tests"]
     A --> S["Site lint + tests"]
     A --> Q["Assess main skills or trusted PR changes"]
@@ -149,7 +151,8 @@ PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output r
 
 The `exchange-data` job packages its validated current JSON pairs as
 `skill-catalog-assessments.zip` and uses that same archive, the catalog ZIP, and
-the assessment wheel to assemble the Operator preview. Changed-skill PRs therefore
+the assessment wheel to assemble the Operator preview. The same wheel is also
+uploaded as a standalone `.whl` download. Changed-skill PRs therefore
 receive matching source and reports from the same run. The standalone catalog
 job remains independent of assessment. The pair archive contains its README and
 `<skill>/skillspector.json` plus `<skill>/adjudication.json`; scanner logs remain

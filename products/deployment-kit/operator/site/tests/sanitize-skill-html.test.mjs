@@ -13,3 +13,16 @@ test("skill markdown sanitizer removes executable HTML", () => {
   assert.equal(safe.includes("<h1>Skill</h1>"), true);
   assert.equal(safe.includes("<p>Use it</p>"), true);
 });
+
+test("skill markdown sanitizer strips dangerous attributes separated by mixed whitespace", () => {
+  const safe = sanitizeSkillHtml(
+    '<a \t\nhref = " javascript:alert(1)" \tONCLICK = alert(2)>Read</a>' +
+    '<img\nsrc="data:text/html,unsafe"\tonerror=alert(3) alt="Skill">' +
+    '<a href="https://example.com/skill">Safe link</a>'
+  );
+
+  assert.doesNotMatch(safe, /javascript:|data:text\/html|onclick|onerror/i);
+  assert.match(safe, />Read<\/a>/);
+  assert.match(safe, /alt="Skill"/);
+  assert.match(safe, /href="https:\/\/example.com\/skill"/);
+});

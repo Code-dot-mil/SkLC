@@ -62,6 +62,7 @@ export default function ScannerFindings({
   const [severity, setSeverity] = useState("all");
   const [showOlderRuns, setShowOlderRuns] = useState(false);
   const [queryStateReady, setQueryStateReady] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const selectedRun = sortedRuns.find((run) => run.id === selectedRunId) || sortedRuns[0];
   const displayedRuns = showOlderRuns ? sortedRuns : sortedRuns.slice(0, 1);
   const olderRunCount = Math.max(sortedRuns.length - 1, 0);
@@ -72,9 +73,9 @@ export default function ScannerFindings({
           scannerFindings
             .filter((finding) => finding.scanner_run_id === selectedRun?.id)
             .map((finding) => finding.severity)
-            .filter(Boolean)
+            .filter((severity): severity is string => Boolean(severity))
         )
-      ).sort(),
+      ).sort((left, right) => left.localeCompare(right)),
     [scannerFindings, selectedRun?.id]
   );
   useEffect(() => {
@@ -137,7 +138,7 @@ export default function ScannerFindings({
         </div>
         <dialog ref={dialogRef}>
           <form method="dialog">
-            <button className="dialog-close" aria-label="Close">Close</button>
+            <button className="dialog-close" type="submit" aria-label="Close">Close</button>
           </form>
           <h2>Scanner Runs</h2>
           <p>This table shows results from SkillSpector, a security scanner from NVIDIA.</p>
@@ -206,9 +207,14 @@ export default function ScannerFindings({
                           type="button"
                           title="Copy content hash"
                           aria-label="Copy content hash"
-                          onClick={(event) => {
+                          onClick={async (event) => {
                             event.stopPropagation();
-                            navigator.clipboard?.writeText(run.content_hash || "");
+                            setCopyError(false);
+                            try {
+                              await navigator.clipboard.writeText(run.content_hash || "");
+                            } catch {
+                              setCopyError(true);
+                            }
                           }}
                         >
                           copy
@@ -232,6 +238,7 @@ export default function ScannerFindings({
             })}
           </tbody>
         </table>
+        {copyError && <p role="status">Could not copy the content hash. Check clipboard permissions and try again.</p>}
         {olderRunCount > 0 && (
           <div className="centered-action">
             <button
@@ -313,9 +320,9 @@ function findingSeveritiesForRun(scannerFindings: Finding[], scannerRunId: strin
       scannerFindings
         .filter((finding) => finding.scanner_run_id === scannerRunId)
         .map((finding) => finding.severity)
-        .filter(Boolean)
+        .filter((severity): severity is string => Boolean(severity))
     )
-  ).sort() as string[];
+  ).sort((left, right) => left.localeCompare(right));
 }
 
 function ModePill({ run }: { run: ScannerRun }) {

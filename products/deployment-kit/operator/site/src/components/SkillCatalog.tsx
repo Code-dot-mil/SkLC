@@ -60,7 +60,8 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
   const [queryStateReady, setQueryStateReady] = useState(false);
 
   const categories = useMemo(
-    () => Array.from(new Set(skills.map((skill) => skill.category || "uncategorized"))).sort(),
+    () => Array.from(new Set(skills.map((skill) => skill.category || "uncategorized")))
+      .sort((left, right) => left.localeCompare(right)),
     [skills]
   );
   const categoryValues = useMemo(() => ["all", ...categories], [categories]);

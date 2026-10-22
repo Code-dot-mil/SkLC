@@ -16,3 +16,5 @@ export function replaceQueryState(
   defaults?: Record<string, string | null | undefined>,
   win?: Window,
 ): void;
+
+export function subscribeQueryState(listener: () => void, win?: Window): () => void;

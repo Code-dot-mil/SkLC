@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 import LocalDate from "./LocalDate";
+import { useQueryString } from "../lib/use-query-string";
 
-type ScannerRun = {
+export type ScannerRun = {
   id: string;
   scanner_name: string;
   scanner_version: string;
@@ -18,7 +19,7 @@ type ScannerRun = {
   content_hash?: string;
 };
 
-type Finding = {
+export type Finding = {
   id: string;
   scanner_run_id: string;
   native_issue_id: string;
@@ -33,7 +34,7 @@ type Finding = {
   false_positive?: boolean;
 };
 
-type Artifact = {
+export type Artifact = {
   scanner_run_id: string;
   artifact_kind: string;
   download_path: string;
@@ -57,11 +58,10 @@ export default function ScannerFindings({
   );
   const defaultRun = sortedRuns[0];
   const runIds = useMemo(() => sortedRuns.map((run) => run.id), [sortedRuns]);
-  const runIdsKey = runIds.join("|");
-  const [selectedRunId, setSelectedRunId] = useState(defaultRun?.id || "");
-  const [severity, setSeverity] = useState("all");
-  const [showOlderRuns, setShowOlderRuns] = useState(false);
-  const [queryStateReady, setQueryStateReady] = useState(false);
+  const search = useQueryString();
+  const selectedRunId = readQueryValue(search, "run", defaultRun?.id || "", runIds);
+  const showOlderRuns = readQueryValue(search, "runs", "latest", RUNS_VALUES) === "all"
+    || Boolean(selectedRunId && selectedRunId !== defaultRun?.id);
   const [copyError, setCopyError] = useState(false);
   const selectedRun = sortedRuns.find((run) => run.id === selectedRunId) || sortedRuns[0];
   const displayedRuns = showOlderRuns ? sortedRuns : sortedRuns.slice(0, 1);
@@ -82,36 +82,11 @@ export default function ScannerFindings({
       }),
     [scannerFindings, selectedRun?.id]
   );
-  useEffect(() => {
-    const defaultRunId = defaultRun?.id || "";
-    const nextRunId = readQueryValue(window.location.search, "run", defaultRunId, runIds);
-    const nextRuns = readQueryValue(window.location.search, "runs", "latest", RUNS_VALUES);
-    setSelectedRunId(nextRunId);
-    setSeverity(
-      readQueryValue(window.location.search, "severity", "all", [
-        "all",
-        ...findingSeveritiesForRun(scannerFindings, nextRunId),
-      ])
-    );
-    setShowOlderRuns(nextRuns === "all" || Boolean(nextRunId && nextRunId !== defaultRunId));
-    setQueryStateReady(true);
-  }, [defaultRun?.id, runIds, runIdsKey, scannerFindings]);
-
-  useEffect(() => {
-    if (severity !== "all" && !severities.includes(severity)) {
-      setSeverity("all");
-    }
-  }, [severity, severities]);
-
-  useEffect(() => {
-    if (!queryStateReady || !selectedRun) {
-      return;
-    }
-    replaceQueryState(
-      { run: selectedRun.id, runs: showOlderRuns ? "all" : "latest", severity },
-      { run: defaultRun?.id || "", runs: "latest", severity: "all" }
-    );
-  }, [defaultRun?.id, queryStateReady, selectedRun, severity, showOlderRuns]);
+  const severity = readQueryValue(search, "severity", "all", ["all", ...severities]);
+  const updateFilters = (updates: Record<string, string>) => replaceQueryState(
+    { run: selectedRunId, runs: showOlderRuns ? "all" : "latest", severity, ...updates },
+    { run: defaultRun?.id || "", runs: "latest", severity: "all" }
+  );
 
   const visibleFindings = scannerFindings.filter((finding) => {
     if (finding.scanner_run_id !== selectedRun?.id) {
@@ -192,8 +167,7 @@ export default function ScannerFindings({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => {
-                        setSelectedRunId(run.id);
-                        setSeverity("all");
+                        updateFilters({ run: run.id, severity: "all" });
                       }}
                     >
                       {selected ? "Selected" : "Select"}
@@ -211,11 +185,11 @@ export default function ScannerFindings({
                           type="button"
                           title="Copy content hash"
                           aria-label="Copy content hash"
-                          onClick={async (event) => {
+                          onClick={(event) => {
                             event.stopPropagation();
                             setCopyError(false);
                             try {
-                              await navigator.clipboard.writeText(run.content_hash || "");
+                              navigator.clipboard.writeText(run.content_hash || "").catch(() => setCopyError(true));
                             } catch {
                               setCopyError(true);
                             }
@@ -249,13 +223,9 @@ export default function ScannerFindings({
               className="link-button"
               type="button"
               onClick={() => {
-                setShowOlderRuns((current) => {
-                  if (current) {
-                    setSelectedRunId(sortedRuns[0].id);
-                    setSeverity("all");
-                  }
-                  return !current;
-                });
+                updateFilters(showOlderRuns
+                  ? { runs: "latest", run: defaultRun.id, severity: "all" }
+                  : { runs: "all" });
               }}
             >
               {showOlderRuns ? "Hide older scanner runs" : "View older scanner runs"}
@@ -274,7 +244,7 @@ export default function ScannerFindings({
           <RiskPills risk={selectedRun.display_risk || "Unknown"} flags={selectedRun.confidence_flags || []} />
         </p>
         <div className="controls">
-          <select value={severity} onChange={(event) => setSeverity(event.target.value)}>
+          <select value={severity} onChange={(event) => updateFilters({ severity: event.target.value })}>
             <option value="all">All finding severities</option>
             {severities.map((item) => (
               <option value={item} key={item}>
@@ -316,20 +286,6 @@ export default function ScannerFindings({
       </section>
     </>
   );
-}
-
-function findingSeveritiesForRun(scannerFindings: Finding[], scannerRunId: string) {
-  return Array.from(
-    new Set(
-      scannerFindings
-        .filter((finding) => finding.scanner_run_id === scannerRunId)
-        .map((finding) => finding.severity)
-        .filter((severity): severity is string => Boolean(severity))
-    )
-  ).sort((left, right) => {
-    if (left === right) return 0;
-    return left < right ? -1 : 1;
-  });
 }
 
 function ModePill({ run }: { run: ScannerRun }) {

@@ -8,12 +8,12 @@ import tseslint from "typescript-eslint";
 export default defineConfig(
   globalIgnores(["dist/**", ".astro/**", "public/downloads/**"]),
   {
-    files: ["**/*.{mjs,ts,tsx}"],
+    files: ["**/*.{mjs,mts,ts,tsx}"],
     extends: [js.configs.recommended],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ["**/*.{mts,ts,tsx}"],
     extends: [tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },

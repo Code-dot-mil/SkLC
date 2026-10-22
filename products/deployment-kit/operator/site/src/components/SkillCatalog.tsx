@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { RECOMMENDATION_OPTIONS, RECOMMENDATION_VALUES } from "../lib/recommendation-options.mjs";
 import LocalDate from "./LocalDate";
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
+import { useQueryString } from "../lib/use-query-string";
 
-type Skill = {
+export type Skill = {
   skill_id: string;
   name: string;
   description: string;
@@ -16,7 +17,7 @@ type Skill = {
   risk_reason?: string;
   confidence_flags: string[];
   last_updated: string;
-  last_scanned: string;
+  last_scanned?: string | null;
   owner?: string;
   scanner_provenance?: {
     name?: string;
@@ -53,11 +54,7 @@ function RecommendationPills({
 }
 
 export default function SkillCatalog({ skills }: { skills: Skill[] }) {
-  const [query, setQuery] = useState("");
-  const [recommendation, setRecommendation] = useState("all");
-  const [category, setCategory] = useState("all");
-  const [sort, setSort] = useState("name");
-  const [queryStateReady, setQueryStateReady] = useState(false);
+  const search = useQueryString();
 
   // Keep ordering identical during static rendering and browser hydration.
   const categories = useMemo(
@@ -70,23 +67,14 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
   );
   const categoryValues = useMemo(() => ["all", ...categories], [categories]);
 
-  useEffect(() => {
-    setQuery(readQueryValue(window.location.search, "q", ""));
-    setRecommendation(readQueryValue(window.location.search, "recommendation", "all", RECOMMENDATION_VALUES));
-    setCategory(readQueryValue(window.location.search, "category", "all", categoryValues));
-    setSort(readQueryValue(window.location.search, "sort", "name", SORT_VALUES));
-    setQueryStateReady(true);
-  }, [categoryValues]);
-
-  useEffect(() => {
-    if (!queryStateReady) {
-      return;
-    }
-    replaceQueryState(
-      { q: query, recommendation, category, sort },
-      { q: "", recommendation: "all", category: "all", sort: "name" }
-    );
-  }, [category, query, queryStateReady, recommendation, sort]);
+  const query = readQueryValue(search, "q", "");
+  const recommendation = readQueryValue(search, "recommendation", "all", RECOMMENDATION_VALUES);
+  const category = readQueryValue(search, "category", "all", categoryValues);
+  const sort = readQueryValue(search, "sort", "name", SORT_VALUES);
+  const updateFilters = (updates: Record<string, string>) => replaceQueryState(
+    { q: query, recommendation, category, sort, ...updates },
+    { q: "", recommendation: "all", category: "all", sort: "name" }
+  );
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -126,11 +114,11 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
       <div className="controls catalog-controls">
         <label>
           <span>Search</span>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Skill name, purpose, tag" />
+          <input value={query} onChange={(event) => updateFilters({ q: event.target.value })} placeholder="Skill name, purpose, tag" />
         </label>
         <label>
           <span>Recommendation</span>
-          <select value={recommendation} onChange={(event) => setRecommendation(event.target.value)}>
+          <select value={recommendation} onChange={(event) => updateFilters({ recommendation: event.target.value })}>
             {RECOMMENDATION_OPTIONS.map((option) => (
               <option value={option.value} key={option.value}>{option.label}</option>
             ))}
@@ -138,7 +126,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
         </label>
         <label>
           <span>Category</span>
-          <select value={category} onChange={(event) => setCategory(event.target.value)}>
+          <select value={category} onChange={(event) => updateFilters({ category: event.target.value })}>
             <option value="all">All categories</option>
             {categories.map((item) => (
               <option value={item} key={item}>{item}</option>
@@ -147,7 +135,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
         </label>
         <label>
           <span>Sort</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value)}>
+          <select value={sort} onChange={(event) => updateFilters({ sort: event.target.value })}>
             <option value="name">Name</option>
             <option value="recommendation">Recommendation</option>
             <option value="last_updated">Last updated</option>

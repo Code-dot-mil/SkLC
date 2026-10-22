@@ -1,9 +1,17 @@
 {
+  "name": "sklc-development",
   "private": true,
   "scripts": {
+    "markdown:lint": "markdownlint-cli2",
+    "markdown:check": "prettier --check \"**/*.md\" --ignore-path .gitignore",
+    "markdown:format": "prettier --write \"**/*.md\" --ignore-path .gitignore",
     "site:build": "npm --prefix products/deployment-kit/operator/site run build",
     "site:lint": "npm --prefix products/deployment-kit/operator/site run lint",
     "site:test": "npm --prefix products/deployment-kit/operator/site run test",
     "site:typecheck": "npm --prefix products/deployment-kit/operator/site run typecheck"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "0.24.0",
+    "prettier": "3.9.10"
   }
 }

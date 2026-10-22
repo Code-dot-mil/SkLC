@@ -38,9 +38,9 @@ class SkillNameMismatchError(SkillValidationError):
 class ScanError(RuntimeError):
     """Scanning failed; any available artifacts remain in report_dir."""
 
-    def __init__(self, message: str, report_dir: Path):
+    def __init__(self, message: str, report_dir: Path | None = None):
         self.report_dir = report_dir
-        super().__init__(f"{message}; artifacts: {report_dir}")
+        super().__init__(f"{message}; artifacts: {report_dir}" if report_dir is not None else message)
 
 
 class IncompleteScanError(ScanError):

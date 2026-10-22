@@ -580,11 +580,44 @@ wheels = [
 ]
 
 [[package]]
-name = "skill-exchange-local"
+name = "skill-assessment"
 version = "0.1.0"
-source = { editable = "." }
+source = { editable = "products/assessment-kit" }
 dependencies = [
     { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.2" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "ruff", marker = "extra == 'test'", specifier = ">=0.17.1" },
+]
+provides-extras = ["test"]
+
+[[package]]
+name = "skill-deployment"
+version = "0.1.0"
+source = { editable = "products/deployment-kit/operator" }
+dependencies = [
+    { name = "pyyaml" },
+    { name = "skill-assessment" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "skill-assessment" },
+]
+
+[[package]]
+name = "skill-exchange-local"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "skill-assessment" },
+    { name = "skill-deployment" },
+    { name = "sklc-maintainer" },
 ]
 
 [package.optional-dependencies]
@@ -602,8 +635,10 @@ release = [
 [package.metadata]
 requires-dist = [
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.2" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "ruff", marker = "extra == 'test'", specifier = ">=0.17.1" },
+    { name = "skill-assessment", editable = "products/assessment-kit" },
+    { name = "skill-deployment", editable = "products/deployment-kit/operator" },
+    { name = "sklc-maintainer", editable = "maintainer" },
 ]
 provides-extras = ["test"]
 
@@ -612,6 +647,11 @@ release = [
     { name = "pygit2", specifier = ">=1.20.1" },
     { name = "pygithub", specifier = ">=2.10.0" },
 ]
+
+[[package]]
+name = "sklc-maintainer"
+version = "0.1.0"
+source = { editable = "maintainer" }
 
 [[package]]
 name = "typing-extensions"

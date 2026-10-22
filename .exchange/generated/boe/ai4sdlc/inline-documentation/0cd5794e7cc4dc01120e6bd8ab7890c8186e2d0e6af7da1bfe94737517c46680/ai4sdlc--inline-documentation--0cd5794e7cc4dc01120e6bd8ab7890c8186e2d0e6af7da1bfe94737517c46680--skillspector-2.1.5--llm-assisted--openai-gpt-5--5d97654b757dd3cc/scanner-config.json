@@ -1,6 +1,0 @@
-{
-  "llm_model": "gpt-5",
-  "llm_provider": "openai",
-  "native_output_format": "skillspector-json-v2",
-  "scan_mode": "llm-assisted"
-}

@@ -31,9 +31,12 @@ products/
   skill-catalog/
   skill-catalog-assessments/
   deployment-kit/
-    site/
     prebuilt/
     operator/
+      src/
+      tests/
+      site/
+      pyproject.toml
   lifecycle/          when its guidance shape is accepted
 maintainer/
 .github/workflows/
@@ -41,9 +44,11 @@ maintainer/
 
 Deployment-mode assets live within their mode, such as
 `deployment-kit/operator/docs/` and `deployment-kit/operator/ci/gitlab/`.
-Shared site source lives under `deployment-kit/site/`; other shared deployment
-capabilities live at the deployment-product level. Tests and fixtures follow the
-ownership of the capability they exercise.
+Operator owns catalog generation, its Python package, tests and fixtures, and the
+Astro site source. Prebuilt contains generated static output, deployment
+instructions, and deploy-only CI. Upstream tooling uses Operator generation and
+site builds to assemble Prebuilt; no shared build runtime lives at the deployment
+product root. Tests and fixtures follow the capability they exercise.
 
 ## CI and composition
 
@@ -93,7 +98,7 @@ instance also exercises its customer-side build and CI as documented.
 | Capability | Owner |
 | --- | --- |
 | Upstream-only Operator ZIP assembler and its tests | `maintainer/` |
-| Generator shipped to customers and also invoked by upstream CI | Deployment product |
+| Generator shipped to customers and also invoked by upstream CI | Deployment product’s Operator mode |
 | GitLab job building a customer's Operator instance | Deployment product's `operator/` mode |
 | Source skills copied into a deployment-kit deliverable | Originating catalog product; explicitly included during assembly |
 | Assessment validation tests and their fixtures | Assessment product |

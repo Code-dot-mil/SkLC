@@ -8,15 +8,19 @@ Two GitHub Actions workflows validate and prepare releases for this repository:
 
 ## GitHub Validation
 
-The `CI` workflow runs on every pull request targeting `main` and every push to
-`main`. All jobs use GitHub-hosted Ubuntu runners.
+The `CI` workflow runs on every pull request, including PRs targeting another
+branch in a stack, and every push to `main`. PR validation and packaging use the
+PR head commit. Every PR attempts all product builds, regardless of changed paths.
+Validation and packaging use GitHub-hosted Ubuntu runners; provider assessment
+jobs use a self-hosted runner.
 
 ```mermaid
 flowchart TD
-    A["Pull request to main<br/>or push to main"]
+    A["Pull request to any branch<br/>or push to main"]
     A --> P["Python lint + tests"]
     A --> S["Site lint + tests"]
-    A --> E["Check existing skill evidence<br/>and generate catalog data"]
+    A --> Q["Assess main skills or trusted PR changes"]
+    Q --> E["Read current assessments<br/>and generate catalog data"]
     A --> C["Package committed skill folders"]
     P --> B["Build site and add<br/>deployment files"]
     S --> B
@@ -25,30 +29,27 @@ flowchart TD
     C --> Z["skill-catalog.zip<br/>Skill folders + README"]
 ```
 
-The first four branches run independently. The site build waits for the Python
-checks, site checks, and catalog data generation to succeed. The skill catalog
-download does not depend on those checks.
+Code checks and product packaging run independently. Data generation waits for
+the relevant main or trusted-PR assessment job; the site build also waits for code
+checks. Fork previews use tracked reports and fail freshness checks when changed
+skills lack matching current evidence. They make no provider calls.
 
 The workflow checks and builds the site in three steps:
 
 1. **Check the code.** The Python and site jobs run lint and tests. These are the
    same checks available locally through the `Justfile`. A failed check prevents
    the final site artifact from being uploaded.
-2. **Generate catalog data.** The `exchange-data` job uses Python to read the
-   tracked bill of evidence (BOE) for each skill. Each BOE must record a successful
-   assessment and match the skill's current content exactly. Missing or invalid
-   evidence fails the build. CI does not run a scanner or create replacement
-   evidence.
+2. **Generate catalog data.** The `exchange-data` job stages current assessments
+   from tracked reports and the preceding assessment job's artifact. Python
+   verifies the shared package hash, usable native execution, completed
+   adjudication, and paired findings. Missing, stale, or mismatched reports fail
+   generation; nonfatal partial coverage and negative safety judgments remain
+   visible. Generation runs no scanner or provider and writes no evidence.
 3. **Build and package the site.** The `static-site` job downloads the generated
-   data and uses Node.js to build `site/dist/`. It then runs
-   `python -m skill_exchange.release stage` to assemble the site, deployment
+   data and uses Node.js to build `products/deployment-kit/operator/site/dist/`, with the generated directory selected
+   explicitly through `SKILL_EXCHANGE_GENERATED_ROOT`. It then runs
+   `python -m sklc_maintainer.packaging prebuilt --stage` to assemble the site, deployment
    guides, and GitLab Pages job in a fresh directory under `RUNNER_TEMP`.
-
-The data-generation job checks out the full Git history. It also sets the source
-repository and commit used in catalog links. For a pull request, those links
-point to the pull request's head commit and repository, including when the
-repository is a fork. For a push, they point to the pushed commit. These values
-replace the placeholders in the site configuration.
 
 The final job uploads the staged directory as the `static-site` artifact. GitHub
 creates the downloadable ZIP and includes hidden files such as `.gitlab-ci.yml`.
@@ -56,15 +57,86 @@ Unzip it once to get `public/`, documentation, and the deployment job. The packa
 has the same layout as a release ZIP. This preview build creates no tag or GitHub
 Release.
 
+## Main catalog assessments
+
+Upstream policy lives in `sklc_maintainer.assessments`: `select` writes the
+NUL-delimited package manifests, `assess` invokes the public assessment CLI,
+`prune` removes obsolete reports only after successful main assessment, and
+`summarize` combines retained PR summaries. The workflow keeps these phases,
+runner/credential conditions, artifacts, and pair-only Git writes visible.
+Selection uses the existing flat package paths; validation, hashing and report
+interpretation stay in assessment-kit. An existing empty catalog selects no
+packages and permits obsolete-report cleanup; a missing root or invalid comparison
+commit fails. Main assessment stops at the first failure; PR assessment continues
+the selected packages and retains partial results for its always-run summary.
+
+The independent `catalog-assessments` job runs only for pushes to `main`. Its
+self-hosted runner must provide Bash, Python, pip, and SkillSpector `>=2.10,<3`
+on `PATH`. The job selects Python 3.12, installs uv, and invokes the checked-out
+assessment kit with explicit `--scan-mode llm-assisted`. Main passes `--if-changed`
+only when the incoming push left both current JSON files unchanged; incoming pair
+edits and an initial push force an independent scan. Both main and PR assessment
+jobs set `SKILL_ASSESSMENT_BASE_DIR` to the checkout root. This rewrites only matching
+native `skill.source` prefixes; it does not redact diagnostic scanner logs.
+
+Configure `SKILLSPECTOR_PROVIDER`, `SKILLSPECTOR_MODEL`, and the selected gateway's
+variables and credential secrets described in the
+[assessment kit](products/assessment-kit/README.md#adjudication-gateways).
+`RUNNER_CA_BUNDLE_PATH` supplies the runner's optional custom certificate bundle.
+Credentials remain in Actions secrets; no provider-specific settings are embedded
+in skill content or customer downloads.
+
+Successful current reports are committed only under
+`products/skill-catalog-assessments/<skill-name>/`. After all scans succeed, the current JSON pair and any
+diagnostic scanner log are removed from obsolete skill directories; unrelated files
+are preserved and empty obsolete directories are removed. The job uses `GITHUB_TOKEN` with `contents: write`; its push
+[does not trigger another workflow run](https://docs.github.com/en/actions/concepts/security/github_token).
+Repository branch protection must permit that write. Concurrent assessment jobs
+are serialized; if another writer advances main, a non-fast-forward push fails
+without overwriting their work. Reports and failure diagnostics are uploaded even
+when the job fails. When conditional reuse applies, valid unchanged reports skip
+without another provider call.
+
+Site generation consumes the main job's current-report artifact for that same
+source revision. Node jobs consume Python-generated artifacts.
+
+## Pull request assessment review
+
+Same-repository PRs run a read-only assessment review on the configured assessment
+runner. Changes anywhere inside a skill package, including supporting files and
+deleted files, select that package. Deleted skill packages are recorded but do not
+invoke the scanner. Unrelated changes skip scanner setup and provider requests.
+Fork PRs receive an explicit skipped notice on a hosted runner, with no assessment
+runner or provider credentials. The workflow uses `pull_request`, checks out the PR
+head without persisted Git credentials, and never commits or posts comments.
+
+The `pr-assessments` artifact contains temporary `reports/<skill-name>/` outputs,
+mirrored `summaries/` Markdown, combined `summary.md`, and NUL-delimited manifests:
+`changed-skills.nul` includes deletions; `current-skills.nul` selects packages still
+present in the PR head. The combined Markdown also appears in the Actions summary.
+Failed scans retain their diagnostics; action summaries preserve partial coverage.
+
+Preview generation copies tracked current reports into a temporary directory,
+then replaces changed entries with `reports/<skill-name>/` from the PR artifact.
+Missing changed reports fail the copy instead of reusing stale tracked evidence.
+Removed packages are absent from PR source discovery. Generation reads the PR
+head, matching the revision assessed by the review job.
+
+Provider configuration is shared with the main job through a YAML anchor, a
+[supported workflow facility](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases).
+
 ## Skill Catalog Download
 
 The `skill-catalog` job builds a separate download. It runs independently of the
-site checks and build, using `scripts/package-skill-catalog.sh` to create
+site checks and build, using `python -m sklc_maintainer.packaging catalog` to create
 `skill-catalog.zip`. Releases use the same packaging command.
 
 The ZIP contains the four selected skill folders and their installation README.
-The script reads files from the checked-out Git commit, so untracked files and
-uncommitted changes are excluded. Packaging requires Git, Bash, and zip.
+One committed catalog selection supplies the skill names for both catalog and
+assessment downloads. Each packaging invocation pins HEAD once and reads owned
+source from that snapshot, excluding untracked files and uncommitted changes.
+Packaging requires Git and Python 3.12 or later; catalog, assessment and Prebuilt
+packaging use only the standard library.
 
 The job uploads the ZIP with `archive: false`, which tells GitHub to offer the
 file directly without wrapping it in another archive. Download `skill-catalog.zip`
@@ -74,8 +146,24 @@ in a release ZIP.
 To package the current commit locally, run this from the repository root:
 
 ```sh
-bash scripts/package-skill-catalog.sh release/skill-catalog.zip
+PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output release/skill-catalog.zip
 ```
+
+The `exchange-data` job packages its validated current JSON pairs as
+`skill-catalog-assessments.zip` and uses that same archive, the catalog ZIP, and
+the assessment wheel to assemble the Operator preview. The same wheel is also
+uploaded as a standalone `.whl` download. Changed-skill PRs therefore
+receive matching source and reports from the same run. The standalone catalog
+job remains independent of assessment. The pair archive contains its README and
+`<skill>/skillspector.json` plus `<skill>/adjudication.json`; scanner logs remain
+job diagnostics. Releases use `python -m sklc_maintainer.packaging assessments` on the
+committed current pairs. Its explicit `--source-dir` option selects the validated
+staged reports in CI; report bytes are copied unchanged. Operator assembly uses
+`uv run python -m sklc_maintainer.packaging operator` with the catalog, assessments
+and wheel inputs. Prebuilt assembly uses the same CLI’s `prebuilt` command with
+a supplied static build; `--stage` prepares CI’s directory artifact and `--version`
+creates the versioned ZIP. Release checks and draft verification stay in
+`sklc_maintainer.release`.
 
 ## Releases
 
@@ -88,11 +176,13 @@ flowchart TD
     R --> Q["Run check-ready<br/>Checks clean checkout, successful CI,<br/>release notes, and unused tag"]
     Q --> T["Maintainer pushes version tag"]
     T --> V["Release workflow repeats checks<br/>and rebuilds from tagged commit"]
-    V --> G["Create draft with two ZIPs + assessment wheel"]
+    V --> G["Create draft with four ZIPs + assessment wheel"]
     G --> H["Run check-draft<br/>Checks tag, notes, assets,<br/>and successful preparation workflow"]
     H --> P["Maintainer publishes existing draft"]
     P --> D["deployment-kit-prebuilt-VERSION.zip"]
     P --> C["skill-catalog-VERSION.zip"]
+    P --> O["deployment-kit-operator-VERSION.zip"]
+    P --> E["skill-catalog-assessments-VERSION.zip"]
     P --> A["skill_assessment-VERSION-py3-none-any.whl"]
 ```
 
@@ -105,7 +195,7 @@ Choose the commit to release and copy its full SHA from GitHub. In a checkout of
 that commit, run the readiness check with Python 3.12 and `uv`:
 
 ```sh
-uv run --group release python -m skill_exchange.release check-ready \
+uv run --group release python -m sklc_maintainer.release check-ready \
   --version <version> --expected-commit <expected-commit-sha>
 ```
 
@@ -156,11 +246,12 @@ This creates the public tag and starts release preparation; it does not publish
 the release. The workflow runs the Python and site checks, generates catalog
 data from tracked BOE that matches each skill's content, and builds the site. Missing evidence fails
 the build without running a scanner. The workflow then creates an unpublished
-draft containing exactly four assets under the same version:
+draft containing exactly five assets under the same version:
 
 - `deployment-kit-prebuilt-<version>.zip`
 - `deployment-kit-operator-<version>.zip`
 - `skill-catalog-<version>.zip`
+- `skill-catalog-assessments-<version>.zip`
 - `skill_assessment-<version>-py3-none-any.whl`
 
 The assessment-kit package version must match the release version under Python
@@ -191,7 +282,7 @@ Once the preparation run succeeds, run the draft gate from the clean candidate
 checkout, using the same version and expected SHA:
 
 ```sh
-uv run --group release python -m skill_exchange.release check-draft \
+uv run --group release python -m sklc_maintainer.release check-draft \
   --version <version> --expected-commit <expected-commit-sha>
 ```
 
@@ -231,7 +322,7 @@ recorded decision or a separate security or acceptance gate.
 ## Prebuilt Deployment
 
 The GitLab Pages template at
-`products/deployment-kit/ci/gitlab/prebuilt/.gitlab-ci.yml` publishes the package's
+`products/deployment-kit/prebuilt/ci/gitlab/.gitlab-ci.yml` publishes the package's
 existing `public/` directory. It requires a Linux runner that can run job images
 and has the tag configured in `PAGES_RUNNER_TAG`.
 
@@ -255,7 +346,7 @@ alert backlog. Do not add a scheduled CI job that duplicates Dependabot.
 The configuration in `.github/dependabot.yml` covers two dependency groups:
 
 - **Python:** the root `pyproject.toml` and `uv.lock`, using the `uv` ecosystem.
-- **Site:** `site/package.json` and `site/package-lock.json`, using the `npm`
+- **Site:** `products/deployment-kit/operator/site/package.json` and `products/deployment-kit/operator/site/package-lock.json`, using the `npm`
   ecosystem.
 
 Dependabot checks for version updates every Monday. It groups minor and patch
@@ -268,4 +359,4 @@ critical alerts. Those alerts are reviewed when received; the rest of the
 backlog is reviewed weekly. Alerts that cannot be fixed promptly are escalated
 to repository administrator `scotluns`.
 
-PR CI uploads an operator ZIP preview. Setup: [operator guide](products/deployment-kit/docs/operator/README.md).
+PR CI uploads an operator ZIP preview. Setup: [operator guide](products/deployment-kit/operator/docs/README.md).

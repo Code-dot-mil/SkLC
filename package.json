@@ -1,9 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "site:build": "npm --prefix site run build",
-    "site:lint": "npm --prefix site run lint",
-    "site:test": "npm --prefix site run test",
-    "site:typecheck": "npm --prefix site run typecheck"
+    "site:build": "npm --prefix products/deployment-kit/operator/site run build",
+    "site:lint": "npm --prefix products/deployment-kit/operator/site run lint",
+    "site:test": "npm --prefix products/deployment-kit/operator/site run test",
+    "site:typecheck": "npm --prefix products/deployment-kit/operator/site run typecheck"
   }
 }

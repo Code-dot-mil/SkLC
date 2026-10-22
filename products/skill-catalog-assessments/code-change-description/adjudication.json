@@ -1,0 +1,24 @@
+{
+  "safe_to_use": true,
+  "summary": "The scanner returned zero findings, risk score 0, severity LOW, and a SAFE recommendation. The only supplied component, SKILL.md, was fully inspected at 100% coverage and contains benign guidance for drafting PR/MR descriptions with no executable scripts or dangerous behavior evident.",
+  "coverage_sufficient": true,
+  "coverage_reason": "One component (SKILL.md) was scanned and fully inspected with 100% coverage; analysis marked complete with no executable scripts, uninspected files, or material coverage gaps in the supplied scope.",
+  "findings": [],
+  "status": "completed",
+  "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
+  "metadata": {
+    "provider": "openai_compatible",
+    "model": "nemotron-3-super",
+    "response_model": "nemotron-3-super",
+    "created_at": "2026-10-21T20:19:34.100203+00:00",
+    "duration_seconds": 4.696,
+    "calls_attempted": 1,
+    "calls_succeeded": 1,
+    "token_usage": {
+      "prompt_tokens": 5774,
+      "completion_tokens": 934,
+      "total_tokens": 6708
+    }
+  },
+  "skill_sha256": "3a84f0dd7fd334beac503a66698c77f0c68eb93a188aae2747073c017aab3753"
+}

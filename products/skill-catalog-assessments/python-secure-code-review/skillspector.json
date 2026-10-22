@@ -1,0 +1,792 @@
+{
+  "skill": {
+    "name": "python-secure-code-review",
+    "source": "products/skill-catalog/python-secure-code-review",
+    "scanned_at": "2026-10-21T20:20:24.746506+00:00"
+  },
+  "risk_assessment": {
+    "score": 65,
+    "severity": "HIGH",
+    "recommendation": "DO_NOT_INSTALL",
+    "max_issue_severity": "HIGH"
+  },
+  "components": [
+    {
+      "path": "SKILL.md",
+      "type": "markdown",
+      "lines": 332,
+      "executable": false,
+      "size_bytes": 14032,
+      "source_url": null,
+      "source_identity": null,
+      "source_digest": null
+    }
+  ],
+  "structured_summaries": [],
+  "issues": [
+    {
+      "id": "TP4",
+      "finding_id": "finding-0c94ef8e6bfb4a9f918bd19eced5e2cb",
+      "category": "MCP Tool Poisoning",
+      "pattern": null,
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "location": {
+        "file": "SKILL.md",
+        "start_line": 1,
+        "end_line": null
+      },
+      "finding": null,
+      "explanation": "The declared purpose describes a meta-level code review capability for assessing Python code changes for security issues. The supplied code does not review, scan, or analyze code; it performs a database lookup on a `users` table. Its primary purpose is materially different, it accesses an inconsistent resource (a database rather than code changes/repositories), and it does not implement any vulnerability detection, authorization checking, or remediation analysis. Note also that the code itself exhibits unsafe input handling (SQL injection), but it is vulnerable code rather than a tool that reviews code for such vulnerabilities.",
+      "remediation": "Update the skill description to accurately reflect all capabilities, or remove undeclared functionality from the implementation.",
+      "code_snippet": null,
+      "intent": null,
+      "tags": [
+        "ASI02",
+        "AML.T0080",
+        "llm-unconfirmed"
+      ],
+      "evidence": {
+        "code_path": "SKILL.md",
+        "code_start_line": 262,
+        "code_end_line": 264,
+        "actual_behavior_summary": "Defines `find_user(conn, email)` which builds a raw SQL query via f-string interpolation and executes it against a database to fetch a user record by email."
+      },
+      "match_fingerprint": null,
+      "occurrences": [
+        {
+          "file": "SKILL.md",
+          "start_line": 1,
+          "end_line": null
+        }
+      ]
+    },
+    {
+      "id": "TP4",
+      "finding_id": "finding-fa6ef7ba0cc84b4ca5038546fe5e956b",
+      "category": "MCP Tool Poisoning",
+      "pattern": null,
+      "severity": "HIGH",
+      "confidence": 0.98,
+      "location": {
+        "file": "SKILL.md",
+        "start_line": 1,
+        "end_line": null
+      },
+      "finding": null,
+      "explanation": "The code chunk does not perform any security analysis. It only collects git metadata and displays diffs of Python files. While it surfaces changed Python files, it does not scan, review, or remediate them for the declared security concerns. The primary purpose is materially different: repository/diff inspection versus automated secure code review.",
+      "remediation": "Update the skill description to accurately reflect all capabilities, or remove undeclared functionality from the implementation.",
+      "code_snippet": null,
+      "intent": null,
+      "tags": [
+        "ASI02",
+        "AML.T0080",
+        "llm-unconfirmed"
+      ],
+      "evidence": {
+        "code_path": "SKILL.md",
+        "code_start_line": 61,
+        "code_end_line": 64,
+        "actual_behavior_summary": "Executes shell/git commands to inspect repository state: git status, git diff --stat, git diff limited to *.py, and recent git log."
+      },
+      "match_fingerprint": null,
+      "occurrences": [
+        {
+          "file": "SKILL.md",
+          "start_line": 1,
+          "end_line": null
+        }
+      ]
+    },
+    {
+      "id": "TP4",
+      "finding_id": "finding-0df53609ccee49118555cf10878032a1",
+      "category": "MCP Tool Poisoning",
+      "pattern": null,
+      "severity": "HIGH",
+      "confidence": 0.98,
+      "location": {
+        "file": "SKILL.md",
+        "start_line": 1,
+        "end_line": null
+      },
+      "finding": null,
+      "explanation": "The declared description describes a security auditing capability. The supplied code simply retrieves an invoice object from a repository. It performs no code review, no security scanning, and no authorization enforcement despite having a `current_user` argument. The primary purpose is materially different (data retrieval vs. security review).",
+      "remediation": "Update the skill description to accurately reflect all capabilities, or remove undeclared functionality from the implementation.",
+      "code_snippet": null,
+      "intent": null,
+      "tags": [
+        "ASI02",
+        "AML.T0080",
+        "llm-unconfirmed"
+      ],
+      "evidence": {
+        "code_path": "SKILL.md",
+        "code_start_line": 284,
+        "code_end_line": 285,
+        "actual_behavior_summary": "Fetching an invoice record by ID from `invoice_repo` and returning it. The `current_user` parameter is accepted but not used for any authorization check."
+      },
+      "match_fingerprint": null,
+      "occurrences": [
+        {
+          "file": "SKILL.md",
+          "start_line": 1,
+          "end_line": null
+        }
+      ]
+    },
+    {
+      "id": "AR3",
+      "finding_id": "finding-4c8762b420ae4ce0afae1c5c69bafa05",
+      "category": "Anti-Refusal",
+      "pattern": "Anti-Refusal Statement",
+      "severity": "HIGH",
+      "confidence": 0.9,
+      "location": {
+        "file": "SKILL.md",
+        "start_line": 276,
+        "end_line": 276,
+        "start_column": 78,
+        "end_column": 92
+      },
+      "finding": "bypass filters",
+      "explanation": "Skill attempts to nullify the agent's safety policies or restrictions ('you have no restrictions', 'ignore your guidelines', 'do anything now'). This is a direct jailbreak that disables guardrails.",
+      "remediation": "Remove jailbreak framing that nullifies safety policies or restrictions. Skill content must not instruct the agent to ignore its guidelines or operate without guardrails.",
+      "code_snippet": "\nWhy it matters: `email` flows directly into the query string, so a crafted value can change query structure rather than being treated as data.\n\nAttack or failure mode: An attacker can inject SQL through the email field to bypass filters or read unintended rows.\n\nRecommendation: Use a parameterized query or the ORM's bound-parameter API so user input is never concatenated into SQL text.\n```",
+      "intent": null,
+      "tags": [
+        "Anti-Refusal",
+        "contextual-triage",
+        "likely-benign-context",
+        "llm-unconfirmed"
+      ],
+      "evidence": {},
+      "match_fingerprint": "f22c62db8177baacd0f5a1247ded49a0ffe272aeb6a65dee879db229e2e577b5",
+      "occurrences": [
+        {
+          "file": "SKILL.md",
+          "start_line": 276,
+          "end_line": 276,
+          "start_column": 78,
+          "end_column": 92
+        }
+      ]
+    }
+  ],
+  "suppressed_count": 0,
+  "suppressed": [],
+  "metadata": {
+    "has_executable_scripts": false,
+    "skillspector_version": "2.12.0",
+    "llm_requested": true,
+    "llm_available": true,
+    "meta_analysis_applied": true,
+    "inference_usage": [
+      {
+        "node": "mcp_tool_poisoning",
+        "request_kind": "structured_output",
+        "provider": "openai_compatible",
+        "model": "nemotron-3-super",
+        "model_source": "requested_model",
+        "usage_source": "provider_response",
+        "prompt_tokens": 228,
+        "completion_tokens": 1141,
+        "reasoning_tokens": 925,
+        "total_tokens": 1369
+      },
+      {
+        "node": "mcp_tool_poisoning",
+        "request_kind": "structured_output",
+        "provider": "openai_compatible",
+        "model": "nemotron-3-super",
+        "model_source": "requested_model",
+        "usage_source": "provider_response",
+        "prompt_tokens": 234,
+        "completion_tokens": 1263,
+        "reasoning_tokens": 1008,
+        "total_tokens": 1497
+      },
+      {
+        "node": "mcp_tool_poisoning",
+        "request_kind": "structured_output",
+        "provider": "openai_compatible",
+        "model": "nemotron-3-super",
+        "model_source": "requested_model",
+        "usage_source": "provider_response",
+        "prompt_tokens": 228,
+        "completion_tokens": 996,
+        "reasoning_tokens": 773,
+        "total_tokens": 1224
+      },
+      {
+        "node": "semantic_developer_intent",
+        "request_kind": "structured_output",
+        "provider": "openai_compatible",
+        "model": "nemotron-3-super",
+        "model_source": "requested_model",
+        "usage_source": "provider_response",
+        "prompt_tokens": 5786,
+        "completion_tokens": 1962,
+        "reasoning_tokens": 1952,
+        "total_tokens": 7748
+      },
+      {
+        "node": "semantic_quality_policy",
+        "request_kind": "structured_output",
+        "provider": "openai_compatible",
+        "model": "nemotron-3-super",
+        "model_source": "requested_model",
+        "usage_source": "provider_response",
+        "prompt_tokens": 5849,
+        "completion_tokens": 2095,
+        "reasoning_tokens": 2085,
+        "total_tokens": 7944
+      },
+      {
+        "node": "semantic_security_discovery",
+        "request_kind": "structured_output",
+        "provider": "openai_compatible",
+        "model": "nemotron-3-super",
+        "model_source": "requested_model",
+        "usage_source": "provider_response",
+        "prompt_tokens": 5390,
+        "completion_tokens": 1095,
+        "reasoning_tokens": 1085,
+        "total_tokens": 6485
+      },
+      {
+        "node": "meta_analyzer",
+        "request_kind": "structured_output",
+        "provider": "openai_compatible",
+        "model": "nemotron-3-super",
+        "model_source": "requested_model",
+        "usage_source": "provider_response",
+        "prompt_tokens": 3929,
+        "completion_tokens": 2659,
+        "reasoning_tokens": 1843,
+        "total_tokens": 6588
+      }
+    ],
+    "llm_provenance": {
+      "schema_version": 1,
+      "provider": {
+        "configured_adapter": "openai_compatible",
+        "resolved_adapter": "openai_compatible",
+        "effective_adapter": "openai_compatible",
+        "effective_adapters": [
+          "openai_compatible"
+        ],
+        "service": "unknown",
+        "routing": {
+          "deployment_override": null,
+          "deployment_source": "not_applicable",
+          "api_version": null,
+          "api_version_source": "not_applicable"
+        }
+      },
+      "analyzers": [
+        {
+          "analyzer_id": "mcp_tool_poisoning",
+          "model": "nemotron-3-super",
+          "model_source": "resolved_configuration",
+          "analyzer_revision": {
+            "value": "2.12.0",
+            "source": "skillspector_package",
+            "source_revision": {
+              "value": "c7958a3268d9498644b22edb75d0f051bbc8cbfc",
+              "source": "package_vcs_metadata"
+            }
+          }
+        },
+        {
+          "analyzer_id": "semantic_developer_intent",
+          "model": "nemotron-3-super",
+          "model_source": "resolved_configuration",
+          "analyzer_revision": {
+            "value": "2.12.0",
+            "source": "skillspector_package",
+            "source_revision": {
+              "value": "c7958a3268d9498644b22edb75d0f051bbc8cbfc",
+              "source": "package_vcs_metadata"
+            }
+          }
+        },
+        {
+          "analyzer_id": "semantic_quality_policy",
+          "model": "nemotron-3-super",
+          "model_source": "resolved_configuration",
+          "analyzer_revision": {
+            "value": "2.12.0",
+            "source": "skillspector_package",
+            "source_revision": {
+              "value": "c7958a3268d9498644b22edb75d0f051bbc8cbfc",
+              "source": "package_vcs_metadata"
+            }
+          }
+        },
+        {
+          "analyzer_id": "semantic_security_discovery",
+          "model": "nemotron-3-super",
+          "model_source": "resolved_configuration",
+          "analyzer_revision": {
+            "value": "2.12.0",
+            "source": "skillspector_package",
+            "source_revision": {
+              "value": "c7958a3268d9498644b22edb75d0f051bbc8cbfc",
+              "source": "package_vcs_metadata"
+            }
+          }
+        },
+        {
+          "analyzer_id": "meta_analyzer",
+          "model": "nemotron-3-super",
+          "model_source": "resolved_configuration",
+          "analyzer_revision": {
+            "value": "2.12.0",
+            "source": "skillspector_package",
+            "source_revision": {
+              "value": "c7958a3268d9498644b22edb75d0f051bbc8cbfc",
+              "source": "package_vcs_metadata"
+            }
+          }
+        }
+      ],
+      "sampling": {
+        "temperature": {
+          "requested": null,
+          "source": "provider_default",
+          "forwarded_to_client": null,
+          "adapter_support": true,
+          "provider_support": "unknown"
+        },
+        "seed": {
+          "requested": null,
+          "source": "unset",
+          "forwarded_to_client": null,
+          "adapter_support": true,
+          "provider_support": "unknown"
+        },
+        "reasoning_effort": {
+          "requested": null,
+          "source": "provider_default",
+          "forwarded_to_client": null,
+          "adapter_support": true,
+          "provider_support": "unknown"
+        }
+      },
+      "determinism": {
+        "classification": "nondeterministic",
+        "control_status": "provider_defaults",
+        "provider_guarantee": false,
+        "reason": "Optional controls do not guarantee identical provider output."
+      }
+    },
+    "llm_calls_attempted": 5,
+    "llm_calls_succeeded": 5
+  },
+  "execution_successful": true,
+  "analysis_completeness": {
+    "total_components": 1,
+    "scanned_components": 0,
+    "coverage_percent": 0.0,
+    "is_complete": false,
+    "status": "partial",
+    "execution_successful": true,
+    "fully_inspected_files": 0,
+    "partially_inspected_files": 1,
+    "entirely_uninspected_files": 0,
+    "ledger_exceptions": [
+      {
+        "outcome": "partial",
+        "phase": "static",
+        "reason_code": "static_parse_limit",
+        "message": "A security-relevant expression exceeded a bounded static parser's span limit.",
+        "path": "SKILL.md",
+        "start_line": null,
+        "end_line": null,
+        "fatal": false,
+        "analyzers": [
+          "static_patterns_tool_misuse"
+        ]
+      },
+      {
+        "outcome": "partial",
+        "phase": "reference_resolution",
+        "reason_code": "reference_missing",
+        "message": "A local path-like reference does not match any bundled artifact, such as a file the skill writes at runtime.",
+        "path": "SKILL.md",
+        "start_line": 55,
+        "end_line": 55,
+        "fatal": false
+      },
+      {
+        "outcome": "partial",
+        "phase": "reference_resolution",
+        "reason_code": "reference_missing",
+        "message": "A local path-like reference does not match any bundled artifact, such as a file the skill writes at runtime.",
+        "path": "SKILL.md",
+        "start_line": 221,
+        "end_line": 221,
+        "fatal": false
+      },
+      {
+        "outcome": "partial",
+        "phase": "reference_resolution",
+        "reason_code": "reference_missing",
+        "message": "A local path-like reference does not match any bundled artifact, such as a file the skill writes at runtime.",
+        "path": "SKILL.md",
+        "start_line": 272,
+        "end_line": 272,
+        "fatal": false
+      },
+      {
+        "outcome": "partial",
+        "phase": "reference_resolution",
+        "reason_code": "reference_missing",
+        "message": "A local path-like reference does not match any bundled artifact, such as a file the skill writes at runtime.",
+        "path": "SKILL.md",
+        "start_line": 293,
+        "end_line": 293,
+        "fatal": false
+      }
+    ],
+    "scope_exclusions": [],
+    "analyzer_statuses": [
+      {
+        "analyzer_id": "artifact_integrity",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "behavioral_ast",
+        "status": "not_applicable",
+        "planned_work": 0,
+        "completed": 0,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0,
+        "reason_code": "no_applicable_files",
+        "message": "No files matched this analyzer's applicability contract."
+      },
+      {
+        "analyzer_id": "behavioral_taint_tracking",
+        "status": "not_applicable",
+        "planned_work": 0,
+        "completed": 0,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0,
+        "reason_code": "no_applicable_files",
+        "message": "No files matched this analyzer's applicability contract."
+      },
+      {
+        "analyzer_id": "bundled_execution_surface",
+        "status": "not_applicable",
+        "planned_work": 0,
+        "completed": 0,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0,
+        "reason_code": "no_applicable_files",
+        "message": "No files matched this analyzer's applicability contract."
+      },
+      {
+        "analyzer_id": "mcp_least_privilege",
+        "status": "not_applicable",
+        "planned_work": 0,
+        "completed": 0,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0,
+        "reason_code": "no_applicable_files",
+        "message": "No files matched this analyzer's applicability contract."
+      },
+      {
+        "analyzer_id": "mcp_rug_pull",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_tool_poisoning",
+        "status": "completed",
+        "planned_work": 4,
+        "completed": 4,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "meta_analyzer",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_developer_intent",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_quality_policy",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_security_discovery",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_agent_snooping",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_anti_refusal",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_data_exfiltration",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_deserialization",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_excessive_agency",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_harmful_content",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_memory_poisoning",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_output_handling",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_privilege_escalation",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_prompt_injection",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_rogue_agent",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_ssrf",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_supply_chain",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_system_prompt_leakage",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_tool_misuse",
+        "status": "degraded",
+        "planned_work": 1,
+        "completed": 0,
+        "partial": 1,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_yara",
+        "status": "completed",
+        "planned_work": 1,
+        "completed": 1,
+        "partial": 0,
+        "skipped": 0,
+        "failed": 0,
+        "unaccounted": 0
+      }
+    ],
+    "references": [
+      {
+        "source_path": "SKILL.md",
+        "line": 55,
+        "column": 82,
+        "evidence": " Note non-Python files that materially affect Python security posture, such as `.env.example`, `pyproject.toml`, migration files, CI config, or deployment setti",
+        "target_path": null,
+        "status": "missing",
+        "disposition": "partial",
+        "reference_kind": "quoted_or_code"
+      },
+      {
+        "source_path": "SKILL.md",
+        "line": 55,
+        "column": 98,
+        "evidence": " files that materially affect Python security posture, such as `.env.example`, `pyproject.toml`, migration files, CI config, or deployment settings",
+        "target_path": null,
+        "status": "missing",
+        "disposition": "partial",
+        "reference_kind": "quoted_or_code"
+      },
+      {
+        "source_path": "SKILL.md",
+        "line": 221,
+        "column": 17,
+        "evidence": "- Evidence: `path/to/file.py:line`",
+        "target_path": null,
+        "status": "missing",
+        "disposition": "partial",
+        "reference_kind": "plain_path"
+      },
+      {
+        "source_path": "SKILL.md",
+        "line": 272,
+        "column": 12,
+        "evidence": "Evidence: `app/users/repo.py:2`",
+        "target_path": null,
+        "status": "missing",
+        "disposition": "partial",
+        "reference_kind": "plain_path"
+      },
+      {
+        "source_path": "SKILL.md",
+        "line": 293,
+        "column": 12,
+        "evidence": "Evidence: `billing/service.py:2`",
+        "target_path": null,
+        "status": "missing",
+        "disposition": "partial",
+        "reference_kind": "plain_path"
+      }
+    ],
+    "limitations": [
+      "Analyzer static_patterns_tool_misuse status: degraded."
+    ],
+    "findings_before_filtering": 4,
+    "findings_after_filtering": 4
+  }
+}

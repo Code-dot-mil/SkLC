@@ -4,16 +4,13 @@ This guide is for developers changing the skill exchange application, CI, deploy
 
 For skill governance and skill review roles, see `GOVERNANCE.md`.
 
-For product ownership, source layout, composition, CI, and test boundaries, apply
-the normative [product-boundary contract](docs/product-boundaries.md) when planning,
-implementing, and reviewing contributions.
+For product ownership, source layout, composition, CI, and test boundaries, apply the normative [product-boundary contract](docs/product-boundaries.md) when planning, implementing, and reviewing contributions.
 
 ## Development Scope
 
 Exchange-site developers maintain:
 
-- Python runtime under `products/deployment-kit/operator/src/skill_exchange/` and
-  upstream tooling under `maintainer/`.
+- Python runtime under `products/deployment-kit/operator/src/skill_exchange/` and upstream tooling under `maintainer/`.
 - The Astro site under `products/deployment-kit/operator/site/`.
 - GitHub Actions workflows under `.github/workflows/`.
 - Product-owned configuration and customer CI.

@@ -3,6 +3,8 @@ name: implement
 description: "Implement a piece of work based on a spec or set of tickets."
 ---
 
+# Implement
+
 Implement the work described by the user in the spec or tickets.
 
 Record the starting `HEAD` and existing local changes. Preserve unrelated edits and identify the paths belonging to this task.

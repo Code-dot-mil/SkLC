@@ -347,6 +347,10 @@ jobs:
 
   static-site:
     name: Static site artifact
+    if: >-
+      always() && !cancelled() &&
+      needs.exchange-data.result == 'success' &&
+      needs.python.result == 'success' && needs.site.result == 'success'
     needs:
       - exchange-data
       - python

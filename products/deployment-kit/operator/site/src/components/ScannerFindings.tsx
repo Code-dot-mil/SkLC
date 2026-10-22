@@ -66,6 +66,7 @@ export default function ScannerFindings({
   const selectedRun = sortedRuns.find((run) => run.id === selectedRunId) || sortedRuns[0];
   const displayedRuns = showOlderRuns ? sortedRuns : sortedRuns.slice(0, 1);
   const olderRunCount = Math.max(sortedRuns.length - 1, 0);
+  // Keep ordering identical during static rendering and browser hydration.
   const severities = useMemo(
     () =>
       Array.from(
@@ -75,7 +76,10 @@ export default function ScannerFindings({
             .map((finding) => finding.severity)
             .filter((severity): severity is string => Boolean(severity))
         )
-      ).sort((left, right) => left.localeCompare(right)),
+      ).sort((left, right) => {
+        if (left === right) return 0;
+        return left < right ? -1 : 1;
+      }),
     [scannerFindings, selectedRun?.id]
   );
   useEffect(() => {
@@ -322,7 +326,10 @@ function findingSeveritiesForRun(scannerFindings: Finding[], scannerRunId: strin
         .map((finding) => finding.severity)
         .filter((severity): severity is string => Boolean(severity))
     )
-  ).sort((left, right) => left.localeCompare(right));
+  ).sort((left, right) => {
+    if (left === right) return 0;
+    return left < right ? -1 : 1;
+  });
 }
 
 function ModePill({ run }: { run: ScannerRun }) {

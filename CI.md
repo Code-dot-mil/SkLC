@@ -12,13 +12,15 @@ The `CI` workflow runs on every pull request, including PRs targeting another br
 ```mermaid
 flowchart TD
     A["Pull request to any branch<br/>or push to main"]
-    A --> P["Python lint + tests"]
-    A --> S["Site lint + tests"]
+    A --> P["Python lint + tests<br/>GitLab script lint"]
+    A --> S["TypeScript + ESLint + Astro<br/>Site tests"]
+    A --> L["Markdown + workflow lint"]
     A --> Q["Assess main skills or trusted PR changes"]
     Q --> E["Read current assessments<br/>and generate catalog data"]
     A --> C["Package committed skill folders"]
     P --> B["Build site and add<br/>deployment files"]
     S --> B
+    L --> B
     E --> B
     B --> W["static-site ZIP<br/>Website + deployment guides"]
     C --> Z["skill-catalog.zip<br/>Skill folders + README"]
@@ -28,7 +30,7 @@ Code checks and product packaging run independently. Data generation waits for t
 
 The workflow checks and builds the site in three steps:
 
-1. **Check the code.** The Python and site jobs run lint and tests. These are the same checks available locally through the `Justfile`. A failed check prevents the final site artifact from being uploaded.
+1. **Check the code and configuration.** Independent checks run Ruff, Python tests, GitLab template script lint, TypeScript, typed ESLint with React and Astro rules, Astro typechecking, site tests, Markdown structure and formatting, and actionlint with ShellCheck. These are the checks available locally through the `Justfile`. A failed check prevents the final site artifact from being uploaded. GitLab checks use the consumer layout and explicitly omit the remote lint API; pipeline-semantic validation still requires a consuming GitLab project. The four catalog skills remain excluded from formatting until assessments can be refreshed, while Markdownlint continues checking them.
 2. **Generate catalog data.** The `exchange-data` job stages current assessments from tracked reports and the preceding assessment job's artifact. Python verifies the shared package hash, usable native execution, completed adjudication, and paired findings. Missing, stale, or mismatched reports fail generation; nonfatal partial coverage and negative safety judgments remain visible. Generation runs no scanner or provider and writes no evidence.
 3. **Build and package the site.** The `static-site` job downloads the generated data and uses Node.js to build `products/deployment-kit/operator/site/dist/`, with the generated directory selected explicitly through `SKILL_EXCHANGE_GENERATED_ROOT`. It then runs `python -m sklc_maintainer.packaging prebuilt --stage` to assemble the site, deployment guides, and GitLab Pages job in a fresh directory under `RUNNER_TEMP`.
 

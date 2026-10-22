@@ -27,7 +27,9 @@ The npm lockfiles pin ESLint, typescript-eslint, React Hooks and Astro plugins, 
 | `just github-lint` | GitHub Actions configuration and embedded ShellCheck diagnostics |
 | `just gitlab-lint` | GitLab template scripts through the verifier's bundled ShellCheck |
 
-`just lint` runs these checks and stops on failure. Run individual commands to collect the full baseline when multiple checks fail. The existing GitHub workflow still invokes its existing Ruff and TypeScript checks; the additional checks are available locally.
+`just lint` runs these checks and stops on failure. Run individual commands to collect the full baseline when multiple checks fail. GitHub CI runs each check on pull requests and pushes to `main`, with independent results for Python, GitLab scripts, TypeScript, ESLint, Astro, Markdown structure, Markdown formatting, and workflow lint. The final site artifact requires all check jobs to succeed.
+
+CI installs the locked npm dependencies and GitLab verifier, and downloads actionlint 1.7.12 with SHA-256 verification. The workflow job checks that the Ubuntu runner's ShellCheck is available before invoking actionlint, so shell analysis cannot be silently omitted. These checks run on GitHub-hosted runners and require no provider credentials.
 
 Prettier uses one source line per prose paragraph (`proseWrap: "never"`), relying on editor soft wrapping. Markdownlint's line-length rule is disabled to match. Code examples are not reformatted. To apply Markdown formatting deliberately, run `npm run markdown:format`; formatting catalog skill content changes assessment hashes and requires refreshed assessments.
 

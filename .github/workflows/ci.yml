@@ -21,16 +21,15 @@ jobs:
       cancel-in-progress: false
     env: &assessment-provider
       SKILL_ASSESSMENT_BASE_DIR: ${{ github.workspace }}
-      SKILLSPECTOR_PROVIDER: ${{ vars.SKILLSPECTOR_PROVIDER }}
-      SKILLSPECTOR_MODEL: ${{ vars.SKILLSPECTOR_MODEL }}
-      SKILLSPECTOR_COMPAT_BASE_URL: ${{ vars.SKILLSPECTOR_COMPAT_BASE_URL }}
-      SKILLSPECTOR_COMPAT_API_KEY: ${{ secrets.SKILLSPECTOR_COMPAT_API_KEY }}
-      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
-      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-      AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
-      AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION }}
+      # Reuse the existing gateway configuration and secret from the original workflow.
+      SKILLSPECTOR_PROVIDER: ${{ vars.SKILL_EXCHANGE_LLM_PROVIDER }}
+      SKILLSPECTOR_MODEL: ${{ vars.SKILL_EXCHANGE_LLM_MODEL }}
+      SKILLSPECTOR_COMPAT_BASE_URL: ${{ vars.SKILL_EXCHANGE_LLM_BASE_URL }}
+      SKILLSPECTOR_COMPAT_API_KEY: ${{ secrets.SKILL_EXCHANGE_LLM_API_KEY }}
+      LLM_API_KEY_HEADER: ${{ vars.SKILL_EXCHANGE_LLM_API_KEY_HEADER }}
+      LLM_REQUESTS_PER_SECOND: ${{ vars.SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND }}
+      LLM_MAX_OUTPUT_TOKENS: ${{ vars.SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS }}
+      ASSESSMENT_TIMEOUT_SECONDS: ${{ vars.SKILL_EXCHANGE_SCAN_MAX_SECONDS }}
       SSL_CERT_FILE: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
       NODE_EXTRA_CA_CERTS: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
     steps:
@@ -44,10 +43,10 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: Check scanner and install uv
+      - name: Install assessment runtime
         run: |
-          skillspector --version
           python -m pip install --no-cache-dir uv
+          bash .github/workflows/install-skillspector.sh
       - name: Select catalog skills
         run: >-
           PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments select
@@ -60,6 +59,7 @@ jobs:
           python -m sklc_maintainer.assessments assess
           --selection "$RUNNER_TEMP/catalog-selection/current-skills.nul"
           --reports products/skill-catalog-assessments --before-sha "$BEFORE_SHA"
+          --timeout "$ASSESSMENT_TIMEOUT_SECONDS"
       - name: Prune obsolete assessment reports after successful scans
         run: >-
           PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments prune
@@ -133,11 +133,11 @@ jobs:
             printf 'assess=false\n' >> "$GITHUB_OUTPUT"
             printf '%s\n' 'No current skill packages changed; no provider assessment requested.' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Check scanner and install uv for changed skills
+      - name: Install assessment runtime for changed skills
         if: steps.changes.outputs.assess == 'true'
         run: |
-          skillspector --version
           python -m pip install --no-cache-dir uv
+          bash .github/workflows/install-skillspector.sh
       - name: Assess changed skills for review
         id: assess
         if: steps.changes.outputs.assess == 'true'
@@ -146,6 +146,7 @@ jobs:
           python -m sklc_maintainer.assessments assess
           --selection "$RUNNER_TEMP/pr-assessments/current-skills.nul"
           --reports "$RUNNER_TEMP/pr-assessments/reports" --keep-going
+          --timeout "$ASSESSMENT_TIMEOUT_SECONDS"
       - name: Summarize findings and required actions
         if: always() && steps.changes.outputs.assess == 'true'
         shell: bash
@@ -179,7 +180,7 @@ jobs:
       matrix:
         include:
           - check: lint
-            command: uv run --extra test ruff check maintainer products
+            command: uv run --extra test ruff check maintainer products .github/workflows/skillspector_runner.py
           - check: test
             command: uv run --extra test pytest
     steps:

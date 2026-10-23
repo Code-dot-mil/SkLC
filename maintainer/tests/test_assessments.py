@@ -137,6 +137,17 @@ def test_pruning_retains_live_bytes_notes_and_symlinks_and_handles_last_skill_re
     assert not (root / "reports/a").exists() and not (root / "reports/b").exists()
 
 
+def test_configured_scan_budget_reaches_each_assessment_and_rejects_nonpositive_timeout(repository):
+    _, _, run, calls = repository
+    run("select", "--skills", "catalog", "--output-dir", "selection")
+    run("assess", "--selection", "selection/current-skills.nul", "--reports", "reports", "--timeout", "600")
+    assert len(calls()) == 2
+    assert all(call[call.index("--timeout") + 1] == "600" for call in calls())
+    run("assess", "--selection", "selection/current-skills.nul", "--reports", "reports", "--timeout", "0",
+        success=False)
+    assert len(calls()) == 2
+
+
 @pytest.mark.parametrize("keep_going", [False, True])
 def test_partial_failures_retain_outputs_and_action_summaries(repository, monkeypatch, keep_going):
     root, _, run, calls = repository

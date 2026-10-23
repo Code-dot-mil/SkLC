@@ -44,7 +44,9 @@ def select(skills: Path, output: Path, base_sha: str | None) -> None:
     print(f"Selected {len(current)} current packages; {len(changed) - len(current)} removed packages.")
 
 
-def assess(selection: Path, reports: Path, before_sha: str | None, keep_going: bool) -> int:
+def assess(selection: Path, reports: Path, before_sha: str | None, keep_going: bool, timeout: int = 300) -> int:
+    if timeout <= 0:
+        raise ValueError("Assessment timeout must be positive")
     if before_sha is not None and before_sha != "0" * 40:
         # Validate even an empty selection before any later pruning or Git writes.
         subprocess.run(["git", "rev-parse", "--verify", "--end-of-options", f"{before_sha}^{{commit}}"],
@@ -53,7 +55,7 @@ def assess(selection: Path, reports: Path, before_sha: str | None, keep_going: b
     for skill in read_paths(selection):
         output = reports / skill.name
         command = ["skill-assessment", "assess", "--skill", str(skill),
-                   "--output-dir", str(output), "--scan-mode", "llm-assisted"]
+                   "--output-dir", str(output), "--scan-mode", "llm-assisted", "--timeout", str(timeout)]
         if before_sha is not None and before_sha != "0" * 40:
             comparison = subprocess.run([
                 "git", "diff", "--quiet", before_sha, "HEAD", "--",
@@ -125,6 +127,7 @@ def main() -> int:
         command.add_argument("--reports", type=Path, required=True)
     assessment.add_argument("--before-sha")
     assessment.add_argument("--keep-going", action="store_true")
+    assessment.add_argument("--timeout", type=int, default=300)
     summary = commands.add_parser("summarize")
     summary.add_argument("--reports", type=Path, required=True)
     summary.add_argument("--output-dir", type=Path, required=True)
@@ -134,7 +137,7 @@ def main() -> int:
         if args.command == "select":
             select(args.skills, args.output_dir, args.base_sha)
         elif args.command == "assess":
-            return assess(args.selection, args.reports, args.before_sha, args.keep_going)
+            return assess(args.selection, args.reports, args.before_sha, args.keep_going, args.timeout)
         elif args.command == "prune":
             prune(args.selection, args.reports)
         else:

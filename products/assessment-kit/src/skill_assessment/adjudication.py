@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -39,10 +40,13 @@ def openai_config(model: str) -> GatewayConfig:
 def compatible_config(model: str) -> GatewayConfig:
     base = os.environ.get("SKILLSPECTOR_COMPAT_BASE_URL", "").strip()
     key = os.environ.get("SKILLSPECTOR_COMPAT_API_KEY", "").strip()
+    header = os.environ.get("LLM_API_KEY_HEADER", "").strip()
+    if header and not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", header):
+        raise ConfigurationUnavailable("LLM_API_KEY_HEADER must be a valid HTTP header name.")
     return GatewayConfig(
         provider="openai_compatible", model=model,
         url=base.rstrip("/") + "/chat/completions" if base else "",
-        headers={"Authorization": "Bearer " + key} if key else {},
+        headers=({header: key} if header else {"Authorization": "Bearer " + key}) if key else {},
     )
 
 
@@ -64,7 +68,7 @@ def gateway_config() -> GatewayConfig:
     if provider not in factories:
         raise ConfigurationUnavailable("Adjudication requires openai, openai_compatible, or azure_openai provider.")
     config = factories[provider](model)
-    if not (config.headers.get("Authorization") or config.headers.get("api-key")) or not config.url or not config.model:
+    if not config.headers or not config.url or not config.model:
         raise ConfigurationUnavailable("Adjudication requires an explicit model and the selected gateway credentials.")
     parsed = urlsplit(config.url)
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
@@ -158,10 +162,16 @@ class GatewayResponse:
 def request_completion(config: GatewayConfig, evidence: dict, metadata: dict, *, timeout: int) -> GatewayResponse:
     """Request a completion while tracking attempts even when the gateway fails."""
     prompt = files("skill_assessment").joinpath("prompts/adjudicate.md").read_text(encoding="utf-8")
+    try:
+        max_tokens = int(os.environ.get("LLM_MAX_OUTPUT_TOKENS", "6000"))
+        if max_tokens <= 0:
+            raise ValueError
+    except ValueError as exc:
+        raise ConfigurationUnavailable("LLM_MAX_OUTPUT_TOKENS must be a positive integer.") from exc
     payload = {
         "model": config.model, "messages": [{"role": "system", "content": prompt},
                                            {"role": "user", "content": json.dumps(evidence)}],
-        "response_format": {"type": "json_object"}, "max_completion_tokens": 6000,
+        "response_format": {"type": "json_object"}, "max_completion_tokens": max_tokens,
     }
     request = urllib.request.Request(config.url, data=json.dumps(payload).encode(), headers=config.headers)
     metadata["calls_attempted"] = 1

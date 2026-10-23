@@ -307,6 +307,42 @@ def test_gateway_protocol_and_usage_are_retained(skill, scanner, gateway, tmp_pa
     assert 'secret' not in report.with_name('adjudication.json').read_text()
 
 
+def test_compatible_gateway_uses_configured_key_header_and_output_cap(skill, scanner, gateway, tmp_path, monkeypatch):
+    monkeypatch.setenv('SKILLSPECTOR_PROVIDER', 'openai_compatible')
+    monkeypatch.setenv('SKILLSPECTOR_COMPAT_BASE_URL', 'https://compatible.example/v1')
+    monkeypatch.setenv('SKILLSPECTOR_COMPAT_API_KEY', 'gateway-secret')
+    monkeypatch.setenv('LLM_API_KEY_HEADER', 'api-key')
+    monkeypatch.setenv('LLM_MAX_OUTPUT_TOKENS', '2048')
+
+    report = scan_skill(skill, tmp_path / 'reports')
+
+    request = gateway['calls'][0]
+    assert request.get_header('Api-key') == 'gateway-secret'
+    assert request.get_header('Authorization') is None
+    assert json.loads(request.data)['max_completion_tokens'] == 2048
+    adjudication = report.with_name('adjudication.json').read_text()
+    assert json.loads(adjudication)['status'] == 'completed'
+    assert 'gateway-secret' not in adjudication
+
+
+@pytest.mark.parametrize('setting,value', [('LLM_API_KEY_HEADER', 'bad\nheader'),
+                                         ('LLM_MAX_OUTPUT_TOKENS', '0'), ('LLM_MAX_OUTPUT_TOKENS', 'invalid')])
+def test_invalid_gateway_settings_fail_without_a_request(
+    skill, scanner, gateway, tmp_path, monkeypatch, setting, value,
+):
+    monkeypatch.setenv('SKILLSPECTOR_PROVIDER', 'openai_compatible')
+    monkeypatch.setenv('SKILLSPECTOR_COMPAT_BASE_URL', 'https://compatible.example/v1')
+    monkeypatch.setenv('SKILLSPECTOR_COMPAT_API_KEY', 'gateway-secret')
+    monkeypatch.setenv(setting, value)
+
+    with pytest.raises(IncompleteScanError):
+        scan_skill(skill, tmp_path / 'reports')
+
+    assert not gateway['calls']
+    result = json.loads(next((tmp_path / 'reports').glob('*/adjudication.json')).read_text())
+    assert result['status'] == 'unavailable'
+
+
 @pytest.mark.parametrize('failure', ['credentials', 'model', 'unsupported', 'http', 'timeout', 'json',
                                     'missing-finding', 'contradiction', 'uncertain', 'identity', 'truncated'])
 def test_adjudication_failure_is_explicit_and_preserves_native_report(

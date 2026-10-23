@@ -2,7 +2,6 @@
 
 import json
 import os
-import re
 import time
 import urllib.error
 import urllib.request
@@ -40,13 +39,10 @@ def openai_config(model: str) -> GatewayConfig:
 def compatible_config(model: str) -> GatewayConfig:
     base = os.environ.get("SKILLSPECTOR_COMPAT_BASE_URL", "").strip()
     key = os.environ.get("SKILLSPECTOR_COMPAT_API_KEY", "").strip()
-    header = os.environ.get("LLM_API_KEY_HEADER", "").strip()
-    if header and not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", header):
-        raise ConfigurationUnavailable("LLM_API_KEY_HEADER must be a valid HTTP header name.")
     return GatewayConfig(
         provider="openai_compatible", model=model,
         url=base.rstrip("/") + "/chat/completions" if base else "",
-        headers=({header: key} if header else {"Authorization": "Bearer " + key}) if key else {},
+        headers={"Authorization": "Bearer " + key} if key else {},
     )
 
 

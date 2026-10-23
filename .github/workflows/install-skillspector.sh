@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # CI supplies the external scanner without adding it to assessment-kit dependencies.
-required=(SKILLSPECTOR_PROVIDER SKILLSPECTOR_MODEL SKILLSPECTOR_COMPAT_BASE_URL
-  SKILLSPECTOR_COMPAT_API_KEY LLM_API_KEY_HEADER LLM_REQUESTS_PER_SECOND
+required=(SKILLSPECTOR_PROVIDER SKILLSPECTOR_MODEL AZURE_OPENAI_ENDPOINT
+  AZURE_OPENAI_API_KEY AZURE_OPENAI_DEPLOYMENT AZURE_OPENAI_API_VERSION LLM_REQUESTS_PER_SECOND
   LLM_MAX_OUTPUT_TOKENS ASSESSMENT_TIMEOUT_SECONDS SSL_CERT_FILE)
 for name in "${required[@]}"; do
   if [[ -z "${!name:-}" ]]; then
@@ -13,7 +13,7 @@ for name in "${required[@]}"; do
 done
 test -r "$SSL_CERT_FILE"
 export GIT_SSL_CAINFO="$SSL_CERT_FILE"
-test "$SKILLSPECTOR_PROVIDER" = openai_compatible
+test "$SKILLSPECTOR_PROVIDER" = azure_openai
 
 runtime="$RUNNER_TEMP/skillspector-runtime"
 uv venv --clear --python "$(command -v python)" "$runtime"

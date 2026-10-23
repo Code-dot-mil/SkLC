@@ -84,23 +84,23 @@ edits and an initial push force an independent scan. Both main and PR assessment
 jobs set `SKILL_ASSESSMENT_BASE_DIR` to the checkout root. This rewrites only matching
 native `skill.source` prefixes; it does not redact diagnostic scanner logs.
 
-Upstream CI reuses the original Actions configuration directly; there is no
-precedence or fallback to the newer, unset variable names:
+Upstream CI uses the native Azure provider and the existing Actions secret.
+Configure the following variables explicitly; there is no provider fallback:
 
 | Actions variable | Runtime setting |
 | --- | --- |
-| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` (must be `openai_compatible`) |
-| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` |
-| `SKILL_EXCHANGE_LLM_BASE_URL` | `SKILLSPECTOR_COMPAT_BASE_URL` |
-| `SKILL_EXCHANGE_LLM_API_KEY_HEADER` | `LLM_API_KEY_HEADER` |
+| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` (must be `azure_openai`) |
+| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` and `AZURE_OPENAI_DEPLOYMENT` |
+| `SKILL_EXCHANGE_LLM_BASE_URL` | `AZURE_OPENAI_ENDPOINT` (gateway root, without `/openai/v1`) |
+| `SKILL_EXCHANGE_LLM_API_VERSION` | `AZURE_OPENAI_API_VERSION` |
 | `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` | `LLM_REQUESTS_PER_SECOND` |
 | `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS` | `LLM_MAX_OUTPUT_TOKENS` |
 | `SKILL_EXCHANGE_SCAN_MAX_SECONDS` | `ASSESSMENT_TIMEOUT_SECONDS`, also passed to Assess via `--timeout` |
 | `RUNNER_CA_BUNDLE_PATH` | `SSL_CERT_FILE` and `NODE_EXTRA_CA_CERTS` |
 
 The existing `SKILL_EXCHANGE_LLM_API_KEY` secret supplies
-`SKILLSPECTOR_COMPAT_API_KEY`. Scanner calls and adjudication both use the configured
-authentication header and output limit. Request pacing applies across the scanner's
+`AZURE_OPENAI_API_KEY`. Scanner calls and adjudication both use Azure deployment
+routing, the native `api-key` header, and the configured output limit. Request pacing applies across the scanner's
 parallel analyzers. All listed settings and a readable CA bundle are required;
 missing values stop setup before scanning.
 Credentials remain in Actions secrets; no provider-specific settings are embedded

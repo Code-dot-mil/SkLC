@@ -72,37 +72,30 @@ the selected packages and retains partial results for its always-run summary.
 
 The independent `catalog-assessments` job runs only for pushes to `main`. Its
 self-hosted runner must provide Bash, Git, Python, and pip. The job selects
-Python 3.12, installs uv, and installs SkillSpector 2.10.0 from pinned NVIDIA
-commit `e29b16d305b0e738e3d4b952ba102f5522a6f084` into a fresh environment under
-`RUNNER_TEMP`. No scanner installation on the runner is required. An upstream-only
-launcher supplies gateway authentication, shared request pacing, output limits,
-and the scanner workflow budget, as in the original assessment workflow. The
-assessment-kit wheel still treats the scanner as an external prerequisite.
-CI invokes the checked-out assessment kit with explicit `--scan-mode llm-assisted`. Main passes `--if-changed`
+Python 3.12, installs uv, then installs the scanner into a temporary environment.
+`SCANNER_SOURCE` is a required Actions variable containing the pip requirement,
+including an immutable source revision. The configured source is SkillSpector
+2.10.0 at NVIDIA commit `e29b16d305b0e738e3d4b952ba102f5522a6f084`.
+The job invokes the checked-out assessment kit with explicit `--scan-mode llm-assisted`. Main passes `--if-changed`
 only when the incoming push left both current JSON files unchanged; incoming pair
 edits and an initial push force an independent scan. Both main and PR assessment
 jobs set `SKILL_ASSESSMENT_BASE_DIR` to the checkout root. This rewrites only matching
 native `skill.source` prefixes; it does not redact diagnostic scanner logs.
 
-Upstream CI uses the native Azure provider and the existing Actions secret.
-Configure the following variables explicitly; there is no provider fallback:
+Azure configuration is supplied entirely through environment variables:
 
 | Actions variable | Runtime setting |
 | --- | --- |
-| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` (must be `azure_openai`) |
+| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` (`azure_openai`) |
 | `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` and `AZURE_OPENAI_DEPLOYMENT` |
-| `SKILL_EXCHANGE_LLM_BASE_URL` | `AZURE_OPENAI_ENDPOINT` (gateway root, without `/openai/v1`) |
+| `SKILL_EXCHANGE_LLM_BASE_URL` | `AZURE_OPENAI_ENDPOINT` (gateway root) |
 | `SKILL_EXCHANGE_LLM_API_VERSION` | `AZURE_OPENAI_API_VERSION` |
-| `SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND` | `LLM_REQUESTS_PER_SECOND` |
-| `SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS` | `LLM_MAX_OUTPUT_TOKENS` |
-| `SKILL_EXCHANGE_SCAN_MAX_SECONDS` | `ASSESSMENT_TIMEOUT_SECONDS`, also passed to Assess via `--timeout` |
 | `RUNNER_CA_BUNDLE_PATH` | `SSL_CERT_FILE` and `NODE_EXTRA_CA_CERTS` |
 
-The existing `SKILL_EXCHANGE_LLM_API_KEY` secret supplies
-`AZURE_OPENAI_API_KEY`. Scanner calls and adjudication both use Azure deployment
-routing, the native `api-key` header, and the configured output limit. Request pacing applies across the scanner's
-parallel analyzers. All listed settings and a readable CA bundle are required;
-missing values stop setup before scanning.
+The existing `SKILL_EXCHANGE_LLM_API_KEY` secret supplies `AZURE_OPENAI_API_KEY`.
+The native Azure provider supplies authentication and deployment routing.
+Scanner pacing, output limits and workflow budgets use upstream defaults;
+legacy custom pacing, token-cap and scan-budget variables are not consumed.
 Credentials remain in Actions secrets; no provider-specific settings are embedded
 in skill content or customer downloads.
 

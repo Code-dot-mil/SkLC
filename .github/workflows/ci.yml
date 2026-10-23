@@ -28,9 +28,7 @@ jobs:
       AZURE_OPENAI_API_KEY: ${{ secrets.SKILL_EXCHANGE_LLM_API_KEY }}
       AZURE_OPENAI_DEPLOYMENT: ${{ vars.SKILL_EXCHANGE_LLM_MODEL }}
       AZURE_OPENAI_API_VERSION: ${{ vars.SKILL_EXCHANGE_LLM_API_VERSION }}
-      LLM_REQUESTS_PER_SECOND: ${{ vars.SKILL_EXCHANGE_LLM_REQUESTS_PER_SECOND }}
-      LLM_MAX_OUTPUT_TOKENS: ${{ vars.SKILL_EXCHANGE_LLM_MAX_OUTPUT_TOKENS }}
-      ASSESSMENT_TIMEOUT_SECONDS: ${{ vars.SKILL_EXCHANGE_SCAN_MAX_SECONDS }}
+      SCANNER_SOURCE: ${{ vars.SCANNER_SOURCE }}
       SSL_CERT_FILE: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
       NODE_EXTRA_CA_CERTS: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
     steps:
@@ -45,9 +43,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install assessment runtime
-        run: |
+        run: &install-scanner |
+          : "${SCANNER_SOURCE:?Set the SCANNER_SOURCE Actions variable}"
           python -m pip install --no-cache-dir uv
-          bash .github/workflows/install-skillspector.sh
+          uv venv --clear --python "$(command -v python)" "$RUNNER_TEMP/skillspector"
+          GIT_SSL_CAINFO="$SSL_CERT_FILE" uv pip install --python "$RUNNER_TEMP/skillspector/bin/python" "$SCANNER_SOURCE"
+          echo "$RUNNER_TEMP/skillspector/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/skillspector/bin/skillspector" --version
       - name: Select catalog skills
         run: >-
           PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments select
@@ -60,7 +62,6 @@ jobs:
           python -m sklc_maintainer.assessments assess
           --selection "$RUNNER_TEMP/catalog-selection/current-skills.nul"
           --reports products/skill-catalog-assessments --before-sha "$BEFORE_SHA"
-          --timeout "$ASSESSMENT_TIMEOUT_SECONDS"
       - name: Prune obsolete assessment reports after successful scans
         run: >-
           PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments prune
@@ -136,9 +137,7 @@ jobs:
           fi
       - name: Install assessment runtime for changed skills
         if: steps.changes.outputs.assess == 'true'
-        run: |
-          python -m pip install --no-cache-dir uv
-          bash .github/workflows/install-skillspector.sh
+        run: *install-scanner
       - name: Assess changed skills for review
         id: assess
         if: steps.changes.outputs.assess == 'true'
@@ -147,7 +146,6 @@ jobs:
           python -m sklc_maintainer.assessments assess
           --selection "$RUNNER_TEMP/pr-assessments/current-skills.nul"
           --reports "$RUNNER_TEMP/pr-assessments/reports" --keep-going
-          --timeout "$ASSESSMENT_TIMEOUT_SECONDS"
       - name: Summarize findings and required actions
         if: always() && steps.changes.outputs.assess == 'true'
         shell: bash
@@ -181,7 +179,7 @@ jobs:
       matrix:
         include:
           - check: lint
-            command: uv run --extra test ruff check maintainer products .github/workflows/skillspector_runner.py
+            command: uv run --extra test ruff check maintainer products
           - check: test
             command: uv run --extra test pytest
     steps:

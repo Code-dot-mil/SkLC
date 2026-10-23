@@ -307,44 +307,6 @@ def test_gateway_protocol_and_usage_are_retained(skill, scanner, gateway, tmp_pa
     assert 'secret' not in report.with_name('adjudication.json').read_text()
 
 
-def test_azure_gateway_uses_native_authentication_and_output_cap(skill, scanner, gateway, tmp_path, monkeypatch):
-    monkeypatch.setenv('SKILLSPECTOR_PROVIDER', 'azure_openai')
-    monkeypatch.setenv('AZURE_OPENAI_ENDPOINT', 'https://azure.example')
-    monkeypatch.setenv('AZURE_OPENAI_API_KEY', 'gateway-secret')
-    monkeypatch.setenv('AZURE_OPENAI_DEPLOYMENT', 'gpt-5.4')
-    monkeypatch.setenv('AZURE_OPENAI_API_VERSION', '2024-06-01')
-    monkeypatch.setenv('LLM_MAX_OUTPUT_TOKENS', '2048')
-
-    report = scan_skill(skill, tmp_path / 'reports')
-
-    request = gateway['calls'][0]
-    assert request.full_url == ('https://azure.example/openai/deployments/gpt-5.4/'
-                                'chat/completions?api-version=2024-06-01')
-    assert request.get_header('Api-key') == 'gateway-secret'
-    assert request.get_header('Authorization') is None
-    assert json.loads(request.data)['max_completion_tokens'] == 2048
-    adjudication = report.with_name('adjudication.json').read_text()
-    assert json.loads(adjudication)['status'] == 'completed'
-    assert 'gateway-secret' not in adjudication
-
-
-@pytest.mark.parametrize('value', ['0', 'invalid'])
-def test_invalid_gateway_settings_fail_without_a_request(
-    skill, scanner, gateway, tmp_path, monkeypatch, value,
-):
-    monkeypatch.setenv('SKILLSPECTOR_PROVIDER', 'azure_openai')
-    monkeypatch.setenv('AZURE_OPENAI_ENDPOINT', 'https://azure.example')
-    monkeypatch.setenv('AZURE_OPENAI_API_KEY', 'gateway-secret')
-    monkeypatch.setenv('LLM_MAX_OUTPUT_TOKENS', value)
-
-    with pytest.raises(IncompleteScanError):
-        scan_skill(skill, tmp_path / 'reports')
-
-    assert not gateway['calls']
-    result = json.loads(next((tmp_path / 'reports').glob('*/adjudication.json')).read_text())
-    assert result['status'] == 'unavailable'
-
-
 @pytest.mark.parametrize('failure', ['credentials', 'model', 'unsupported', 'http', 'timeout', 'json',
                                     'missing-finding', 'contradiction', 'uncertain', 'identity', 'truncated'])
 def test_adjudication_failure_is_explicit_and_preserves_native_report(

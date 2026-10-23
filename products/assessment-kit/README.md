@@ -68,11 +68,6 @@ the `api-key` header. An Azure gateway exposing the OpenAI-compatible v1 protoco
 instead uses the `openai` configuration. Gateways must use HTTPS and accept chat
 completions with JSON-object output and `max_completion_tokens`.
 
-`LLM_MAX_OUTPUT_TOKENS` sets a positive integer output cap for adjudication;
-when unset, the cap is 6000. Upstream CI supplies this setting to both its scanner
-adapter and adjudication. CI uses the native `azure_openai` provider for API-key
-authentication and deployment routing.
-
 Adjudication does not switch providers or models automatically. Unsupported
 providers or missing configuration produce an explicit unavailable adjudication.
 

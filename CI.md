@@ -82,17 +82,11 @@ edits and an initial push force an independent scan. Both main and PR assessment
 jobs set `SKILL_ASSESSMENT_BASE_DIR` to the checkout root. This rewrites only matching
 native `skill.source` prefixes; it does not redact diagnostic scanner logs.
 
-Azure configuration is supplied entirely through environment variables:
-
-| Actions variable | Runtime setting |
-| --- | --- |
-| `SKILL_EXCHANGE_LLM_PROVIDER` | `SKILLSPECTOR_PROVIDER` (`azure_openai`) |
-| `SKILL_EXCHANGE_LLM_MODEL` | `SKILLSPECTOR_MODEL` and `AZURE_OPENAI_DEPLOYMENT` |
-| `SKILL_EXCHANGE_LLM_BASE_URL` | `AZURE_OPENAI_ENDPOINT` (gateway root) |
-| `SKILL_EXCHANGE_LLM_API_VERSION` | `AZURE_OPENAI_API_VERSION` |
-| `RUNNER_CA_BUNDLE_PATH` | `SSL_CERT_FILE` and `NODE_EXTRA_CA_CERTS` |
-
-The existing `SKILL_EXCHANGE_LLM_API_KEY` secret supplies `AZURE_OPENAI_API_KEY`.
+Configure the existing Actions variables directly: `SKILLSPECTOR_PROVIDER`
+(`azure_openai`), `SKILLSPECTOR_MODEL`, `AZURE_OPENAI_ENDPOINT` (gateway root),
+`AZURE_OPENAI_DEPLOYMENT`, and `AZURE_OPENAI_API_VERSION`. Store the credential
+in the `AZURE_OPENAI_API_KEY` Actions secret. `RUNNER_CA_BUNDLE_PATH` supplies
+`SSL_CERT_FILE` and `NODE_EXTRA_CA_CERTS`.
 The native Azure provider supplies authentication and deployment routing.
 Scanner pacing, output limits and workflow budgets use upstream defaults;
 legacy custom pacing, token-cap and scan-budget variables are not consumed.

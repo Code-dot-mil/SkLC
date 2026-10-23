@@ -31,6 +31,7 @@ jobs:
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
       AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
       AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION }}
+      SCANNER_SOURCE: ${{ vars.SCANNER_SOURCE }}
       SSL_CERT_FILE: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
       NODE_EXTRA_CA_CERTS: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
     steps:
@@ -44,10 +45,14 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: Check scanner and install uv
-        run: |
-          skillspector --version
+      - name: Install assessment runtime
+        run: &install-scanner |
+          : "${SCANNER_SOURCE:?Set the SCANNER_SOURCE Actions variable}"
           python -m pip install --no-cache-dir uv
+          uv venv --clear --python "$(command -v python)" "$RUNNER_TEMP/skillspector"
+          GIT_SSL_CAINFO="$SSL_CERT_FILE" uv pip install --python "$RUNNER_TEMP/skillspector/bin/python" "$SCANNER_SOURCE"
+          echo "$RUNNER_TEMP/skillspector/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/skillspector/bin/skillspector" --version
       - name: Select catalog skills
         run: >-
           PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments select
@@ -133,11 +138,9 @@ jobs:
             printf 'assess=false\n' >> "$GITHUB_OUTPUT"
             printf '%s\n' 'No current skill packages changed; no provider assessment requested.' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Check scanner and install uv for changed skills
+      - name: Install assessment runtime for changed skills
         if: steps.changes.outputs.assess == 'true'
-        run: |
-          skillspector --version
-          python -m pip install --no-cache-dir uv
+        run: *install-scanner
       - name: Assess changed skills for review
         id: assess
         if: steps.changes.outputs.assess == 'true'

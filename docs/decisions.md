@@ -23,8 +23,9 @@ NVIDIA SkillSpector will be the baseline skill assessor in `llm-assisted` scan m
 `static-only` has a high false positive rate, must be explicitly requested, and must
 not be used as a fallback when `llm-assisted` is configured but unavailable.
 
-SkillSpector installation and dependency management are outside this repository's
-scope. The assessment kit requires an externally installed `skillspector` executable
+SkillSpector installation and dependency management are outside the assessment kit's
+scope. Upstream assessment CI installs its pinned scanner at runtime; consumers
+provide their own installation. The assessment kit requires an external `skillspector` executable
 on `PATH` for assessment; validation, hashing, and summaries need no scanner.
 The compatibility target is SkillSpector `>=2.10,<3` through its public CLI and JSON report format.
 Versions 2.10.0 and 2.12.0 have been exercised; other v2 releases are expected to remain compatible.

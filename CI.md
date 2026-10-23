@@ -71,18 +71,25 @@ commit fails. Main assessment stops at the first failure; PR assessment continue
 the selected packages and retains partial results for its always-run summary.
 
 The independent `catalog-assessments` job runs only for pushes to `main`. Its
-self-hosted runner must provide Bash, Python, pip, and SkillSpector `>=2.10,<3`
-on `PATH`. The job selects Python 3.12, installs uv, and invokes the checked-out
-assessment kit with explicit `--scan-mode llm-assisted`. Main passes `--if-changed`
+self-hosted runner must provide Bash, Git, Python, and pip. The job selects
+Python 3.12, installs uv, then installs the scanner into a temporary environment.
+`SCANNER_SOURCE` is a required Actions variable containing the pip requirement,
+including an immutable source revision. The configured source is SkillSpector
+2.10.0 at NVIDIA commit `e29b16d305b0e738e3d4b952ba102f5522a6f084`.
+The job invokes the checked-out assessment kit with explicit `--scan-mode llm-assisted`. Main passes `--if-changed`
 only when the incoming push left both current JSON files unchanged; incoming pair
 edits and an initial push force an independent scan. Both main and PR assessment
 jobs set `SKILL_ASSESSMENT_BASE_DIR` to the checkout root. This rewrites only matching
 native `skill.source` prefixes; it does not redact diagnostic scanner logs.
 
-Configure `SKILLSPECTOR_PROVIDER`, `SKILLSPECTOR_MODEL`, and the selected gateway's
-variables and credential secrets described in the
-[assessment kit](products/assessment-kit/README.md#adjudication-gateways).
-`RUNNER_CA_BUNDLE_PATH` supplies the runner's optional custom certificate bundle.
+Configure the existing Actions variables directly: `SKILLSPECTOR_PROVIDER`
+(`azure_openai`), `SKILLSPECTOR_MODEL`, `AZURE_OPENAI_ENDPOINT` (gateway root),
+`AZURE_OPENAI_DEPLOYMENT`, and `AZURE_OPENAI_API_VERSION`. Store the credential
+in the `AZURE_OPENAI_API_KEY` Actions secret. `RUNNER_CA_BUNDLE_PATH` supplies
+`SSL_CERT_FILE` and `NODE_EXTRA_CA_CERTS`.
+The native Azure provider supplies authentication and deployment routing.
+Scanner pacing, output limits and workflow budgets use upstream defaults;
+legacy custom pacing, token-cap and scan-budget variables are not consumed.
 Credentials remain in Actions secrets; no provider-specific settings are embedded
 in skill content or customer downloads.
 

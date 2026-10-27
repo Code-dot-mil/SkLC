@@ -1,46 +1,103 @@
-# Static Skill Exchange Architecture
+# SkLC architecture
 
-The normative [product-boundary contract](product-boundaries.md) defines ownership,
-source layout, permitted composition, and consumer-independence expectations for
-architecture changes.
+SkLC helps teams use agent skills, assess them, and share them through a static
+skill exchange. This repository develops and packages independently usable
+products. A team can install skills, assess its own skills, or host an exchange,
+depending on what it needs.
 
-The site builds from skill packages and current adjudicated assessments.
+Start here for the product relationships and delivery flow. For ownership rules,
+source layout, permitted dependencies, and independence checks, use the normative
+[product-boundary contract](product-boundaries.md).
+
+## Products and independent use
+
+| Product | What a consumer gets | Independent use |
+| --- | --- | --- |
+| Skill catalog | Complete developer skill packages | Install skills in a coding agent's workspace. Assessment and hosting are optional. |
+| Assessment kit | An installable Python CLI | Assess any local skill package and read its results, using an external SkillSpector installation and a configured provider for LLM-assisted assessment. |
+| Deployment kit: Prebuilt | A finished exchange website and deployment instructions | Host the supplied site with a static host, including GitLab Pages. The consumer needs no assessment or site-build toolchain. |
+| Deployment kit: Operator | Site source, build runtime, assessment wheel, reference CI, and included upstream skills and evidence | Build and host an exchange for the operator's own catalog, with any selected upstream skills. |
+
+Prebuilt and Operator are two modes of the deployment product. The separate
+catalog-assessments download supplies matching evidence for the upstream skills;
+it is a companion to the catalog. Skill lifecycle guidance is a parallel product
+track with a separate publication origin; see the
+[product requirements](decisions.md#3-products) and
+[maintainer environment](decisions.md#2-maintainer-environment).
 
 ```mermaid
 flowchart LR
-  skills[Skill packages] --> builder[Python generator]
-  evidence[Current paired assessments] --> builder
-  builder --> data[Generated site data and downloads]
-  data --> astro[Astro static build]
+  releases["SkLC GitHub Releases"]
+  releases --> catalog["Skill catalog"]
+  releases --> assessment["Assessment kit"]
+  releases --> prebuilt["Deployment kit: Prebuilt"]
+  releases --> operator["Deployment kit: Operator"]
+  releases --> evidence["Catalog assessments"]
+  catalog --> workspace["Developer's agent workspace"]
+  assessment --> local["Local skill assessment"]
+  prebuilt --> host["Static host / GitLab Pages"]
+  operator --> instance["Customer-owned catalog and build"]
+  instance --> host
+  catalog -. "included skills" .-> operator
+  assessment -. "included wheel" .-> operator
+  evidence -. "included evidence" .-> operator
 ```
 
-The builder discovers `products/skill-catalog/<skill-id>/`, validates names and descriptions,
-and reads `products/skill-catalog-assessments/<skill-name>/`. Each directory contains the unchanged native `skillspector.json`,
-paired `adjudication.json`. These two files form the BOE; scanner logs are
-diagnostic output for local runs and CI artifacts. The shared public assessment hash
-must match `adjudication.skill_sha256`. Git owns history; generation selects no
-historical report and runs no scanner or provider.
+Solid arrows show delivery and use; dotted arrows show components bundled into
+Operator. The branches are consumer choices. Independent use means each download's
+documented workflow runs with its included components and declared prerequisites,
+outside this checkout. Operator composes other products: it bundles the assessment
+wheel and upstream skills with matching evidence. Operators explicitly select
+which upstream content to copy into their live catalog alongside their own skills.
 
-Native execution must be usable and adjudication completed. Every finding must
-pair by its one-based position and rule identity. Nonfatal partial native coverage,
-uncertain findings, and negative safety judgments remain advisory. Generated
-records contain skill identity, description, full instructions, package files,
-catalog metadata, adjudication, and native display
-rows. The site summary shows the exact adjudication text, status, coverage judgment,
-disposition counts, and limitations; the existing native scanner display remains
-evidence separate from safety guidance. The assessment product owns eligibility
-and hashing. Reports are copied byte for byte and remain separate downloads.
+## How skills become an exchange
 
-`--evidence` selects another current-report root; `--generated` selects
-derived output. `just generate` writes to `.exchange/local-generated/`. Operator
-generation uses the same reader and freshness rule with its preceding job's
-reports. Intentional static-only CLI scans retain diagnostics but do not supply
-completed adjudication for a site build.
+Assessment produces evidence about a skill. Site generation consumes that evidence
+with the exact skill content it describes. The same Operator generator and site
+build serve both upstream Prebuilt assembly and a customer's Operator instance.
 
-## Builds and downloads
+```mermaid
+flowchart LR
+  skills["Skill packages"] --> assess["Assessment kit"]
+  scanner["External SkillSpector + provider"] --> assess
+  assess --> evidence["Current assessment pair / BOE"]
+  skills --> generate["Operator Python generator"]
+  evidence --> generate
+  generate --> data["Site data + downloads"]
+  data --> astro["Astro build"]
+  astro --> site["Static website"]
+```
 
-Python produces site data; Astro consumes it. The CI and release workflows use the same evidence-reading path. The prebuilt deployment package contains the resulting site, deployment instructions, and a GitLab Pages job. Each product is one ZIP. Consumers compare its SHA-256 with GitHub’s digest, unzip once, and use it. CI uploads staged directories so its downloads have the same layout.
+The catalog supplies reusable skills; an operator can also supply entirely its
+own. The assessment kit owns assessment and report interpretation. Operator owns
+catalog generation and website presentation. The website serves instructions,
+assessment context, and downloads as static files.
 
-The skill-catalog download separately packages committed skill files and an installation README. It does not require site generation or assessment.
+Generation verifies that each assessment matches its skill and leaves evidence
+unchanged. Scanner and provider requests happen during assessment; visitors use
+the built website without invoking them. See the
+[assessment guide](../products/assessment-kit/README.md) for report meaning and
+prerequisites, the [Operator runtime](../products/deployment-kit/operator/README.md)
+for generation behavior, and [governance](../GOVERNANCE.md) for human review and
+approval responsibilities.
 
-See [CI](../CI.md) for build and release details.
+## Maintainer delivery and customer operation
+
+Maintainers develop the products together in this GitHub repository. Upstream CI
+validates them and builds preview downloads; the release workflow assembles the
+consumer downloads under one release version. `maintainer/` owns this assembly.
+Product source and release contents differ because a kit includes the components
+needed for its consumer workflow. See [CI](../CI.md) for artifact contents,
+workflow behavior, and the release process.
+
+Customers take those downloads into their own environment. A Prebuilt customer
+deploys the finished website. An Operator customer owns the live catalog and
+evidence, then runs the included assessment, generation, build, and deployment
+flow. Customer GitLab CI operates on that installed kit independently of upstream
+GitHub workflows. Visitors reach the resulting static site in either case.
+
+For installation or deployment, follow the
+[Prebuilt guides](../products/deployment-kit/prebuilt/docs/README.md) or
+[Operator guide](../products/deployment-kit/operator/docs/README.md). For direct
+skill installation, use the [catalog guide](../products/skill-catalog/README.md).
+For source changes and local checks, use [Contributing](../CONTRIBUTING.md).

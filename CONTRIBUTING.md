@@ -21,12 +21,13 @@ Skill packages under `products/skill-catalog/` are exchange content. Treat chang
 
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22, `npm`, and `just`.
+Install [Python 3.12](https://www.python.org/downloads/), [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js 22 with npm](https://nodejs.org/en/download) (22.22.0 or later), and [just](https://just.systems/man/en/packages.html). The [local lint guide](docs/linting.md) also covers the required `actionlint` and `shellcheck` tools.
 
 Install project dependencies:
 
 ```sh
-uv sync --extra test
+uv sync --extra test --group lint
+npm ci
 npm ci --prefix products/deployment-kit/operator/site
 ```
 
@@ -59,9 +60,8 @@ Generation reads `products/skill-catalog-assessments/<skill-name>/`. Use `--evid
 Python code must pass:
 
 ```sh
-uv run --extra test ruff check scripts tests products/assessment-kit
+just python-lint
 uv run --extra test pytest
-uv run python -m compileall scripts tests
 ```
 
 Keep Python code focused on exchange validation, evidence verification, generated index creation, and packaging. Do not put frontend build behavior in Python unless it is part of generated exchange data.

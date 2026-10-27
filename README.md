@@ -1,118 +1,60 @@
-# Skill Exchange Site
+# SkLC: install, assess, and share agent skills
 
-Skill Exchange Site serves agent skills with optional assessments. Browse names and descriptions, read full instructions, and download a skill. Open an assessment for required remediation, unresolved findings, false positives, scope, and limitations, with downloads of the original report pair.
+SkLC helps teams use and share agent skills: reusable instruction packages that guide a coding agent through a task. Each skill is a directory with a `SKILL.md` file containing its name, description, and instructions, plus any supporting files.
 
-The prebuilt kit serves four developer skills as a static introduction. The Operator kit can assess and serve a consumer's own skills. Product source and release composition follow [product boundaries](docs/product-boundaries.md).
+For example, a developer can install the supplied Python code review skill in a workspace. A skill author can assess their own instructions and investigate potential problems. A team can publish skills and their assessment results through a static website called a Skill Exchange.
 
-## Use the prebuilt site
+You can use these capabilities independently. Choose the path that matches your task below. For an overview of how the products fit together, read the [architecture guide](docs/architecture.md).
 
-The prebuilt deployment kit contains an already-built site. Download `deployment-kit-prebuilt-<version>.zip` from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256 with the digest GitHub displays for that asset, then unzip it once. Follow the [installation guide](products/deployment-kit/prebuilt/docs/install.md) for commands. You only need unzip support and a SHA-256 utility to install the package.
+## Choose your starting point
 
-Choose a hosting path:
+| I want to… | Use | Start here |
+| --- | --- | --- |
+| Install developer skills in my coding agent's workspace | Skill catalog: four complete skill packages | [Install the catalog](products/skill-catalog/README.md) |
+| Assess a local skill and understand which findings need attention | Assessment kit: a standalone Python CLI | [Install and use the assessment kit](products/assessment-kit/README.md) |
+| Host the supplied example exchange without building a website | Deployment kit, Prebuilt mode: a finished static site | [Install the prebuilt site](products/deployment-kit/prebuilt/docs/install.md), then deploy to [GitLab Pages](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md) or [another static host](products/deployment-kit/prebuilt/docs/deploy-static-hosting.md) |
+| Assess my own catalog and build an exchange for it | Deployment kit, Operator mode: assessment tooling, site source, and a GitLab pipeline | [Set up an Operator instance](products/deployment-kit/operator/docs/README.md) |
 
-- [GitLab Pages](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md): copy the complete package, including hidden files, and configure `PAGES_RUNNER_TAG` for an available Linux runner that can pull the selected job image.
-- [Another static host](products/deployment-kit/prebuilt/docs/deploy-static-hosting.md): serve the complete `public/` directory at a domain root or URL prefix.
+The catalog includes secure Python code review, unit test generation, inline documentation, and change descriptions. You can install these skills without hosting an exchange or running an assessment.
 
-For a CI test build, download the `static-site` artifact ZIP from a successful [CI run](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml). Unzip it once to get the same package layout as a release. It is a preview, not a published product release. See [CI package details](CI.md#github-validation).
+Download the product you need from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases). Before using it, calculate its SHA-256 and compare it with the digest GitHub displays for that asset. Each installation guide explains its requirements and package layout. Downloads from [CI runs](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml) are development previews; see [CI package details](CI.md#github-validation).
 
-The developer setup below is for working on the source.
+## Understand assessment results
 
-## Download the skill catalog
+The assessment kit uses the external SkillSpector scanner to identify potential problems in a skill. By default, it also asks a configured model to review the findings in context. That review is called adjudication: it distinguishes confirmed findings, false positives, and findings that still need investigation. Skill contents are sent to the configured provider.
 
-Download `skill-catalog-<version>.zip` from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256 with the digest GitHub displays for that asset, then unzip it once. The archive contains the developer skill folders, their supporting files, and a [short installation README](products/skill-catalog/README.md). Copy the folders into your workspace's `.agents/skills/`. For PR testing, the `skill-catalog.zip` CI artifact contains the same layout.
-
-## Assess a local skill
-
-The [assessment kit](products/assessment-kit/README.md) provides a standalone `skill-assessment` CLI with `validate`, `hash`, `assess`, and `summarize` commands. Summarize explains remediation, unresolved findings, and false positives from existing paired reports. Install its wheel from an SkLC release without the checkout or site tooling; compare its SHA-256 with the GitHub asset digest, then follow the assessment kit installation and usage guide.
-
-## Direction and current operation
-
-The [roadmap](docs/roadmap.md) describes the intended assessment, catalog, and deployment products.
-
-The current site builds from skill packages and existing tracked evidence:
-
-1. Skills live under `products/skill-catalog/<skill-id>/`, with metadata and instructions in `SKILL.md`.
-2. Python validates skill content, checks current adjudicated assessments against exact skill content, and creates site records and skill ZIPs.
-3. Astro consumes those records and builds the static catalog.
-
-Current reports live under `products/skill-catalog-assessments/<skill-name>/`. Site generation requires paired native findings and completed adjudication for the exact skill content. Generation is read-only and runs no scanner. Nonfatal partial coverage and negative safety judgments remain visible advisory results.
-
-The `skill-catalog-assessments-<version>.zip` release download contains the current JSON pair for each of the four catalog skills, with its interpretation guide. Developers can use `skill-assessment summarize` to review required remediation, unresolved findings, false positives, scope, and limitations.
-
-## Repository Map
-
-- `.exchange/` contains derived local and CI catalog output.
-- `.github/workflows/ci.yml` validates the codebase and builds preview catalog artifacts.
-- `CI.md` documents validation, packaging, and release behavior.
-- `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
-- `docs/architecture.md` documents the current component, evidence, catalog-build, and CI flows.
-- `docs/roadmap.md` defines the Q3 2026 target product, GitHub release, and downstream delivery plan.
-- `GOVERNANCE.md` describes exchange roles and generated-output boundaries.
-- `products/deployment-kit/operator/` owns the Python catalog runtime, its tests, and the site build.
-- `maintainer/` owns upstream packaging, release orchestration, and their tests.
-- `products/deployment-kit/operator/site/` contains the Astro static site.
-- `products/skill-catalog/` contains skill packages included in the exchange.
-- `products/assessment-kit/` owns the standalone assessment CLI and its tests.
-
-## Developer Setup
-
-Install the local toolchain:
-
-- Python 3.12 with `uv`.
-- Node.js 22 with `npm`.
-- `just` for cross-stack commands.
-
-Install dependencies:
+Use `skill-assessment summarize` to turn the scanner report and adjudication into a Markdown summary of required remediation, unresolved findings, false positives, and limitations. After installing the kit, summarize an existing report pair with:
 
 ```sh
-uv sync --extra test
-npm ci --prefix products/deployment-kit/operator/site
+uv run --no-project skill-assessment summarize --assessment-dir ./reports
 ```
 
-## Local Workflow
+Run this from the working directory containing the virtual environment created during installation. Here, `./reports` is a directory containing both `skillspector.json` and `adjudication.json`. The separate `skill-catalog-assessments-<version>.zip` release download contains one such pair per supplied catalog skill. Point the command at the selected skill's directory. Summarizing existing reports needs no scanner or provider configuration.
 
-Run the common local checks:
+Assessment helps inform a human decision; command success does not establish that a skill is safe. Adjudication examines `SKILL.md` and scanner evidence, while supporting files are not independently reviewed. Read the [assessment guide's scope and limitations](products/assessment-kit/README.md#review-scope) before relying on a result. Human review and approval responsibilities are described in [governance](GOVERNANCE.md).
+
+## Host and maintain an exchange
+
+Prebuilt mode serves the supplied four-skill catalog as a finished website. You need a static host; deploying the package requires no Python, Node.js, or assessment toolchain.
+
+Operator mode is for a catalog you maintain. You select any included upstream skills you want, add your own, and run **Assess → Generate → Build → Pages**. Its [installation guide](products/deployment-kit/operator/docs/README.md) covers runner access, the assessment image, provider configuration, evidence retention, and updates.
+
+Both modes produce a static website where visitors can browse skill instructions, download packages, and inspect assessment evidence. Visitors do not trigger scans or model requests. An Operator pipeline requires completed matching assessments to build the site, but negative judgments and coverage limitations remain visible advisory results rather than automatically blocking publication.
+
+## Contribute to SkLC
+
+For source development, follow [Contributing](CONTRIBUTING.md). Start with the [development and lint prerequisites](docs/linting.md), then run the common checks from the repository root:
 
 ```sh
 just ci-local
 ```
 
-Generate local catalog data from tracked evidence:
-
-```sh
-just generate
-```
-
-Build the static site from freshly generated local data:
+To generate catalog data from existing assessments and build the website:
 
 ```sh
 just build
 ```
 
-Local `just` generation writes to `.exchange/local-generated/` while current assessment reports remain read-only. Use `uv` directly for Python-only checks and `npm --prefix products/deployment-kit/operator/site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
+The build writes derived catalog data to `.exchange/local-generated/` and site output to `products/deployment-kit/operator/site/dist/`. It reads current assessment reports without changing them or running a scanner.
 
-Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details.
-
-## CI Workflow
-
-- `CI` runs lint and tests, reads current adjudicated assessments, builds the site, and uploads catalog artifacts.
-- GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
-
-See [CI.md](CI.md) for the full configuration reference.
-
-## Configuration
-
-Configuration is part of the portability model. Do not hardcode network-specific values into the repository. Use CI variables or environment variables for:
-
-- Python and Node image registry, repository, tag, or full image override.
-- Customer GitLab runner tags for packaged Pages deployment.
-
-Secrets should be configured as masked CI variables in the target environment and must not be committed.
-
-## Current Boundaries
-
-This is a static exchange MVP. It does not implement a live application server, interactive approval workflow, protected-branch administration, hosting-provider API simulation, or user account model. Those responsibilities belong to the hosting platform and future exchange services.
-
-## Operator kit
-
-Use `deployment-kit-operator-<version>.zip` to assess a catalog and deploy its exchange in GitLab. See the [operator guide](products/deployment-kit/operator/docs/README.md).
+For further reading, use the [architecture](docs/architecture.md) for component relationships, [product boundaries](docs/product-boundaries.md) for source ownership and dependencies, and [CI](CI.md) for validation, preview downloads, and releases. The [roadmap](docs/roadmap.md) records intended milestones; use the linked product guides for current usage instructions. [Reader profiles](docs/PERSONAS.md) describe the audiences this documentation serves.

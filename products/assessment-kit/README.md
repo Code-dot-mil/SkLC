@@ -2,18 +2,18 @@
 
 Assess a skill during development, understand which findings need action, and check the revised skill. The kit produces a SkillSpector report and adjudication, then translates them into a human-friendly, action-based summary.
 
-After installation and provider setup:
+For a new assessment, complete installation and provider setup, then run these commands from the working directory containing your virtual environment:
 
 ```sh
-skill-assessment assess --skill ./my-skill --output-dir ./reports
-skill-assessment summarize --assessment-dir ./reports
+uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports
+uv run --no-project skill-assessment summarize --assessment-dir ./reports
 ```
 
 Address confirmed findings and investigate unresolved findings, then assess the revised skill with the same commands. False-positive determinations explain why no remediation is needed for those findings. `validate` checks a package's frontmatter; `hash` identifies its contents.
 
 ## Prerequisites
 
-Python 3.12 or later is required. The examples below use `uv` to build and install the assessment kit and run its commands.
+[Python 3.12 or later](https://www.python.org/downloads/) is required. The examples below use [uv](https://docs.astral.sh/uv/getting-started/installation/) to build and install the assessment kit and run its commands. To read existing reports only, follow [Installation](#installation), then [Summarize](#summarize); skip the scanner and provider setup below.
 
 ### SkillSpector
 
@@ -53,12 +53,14 @@ To build from source instead, run from the repository root:
 uv build --wheel products/assessment-kit --out-dir release/assessment-kit
 ```
 
-Copy the wheel into a separate working directory, then install it:
+Copy the wheel into a separate working directory, then install it, replacing `<version>` with the version in the downloaded filename:
 
 ```sh
 uv venv --python 3.12
-uv pip install skill_assessment-0.1.0-py3-none-any.whl
+uv pip install 'skill_assessment-<version>-py3-none-any.whl'
 ```
+
+Run the `uv run --no-project` examples from this working directory so they use its `.venv`. These commands do not require activating the environment. To use a bare `skill-assessment` command instead, activate this environment first.
 
 ## Validate
 
@@ -167,7 +169,7 @@ The hash includes file paths and contents. It starts with `skill-assessment-pack
 Produce a human-friendly, action-based Markdown summary of the SkillSpector report and adjudication:
 
 ```sh
-skill-assessment summarize --assessment-dir ./reports > assessment.md
+uv run --no-project skill-assessment summarize --assessment-dir ./reports > assessment.md
 ```
 
 The directory must contain `skillspector.json` and `adjudication.json`. The summary starts with the number of true-positive findings that need remediation, followed by counts of unresolved findings and false positives. It includes the review status, scope, and limitations. True positives and unresolved findings have detailed entries; false positives have shorter entries. Findings from static-only scans or unavailable or failed adjudication remain unresolved.

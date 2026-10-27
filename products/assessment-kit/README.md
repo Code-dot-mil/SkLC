@@ -2,7 +2,7 @@
 
 Assess a skill during development, understand which findings need action, and check the revised skill. The kit produces a SkillSpector report and adjudication, then translates them into a human-friendly, action-based summary.
 
-After installation and provider setup:
+After installation, activate the environment containing the wheel (or use `uv run --no-project` as in the examples below) and configure the provider:
 
 ```sh
 skill-assessment assess --skill ./my-skill --output-dir ./reports
@@ -57,8 +57,10 @@ Copy the wheel into a separate working directory, then install it:
 
 ```sh
 uv venv --python 3.12
-uv pip install skill_assessment-0.1.0-py3-none-any.whl
+uv pip install skill_assessment-<version>-py3-none-any.whl
 ```
+
+Replace `<version>` with the downloaded wheel's version, including Python's normalized prerelease spelling where applicable. The examples using `uv run --no-project` select this directory's virtual environment; bare `skill-assessment` commands require that environment's executable directory on `PATH`.
 
 ## Validate
 
@@ -167,7 +169,7 @@ The hash includes file paths and contents. It starts with `skill-assessment-pack
 Produce a human-friendly, action-based Markdown summary of the SkillSpector report and adjudication:
 
 ```sh
-skill-assessment summarize --assessment-dir ./reports > assessment.md
+uv run --no-project skill-assessment summarize --assessment-dir ./reports > assessment.md
 ```
 
 The directory must contain `skillspector.json` and `adjudication.json`. The summary starts with the number of true-positive findings that need remediation, followed by counts of unresolved findings and false positives. It includes the review status, scope, and limitations. True positives and unresolved findings have detailed entries; false positives have shorter entries. Findings from static-only scans or unavailable or failed adjudication remain unresolved.

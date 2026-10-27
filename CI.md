@@ -24,6 +24,7 @@ flowchart TD
     E --> B
     B --> W["static-site ZIP<br/>Website + deployment guides"]
     C --> Z["skill-catalog.zip<br/>Skill folders + README"]
+    E --> O["Operator ZIP + assessment ZIP<br/>+ standalone assessment wheel"]
 ```
 
 Code checks and product packaging run independently. Data generation waits for the relevant main or trusted-PR assessment job; the site build also waits for code checks. Fork previews use tracked reports and fail freshness checks when changed skills lack matching current evidence. They make no provider calls.
@@ -115,7 +116,9 @@ The check confirms that:
 - The candidate commit is in GitHub's `main` history. It can be an older commit; the local branch name does not matter.
 - The latest `ci.yml` run triggered by a push to `main` for that commit completed successfully.
 
-Missing CI results, API errors, or unavailable authentication cause the check to fail. On success, it prints JSON containing the version, tag, candidate SHA, and CI run URL. Use that run's `static-site` and `skill-catalog.zip` artifacts to preview the packages without rebuilding locally.
+Missing CI results, API errors, or unavailable authentication cause the check to fail. On success, it prints JSON containing the version, tag, candidate SHA, and CI run URL. Use that run's product previews described under [Skill Catalog Download](#skill-catalog-download) and [GitHub Validation](#github-validation) to inspect the relevant packages without rebuilding locally.
+
+An assessment-bot commit may be newer than the last push-triggered CI run because its token does not trigger another workflow. Such a commit is not a verified release candidate: the gate requires successful main push CI for the exact SHA. A PR run or a run for its parent does not satisfy that requirement. Do not tag it or alter evidence to bypass the gate; candidate verification must be resolved before release preparation.
 
 The check is read-only: it creates no tag or release. If the candidate changes, run it again. When ready to release, tag the exact SHA reported by the check.
 
@@ -144,7 +147,7 @@ The assessment-kit package version must match the release version under Python p
 
 Draft creation uses `gh release create --verify-tag --draft`, which requires an existing tag and does not overwrite an existing release. Versions with a SemVer prerelease suffix are marked as GitHub prereleases.
 
-The release job runs on GitHub-hosted Ubuntu with a 30-minute timeout. Runs for the same tag share a concurrency group; a new run does not cancel a release already in progress. Temporary files stay under `RUNNER_TEMP`, and catalog source links point to the tagged commit. Checkout does not retain Git credentials, and `GH_TOKEN` is available only to the draft-creation step.
+The release job runs on GitHub-hosted Ubuntu with a 30-minute timeout. Runs for the same tag share a concurrency group; a new run does not cancel a release already in progress. Temporary files stay under `RUNNER_TEMP`, and catalog contents come from the tagged commit. Checkout does not retain Git credentials, and `GH_TOKEN` is available only to the draft-creation step.
 
 Wait for the workflow to finish before publishing. The workflow owns packaging, draft creation, and uploads. Do not separately create a draft or upload locally repackaged CI previews. If preparation fails, inspect that run and resolve its failure before proceeding. An existing tag or partial draft is a recovery case; do not move tags or replace assets without agreeing on recovery.
 
@@ -157,7 +160,7 @@ uv run --group release python -m sklc_maintainer.release check-draft \
   --version <version> --expected-commit <expected-commit-sha>
 ```
 
-The gate verifies the checkout and committed notes, confirms the GitHub tag resolves to the expected commit on `main`, and requires an existing draft with matching notes and prerelease status. That draft must contain exactly the two versioned product ZIPs and the assessment wheel, all uploaded, nonempty, and carrying GitHub SHA-256 digests. The latest `release.yml` push run for the tag and commit must have completed successfully. Missing authentication, API errors, missing assets, and unfinished or failed runs block publication.
+The gate verifies the checkout and committed notes, confirms the GitHub tag resolves to the expected commit on `main`, and requires an existing draft with matching notes and prerelease status. That draft must contain exactly the four versioned ZIPs and the assessment wheel listed above, all uploaded, nonempty, and carrying GitHub SHA-256 digests. The latest `release.yml` push run for the tag and commit must have completed successfully. Missing authentication, API errors, missing assets, and unfinished or failed runs block publication.
 
 On success, it prints the candidate SHA, draft URL, workflow URL, and asset digests. It does not download the assets or change GitHub state. `check-ready` is for an unused version; `check-draft` is for an existing draft. Do not rerun `check-ready` after creating the tag or draft.
 

@@ -1,6 +1,6 @@
 # Skill Exchange Site
 
-Skill Exchange Site serves agent skills with optional assessments. Browse names and descriptions, read full instructions, and download a skill. Open an assessment for required remediation, unresolved findings, false positives, scope, and limitations, with downloads of the original report pair.
+Skill Exchange Site serves assessed agent skills. Browse names and descriptions, read full instructions, and download a skill. Open an assessment for required remediation, unresolved findings, false positives, scope, and limitations, with downloads of the original report pair. The separate skill catalog can be installed without assessment or hosting tools.
 
 The prebuilt kit serves four developer skills as a static introduction. The Operator kit can assess and serve a consumer's own skills. Product source and release composition follow [product boundaries](docs/product-boundaries.md).
 
@@ -25,9 +25,7 @@ Download `skill-catalog-<version>.zip` from [GitHub Releases](https://github.com
 
 The [assessment kit](products/assessment-kit/README.md) provides a standalone `skill-assessment` CLI with `validate`, `hash`, `assess`, and `summarize` commands. Summarize explains remediation, unresolved findings, and false positives from existing paired reports. Install its wheel from an SkLC release without the checkout or site tooling; compare its SHA-256 with the GitHub asset digest, then follow the assessment kit installation and usage guide.
 
-## Direction and current operation
-
-The [roadmap](docs/roadmap.md) describes the intended assessment, catalog, and deployment products.
+## Current operation
 
 The current site builds from skill packages and existing tracked evidence:
 
@@ -46,12 +44,13 @@ The `skill-catalog-assessments-<version>.zip` release download contains the curr
 - `CI.md` documents validation, packaging, and release behavior.
 - `CONTRIBUTING.md` explains how developers contribute to the exchange application, tooling, CI, and documentation.
 - `docs/architecture.md` documents the current component, evidence, catalog-build, and CI flows.
-- `docs/roadmap.md` defines the Q3 2026 target product, GitHub release, and downstream delivery plan.
+- `docs/decisions.md` records accepted product and assessment decisions.
 - `GOVERNANCE.md` describes exchange roles and generated-output boundaries.
 - `products/deployment-kit/operator/` owns the Python catalog runtime, its tests, and the site build.
 - `maintainer/` owns upstream packaging, release orchestration, and their tests.
 - `products/deployment-kit/operator/site/` contains the Astro static site.
 - `products/skill-catalog/` contains skill packages included in the exchange.
+- `products/skill-catalog-assessments/` contains the current assessment pair for each catalog skill.
 - `products/assessment-kit/` owns the standalone assessment CLI and its tests.
 
 ## Developer Setup
@@ -59,13 +58,15 @@ The `skill-catalog-assessments-<version>.zip` release download contains the curr
 Install the local toolchain:
 
 - Python 3.12 with `uv`.
-- Node.js 22 with `npm`.
+- Node.js 22.22.0 or later with `npm`.
 - `just` for cross-stack commands.
+- `actionlint` and `shellcheck` for workflow checks; see the [linting guide](docs/linting.md) for installation.
 
 Install dependencies:
 
 ```sh
-uv sync --extra test
+uv sync --extra test --group lint
+npm ci
 npm ci --prefix products/deployment-kit/operator/site
 ```
 
@@ -95,7 +96,7 @@ Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow de
 
 ## CI Workflow
 
-- `CI` runs lint and tests, reads current adjudicated assessments, builds the site, and uploads catalog artifacts.
+- `CI` runs lint and tests, assesses selected trusted PR changes, and maintains main-branch assessment evidence. Separate generation and build jobs consume current assessments without provider calls and upload product previews.
 - GitHub Dependabot owns dependency-vulnerability alerts and remediation pull requests.
 
 See [CI.md](CI.md) for the full configuration reference.

@@ -32,7 +32,7 @@ Treat the command as the readiness gate before creating a tag. On success, repor
 
 Briefly check open Dependabot alerts and investigate any relevant findings. Discuss their release impact with the maintainer in the session; this does not require a recorded decision or introduce another readiness gate. If alerts cannot be read, say so rather than reporting a clean security backlog.
 
-Use the verified CI run's `static-site` and `skill-catalog.zip` artifacts for any useful package previews. Follow the shipped guides when trying them. Keep these checks proportional to the request; do not invent an acceptance process.
+Use the verified CI run's relevant product previews listed in `CI.md`, including the Operator ZIP, assessment ZIP, and wheel alongside `static-site` and `skill-catalog.zip`. Follow the shipped guides when trying them. Keep these checks proportional to the request; do not invent an acceptance process.
 
 ## Prepare the draft
 

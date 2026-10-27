@@ -17,7 +17,7 @@ When a behavior distinguishes owners, other users, administrators, or anonymous 
 
 Tests written to guide an edit can be useful temporarily. Remove them before committing if their only purpose is to prove that a named control, function, parameter, or old implementation was added or deleted. The positive mirror can be just as weak: “the new button exists” often says little about whether its action works. Keep a test when it exercises the resulting workflow and would fail for a meaningful defect.
 
-Absence is worth asserting when absence *is* the behavior: access must be denied, sensitive content must be hidden, a deleted item must not appear in results, or closing a panel must remove it. Test the relevant state and consequence, rather than every removed artifact.
+Absence is worth asserting when absence _is_ the behavior: access must be denied, sensitive content must be hidden, a deleted item must not appear in results, or closing a panel must remove it. Test the relevant state and consequence, rather than every removed artifact.
 
 When revising existing tests, preserve independent protections that still apply. Replace assertions invalidated by the requested behavior without dropping coverage for unrelated validation, authorization, or data integrity. If an actor loses access to a workflow, a denial test cannot prove that the workflow still validates input or protects immutable data for actors who retain access; move those checks to an authorized path. Review the test diff before committing.
 

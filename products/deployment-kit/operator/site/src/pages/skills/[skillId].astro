@@ -44,7 +44,7 @@ const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmat
 const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
 const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
 
-function formatRecommendation(value) {
+function formatRecommendation(value: string) {
   if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
     return "Avoid installing";
   }
@@ -58,14 +58,14 @@ function formatRecommendation(value) {
 }
 
 
-function formatFrontmatterValue(value) {
+function formatFrontmatterValue(value: unknown) {
   if (Array.isArray(value)) {
     return value.join(", ");
   }
   return String(value ?? "");
 }
 
-function flattenFrontmatterRows(value, prefix = "") {
+function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][] {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return prefix ? [[prefix, value]] : [];
   }

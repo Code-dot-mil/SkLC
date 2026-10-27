@@ -33,6 +33,16 @@ export function replaceQueryState(updates, defaults = {}, win = globalThis.windo
   const nextSearch = updateQueryString(win.location.search, updates, defaults);
   const nextUrl = `${win.location.pathname}${nextSearch}${win.location.hash}`;
   win.history.replaceState(win.history.state, "", nextUrl);
+  win.dispatchEvent(new Event("query-state-change"));
+}
+
+export function subscribeQueryState(listener, win = globalThis.window) {
+  win.addEventListener("query-state-change", listener);
+  win.addEventListener("popstate", listener);
+  return () => {
+    win.removeEventListener("query-state-change", listener);
+    win.removeEventListener("popstate", listener);
+  };
 }
 
 function normalizeSearch(search) {

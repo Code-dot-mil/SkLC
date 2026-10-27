@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { formatDate } from "../lib/format-date.mjs";
 
-export default function LocalDate({ value }: { value?: string }) {
-  const [localized, setLocalized] = useState(false);
-  useEffect(() => setLocalized(true), []);
+const subscribe = () => () => {};
+const browserSnapshot = () => true;
+const serverSnapshot = () => false;
+
+export default function LocalDate({ value }: { value?: string | null }) {
+  const localized = useSyncExternalStore(subscribe, browserSnapshot, serverSnapshot);
 
   if (!value) return <span>Unknown</span>;
 

@@ -1,57 +1,29 @@
 # Skill Exchange Site
 
-Skill Exchange Site serves agent skills with optional assessments. Browse names
-and descriptions, read full instructions, and download a skill. Open an assessment
-for required remediation, unresolved findings, false positives, scope, and
-limitations, with downloads of the original report pair.
+Skill Exchange Site serves agent skills with optional assessments. Browse names and descriptions, read full instructions, and download a skill. Open an assessment for required remediation, unresolved findings, false positives, scope, and limitations, with downloads of the original report pair.
 
-The prebuilt kit serves four developer skills as a static introduction. The
-Operator kit can assess and serve a consumer's own skills. Product source and
-release composition follow [product boundaries](docs/product-boundaries.md).
+The prebuilt kit serves four developer skills as a static introduction. The Operator kit can assess and serve a consumer's own skills. Product source and release composition follow [product boundaries](docs/product-boundaries.md).
 
 ## Use the prebuilt site
 
-The prebuilt deployment kit contains an already-built site. Download
-`deployment-kit-prebuilt-<version>.zip` from
-[GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256
-with the digest GitHub displays for that asset, then unzip it once. Follow the
-[installation guide](products/deployment-kit/prebuilt/docs/install.md) for commands.
-You only need unzip support and a SHA-256 utility to install the package.
+The prebuilt deployment kit contains an already-built site. Download `deployment-kit-prebuilt-<version>.zip` from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256 with the digest GitHub displays for that asset, then unzip it once. Follow the [installation guide](products/deployment-kit/prebuilt/docs/install.md) for commands. You only need unzip support and a SHA-256 utility to install the package.
 
 Choose a hosting path:
 
-- [GitLab Pages](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md): copy
-  the complete package, including hidden files, and configure `PAGES_RUNNER_TAG`
-  for an available Linux runner that can pull the selected job image.
-- [Another static host](products/deployment-kit/prebuilt/docs/deploy-static-hosting.md):
-  serve the complete `public/` directory at a domain root or URL prefix.
+- [GitLab Pages](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md): copy the complete package, including hidden files, and configure `PAGES_RUNNER_TAG` for an available Linux runner that can pull the selected job image.
+- [Another static host](products/deployment-kit/prebuilt/docs/deploy-static-hosting.md): serve the complete `public/` directory at a domain root or URL prefix.
 
-For a CI test build, download the `static-site` artifact ZIP from a successful
-[CI run](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml). Unzip it once
-to get the same package layout as a release. It is a preview,
-not a published product release. See [CI package details](CI.md#github-validation).
+For a CI test build, download the `static-site` artifact ZIP from a successful [CI run](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml). Unzip it once to get the same package layout as a release. It is a preview, not a published product release. See [CI package details](CI.md#github-validation).
 
 The developer setup below is for working on the source.
 
 ## Download the skill catalog
 
-Download `skill-catalog-<version>.zip` from
-[GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256
-with the digest GitHub displays for that asset, then unzip it once. The archive
-contains the developer skill folders, their supporting files, and a
-[short installation README](products/skill-catalog/README.md). Copy the folders
-into your workspace's `.agents/skills/`. For PR testing, the `skill-catalog.zip` CI
-artifact contains the same layout.
+Download `skill-catalog-<version>.zip` from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases), compare its SHA-256 with the digest GitHub displays for that asset, then unzip it once. The archive contains the developer skill folders, their supporting files, and a [short installation README](products/skill-catalog/README.md). Copy the folders into your workspace's `.agents/skills/`. For PR testing, the `skill-catalog.zip` CI artifact contains the same layout.
 
 ## Assess a local skill
 
-The [assessment kit](products/assessment-kit/README.md) provides a standalone
-`skill-assessment` CLI with `validate`, `hash`, `assess`, and `summarize` commands.
-Summarize explains remediation, unresolved findings, and false positives from
-existing paired reports.
-Install its wheel from an SkLC release without the checkout or site tooling;
-compare its SHA-256 with the GitHub asset digest, then follow the assessment kit
-installation and usage guide.
+The [assessment kit](products/assessment-kit/README.md) provides a standalone `skill-assessment` CLI with `validate`, `hash`, `assess`, and `summarize` commands. Summarize explains remediation, unresolved findings, and false positives from existing paired reports. Install its wheel from an SkLC release without the checkout or site tooling; compare its SHA-256 with the GitHub asset digest, then follow the assessment kit installation and usage guide.
 
 ## Direction and current operation
 
@@ -65,10 +37,7 @@ The current site builds from skill packages and existing tracked evidence:
 
 Current reports live under `products/skill-catalog-assessments/<skill-name>/`. Site generation requires paired native findings and completed adjudication for the exact skill content. Generation is read-only and runs no scanner. Nonfatal partial coverage and negative safety judgments remain visible advisory results.
 
-The `skill-catalog-assessments-<version>.zip` release download contains the current
-JSON pair for each of the four catalog skills, with its interpretation guide.
-Developers can use `skill-assessment summarize` to review required remediation,
-unresolved findings, false positives, scope, and limitations.
+The `skill-catalog-assessments-<version>.zip` release download contains the current JSON pair for each of the four catalog skills, with its interpretation guide. Developers can use `skill-assessment summarize` to review required remediation, unresolved findings, false positives, scope, and limitations.
 
 ## Repository Map
 
@@ -146,5 +115,4 @@ This is a static exchange MVP. It does not implement a live application server, 
 
 ## Operator kit
 
-Use `deployment-kit-operator-<version>.zip` to assess a catalog and deploy its exchange
-in GitLab. See the [operator guide](products/deployment-kit/operator/docs/README.md).
+Use `deployment-kit-operator-<version>.zip` to assess a catalog and deploy its exchange in GitLab. See the [operator guide](products/deployment-kit/operator/docs/README.md).

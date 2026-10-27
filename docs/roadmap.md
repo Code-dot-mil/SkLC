@@ -22,7 +22,7 @@ The Q3 priority is the smallest release path that proves this model: GitHub publ
 Each product has its own release artifact, but products and components are not individually versioned. A SkLC GitHub Release has one version, and every artifact in that release uses that version. Product interfaces and deployment-kit composition follow the normative [product-boundary contract](product-boundaries.md). Each product defines the formats it needs; add shared schemas and examples when products need a common serialized format.
 
 | Product | Release artifact | Uses another product? | Primary use-case |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Skill lifecycle guidance | Code-dot-mil AI4SDLC GitHub guidance | No | Help users understand and apply the skill lifecycle. |
 | Assessment kit | Python wheel, usage documentation, and optional GitLab CI profile | No | Validate skills, hash packages, assess, and summarize reports. |
 | Skill catalog | Complete skill packages in one ZIP | No | Install skills or supply a skill exchange. |
@@ -50,8 +50,7 @@ flowchart LR
 
 Solid arrows show how released products are used together. Dotted arrows show where lifecycle guidance may later inform the products. The guidance track is parallel and non-gating until its minimum useful shape is accepted. Each product still stands alone.
 
-The [product-boundary contract](product-boundaries.md#directory-structure) defines
-the source layout and separates consumer products from upstream maintainer tooling.
+The [product-boundary contract](product-boundaries.md#directory-structure) defines the source layout and separates consumer products from upstream maintainer tooling.
 
 ## 3. Release strategy
 
@@ -155,8 +154,7 @@ A customer can obtain the initial skill catalog for use in a GitLab-hosted skill
 - A short README explaining download, unzip, and workspace installation.
 - One ZIP with a native GitHub Release asset digest.
 
-Assessment, BOE packaging, catalog selection, and site generation are
-outside the initial download milestone.
+Assessment, BOE packaging, catalog selection, and site generation are outside the initial download milestone.
 
 #### 3.3.3 Team delivery tasks
 
@@ -168,16 +166,14 @@ outside the initial download milestone.
 
 - The download contains exactly the four complete skill folders and README.
 - Its SHA-256 matches GitHub’s asset digest; untracked files and unrelated repository content are absent.
-- A developer copies the folders into a clean workspace's `.agents/skills/` and
-  confirms a fresh agent session discovers those workspace skills.
+- A developer copies the folders into a clean workspace's `.agents/skills/` and confirms a fresh agent session discovers those workspace skills.
 
 #### 3.3.5 Future capabilities
 
 - Distribute complete skill packages and let operators select included upstream skills and assessments by explicit copy.
 - Optionally distribute BOE and native reports separately, associated with the exact skill contents they describe.
 
-The separate current-assessment download associates each JSON pair with the exact
-skill contents it describes.
+The separate current-assessment download associates each JSON pair with the exact skill contents it describes.
 
 ### 3.4 Release milestone — Assessment kit foundation
 
@@ -260,9 +256,7 @@ Excluded:
 
 #### 3.6.1 Maintainer outcome
 
-SkLC maintainers use assessment summaries to give developers actionable feedback
-on proposed skill changes. After merge, automation maintains the repository's
-assessment report and adjudication pair for consumers of the published skill.
+SkLC maintainers use assessment summaries to give developers actionable feedback on proposed skill changes. After merge, automation maintains the repository's assessment report and adjudication pair for consumers of the published skill.
 
 This milestone is not part of the Q3 MVP unless retained assessment evidence is required for an accepted catalog release.
 
@@ -333,8 +327,7 @@ Excluded:
 
 #### 3.8.1 Customer outcome
 
-An operator can serve their own skills and assessments alongside any selected
-upstream skills, then update the kit while preserving that live catalog.
+An operator can serve their own skills and assessments alongside any selected upstream skills, then update the kit while preserving that live catalog.
 
 #### 3.8.2 Scope
 

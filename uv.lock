@@ -300,6 +300,18 @@ wheels = [
 ]
 
 [[package]]
+name = "gitlab-ci-verify-bin"
+version = "2.11.12"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/08/0e03e3e14fe04c8c8eeaf0f30624f4b271634012c38614e1301fbcd801a8/gitlab_ci_verify_bin-2.11.12-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:26e30120e41550107c15dc9d7d6ef6abc44ec88ee67e5d35f24d0e8905cda966", size = 14920037, upload-time = "2026-10-19T07:57:16.634Z" },
+    { url = "https://files.pythonhosted.org/packages/30/48/c326e7d4106757c405fa78e75deb80fb12dea1610bc30288df9dd6d8dcf1/gitlab_ci_verify_bin-2.11.12-py3-none-macosx_11_0_arm64.whl", hash = "sha256:93e22b744052db3e95cb2cdf87050e68b211f91f799ac3cc01f648304dc65ff7", size = 19279720, upload-time = "2026-10-19T07:57:18.846Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/37/17971589b00b1ef75049f4177d26091518054730dbf9be9df520d8754206/gitlab_ci_verify_bin-2.11.12-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:4754bbbd1bb280fc977787b95dfb3872652e46b5d8e003cda71e033680647ac2", size = 11678997, upload-time = "2026-10-19T07:57:20.656Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/44/6a7ecec1201c4f7b772f6af767e2eff75d64e2a0fec81aa06b1685c796bc/gitlab_ci_verify_bin-2.11.12-py3-none-musllinux_1_1_x86_64.whl", hash = "sha256:b5fa1a7ea7dbf6681c604b87d0004c72f2a4dacebe9756fe7678b96c2f992c39", size = 11678991, upload-time = "2026-10-19T07:57:22.401Z" },
+    { url = "https://files.pythonhosted.org/packages/78/6f/b58d80aeb0e9978f320aec4191cf1ef3326666946507a1c24d9dffbd587b/gitlab_ci_verify_bin-2.11.12-py3-none-win_amd64.whl", hash = "sha256:7f62af0776f0d2763aa1d1446f8927176465741e7dcd714d52d178b9a1d5932c", size = 9845634, upload-time = "2026-10-19T07:57:24.265Z" },
+]
+
+[[package]]
 name = "idna"
 version = "3.20"
 source = { registry = "https://pypi.org/simple" }
@@ -627,6 +639,9 @@ test = [
 ]
 
 [package.dev-dependencies]
+lint = [
+    { name = "gitlab-ci-verify-bin" },
+]
 release = [
     { name = "pygit2" },
     { name = "pygithub" },
@@ -643,6 +658,7 @@ requires-dist = [
 provides-extras = ["test"]
 
 [package.metadata.requires-dev]
+lint = [{ name = "gitlab-ci-verify-bin", specifier = ">=2.11.12" }]
 release = [
     { name = "pygit2", specifier = ">=1.20.1" },
     { name = "pygithub", specifier = ">=2.10.0" },

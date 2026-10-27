@@ -174,17 +174,34 @@ jobs:
           include-hidden-files: true
 
   python:
-    name: "Python ${{ matrix.check }}"
+    name: "${{ matrix.check }}"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          - check: lint
+          - check: Python lint
             command: uv run --extra test ruff check maintainer products
-          - check: test
+          - check: Python test
             command: uv run --extra test pytest
+          - check: GitLab scripts
+            command: |
+              staging=$(mktemp -d)
+              trap 'rm -rf "$staging"' EXIT
+              mkdir -p "$staging/operator/ci"
+              cp products/deployment-kit/operator/ci/gitlab/.gitlab-ci.yml "$staging/operator/"
+              cp products/deployment-kit/operator/ci/gitlab/assessment.yml "$staging/operator/ci/"
+              result=0
+              for config in \
+                  products/assessment-kit/ci/gitlab/profile.yml \
+                  products/deployment-kit/operator/ci/gitlab/assessment.yml \
+                  products/deployment-kit/prebuilt/ci/gitlab/.gitlab-ci.yml; do
+                  uv run --frozen --group lint gitlab-ci-verify --no-lint-api --gitlab-ci-file "$config" || result=$?
+              done
+              uv run --project "$PWD" --directory "$staging/operator" --frozen --group lint \
+                  gitlab-ci-verify --no-lint-api --gitlab-ci-file .gitlab-ci.yml || result=$?
+              exit "$result"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -231,6 +248,10 @@ jobs:
         include:
           - check: lint
             command: npm --prefix products/deployment-kit/operator/site run lint
+          - check: eslint
+            command: npm --prefix products/deployment-kit/operator/site run lint:code
+          - check: astro
+            command: npm --prefix products/deployment-kit/operator/site run typecheck:astro
           - check: test
             command: npm --prefix products/deployment-kit/operator/site run test
     steps:
@@ -246,6 +267,61 @@ jobs:
         run: npm ci --prefix products/deployment-kit/operator/site
       - name: Run check
         run: ${{ matrix.command }}
+
+  markdown:
+    name: "Markdown ${{ matrix.check }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: lint
+            command: npm run markdown:lint
+          - check: format
+            command: npm run markdown:check
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Install Markdown dependencies
+        run: npm ci
+      - name: Run check
+        run: ${{ matrix.command }}
+
+  workflows:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install actionlint and verify ShellCheck
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTIONLINT_VERSION: "1.7.12"
+        run: |
+          shellcheck --version
+          mkdir -p "$RUNNER_TEMP/actionlint"
+          gh release download "v$ACTIONLINT_VERSION" --repo rhysd/actionlint \
+            --pattern "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            --pattern "actionlint_${ACTIONLINT_VERSION}_checksums.txt" \
+            --dir "$RUNNER_TEMP/actionlint"
+          cd "$RUNNER_TEMP/actionlint"
+          sha256sum --check --ignore-missing "actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          tar -xzf "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" actionlint
+          printf '%s\n' "$RUNNER_TEMP/actionlint" >> "$GITHUB_PATH"
+      - name: Check workflows and embedded shell
+        run: actionlint
 
   exchange-data:
     name: Static site exchange data
@@ -353,11 +429,14 @@ jobs:
     if: >-
       always() && !cancelled() &&
       needs.exchange-data.result == 'success' &&
-      needs.python.result == 'success' && needs.site.result == 'success'
+      needs.python.result == 'success' && needs.site.result == 'success' &&
+      needs.markdown.result == 'success' && needs.workflows.result == 'success'
     needs:
       - exchange-data
       - python
       - site
+      - markdown
+      - workflows
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

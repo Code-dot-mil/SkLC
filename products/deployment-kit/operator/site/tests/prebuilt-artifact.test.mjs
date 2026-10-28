@@ -47,6 +47,13 @@ test("built site links and assets work unchanged at root and nested hosting path
   for (const expected of ["Fixture adjudication summary", "Adjudication status", "Coverage sufficient", "external references were not assessed", "2026"]) {
     assert.ok(detail.includes(expected), `missing assessment outcome: ${expected}`);
   }
+  // A SAFE label must not turn confirmed or unresolved findings into an all-clear.
+  assert.ok(!detail.includes("No issues remain after AI review"));
+  assert.ok(detail.includes("1 confirmed issues, 2 unresolved findings, and 3 false positives"));
+  const pending = renderedText("skills/review");
+  assert.ok(pending.includes("AI review is not complete"));
+  assert.ok(!pending.includes("No issues remain after AI review"));
+  assert.ok(renderedText("skills/clear").includes("No issues remain after AI review"));
   const html = readFileSync(resolve(dist, "skills/example/index.html"), "utf-8");
   assert.ok(!/<script[^>]*>alert\(1\)/.test(html), "summary HTML must stay inert");
   assert.ok(!html.includes('href="https://untrusted.example/"'), "summary links must stay inert");
@@ -136,6 +143,12 @@ function writeFixture(root) {
   write("index.json", JSON.stringify({ skills: [example, {
     ...example, skill_id: "review", name: "Review code",
     description: "Find defects in Python code", scanner_runs: [], scanner_artifacts: [],
+    adjudication: { ...example.adjudication, status: "pending" },
+    dispositions: { true_positive: 0, uncertain: 0, false_positive: 0 },
+  }, {
+    ...example, skill_id: "clear", name: "Reviewed skill",
+    scanner_runs: [], scanner_artifacts: [],
+    dispositions: { true_positive: 0, uncertain: 0, false_positive: 0 },
   }] }));
   write("assessments/example/skillspector.json", "{}\n");
   write("assessments/example/adjudication.json", "{}\n");

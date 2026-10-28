@@ -26,15 +26,15 @@ const scannerFindings = scannerFindingsTable.rows.filter((row) => row.scanner_ru
 const scannerReport = scannerArtifactsTable.rows.find(
   (row) => row.scanner_run_id === scannerRun?.id && row.artifact_kind === "native_report"
 );
-const recommendationLabel = skill.recommendation_label || formatRecommendation(skill.recommendation);
-const risk = skill.risk || "Unknown";
-const scannerProvenance = skill.scanner_provenance || {
-  name: "skillspector",
-  version: undefined,
-  scan_mode: skill.scan_mode,
-  provider: undefined,
-  model: undefined,
-};
+const completed = skill.adjudication.status === "completed";
+const { true_positive: confirmed, false_positive: dismissed, uncertain: unresolved } = skill.dispositions;
+const allDismissed = completed && scannerFindings.length > 0 && dismissed === scannerFindings.length && confirmed === 0 && unresolved === 0;
+const reviewHeadline = !completed ? "AI review is not complete"
+  : skill.recommendation === "SAFE" && confirmed === 0 && unresolved === 0 ? "No issues remain after AI review"
+  : "Review the assessment before using this skill";
+const reviewOutcome = !completed ? "A completed AI review is not available."
+  : allDismissed ? `All ${dismissed} scanner warnings were reviewed by AI and judged false positives.`
+  : `AI review: ${confirmed} confirmed issues, ${unresolved} unresolved findings, and ${dismissed} false positives.`;
 const markdownProcessor = await createMarkdownProcessor({
   rehypePlugins: [sanitizeSkillMarkdown],
 });
@@ -42,20 +42,6 @@ const parsedSkillMarkdown = parseFrontmatter(skill.skill_md_content);
 const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmatter);
 const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
 const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
-
-function formatRecommendation(value: string) {
-  if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
-    return "Avoid installing";
-  }
-  if (value === "CAUTION") {
-    return "Human Review Advised";
-  }
-  if (value === "SAFE") {
-    return "Safe to use";
-  }
-  return "Unknown";
-}
-
 
 function formatFrontmatterValue(value: unknown) {
   if (Array.isArray(value)) {
@@ -88,39 +74,20 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
         <p class="eyebrow">Skill package</p>
         <h1>{skill.skill_id}</h1>
         <p class="hero-description">{skill.description}</p>
-        <div class="recommendation-line">
-          <span class="recommendation-label">Recommendation</span>
-          <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} />
-          <button class="icon-button compact-circle" type="button" data-dialog-target="recommendation-dialog" aria-label="How recommendation is calculated">i</button>
-        </div>
         <div class="hero-actions">
           <a class="primary-action" href={skill.download_path}>Download skill package</a>
         </div>
       </div>
       <aside class="trust-panel" aria-label="Trust snapshot">
         <p class="eyebrow">Trust snapshot</p>
-        <dl class="trust-list">
-          <div>
-            <dt>Use guidance</dt>
-            <dd>{recommendationLabel}</dd>
-          </div>
-          <div>
-            <dt>Scanner risk</dt>
-            <dd>{risk}</dd>
-          </div>
-          <div>
-            <dt>Scan mode</dt>
-            <dd>{scannerProvenance.scan_mode || skill.scan_mode}</dd>
-          </div>
-          <div>
-            <dt>Last scanned</dt>
-            <dd><LocalDate value={skill.last_scanned} client:load /></dd>
-          </div>
-          <div>
-            <dt>Owner</dt>
-            <dd>{skill.owner || "Not declared"}</dd>
-          </div>
-        </dl>
+        <div class="recommendation-line">
+          <span class="recommendation-label">Recommendation</span>
+          <RecommendationBadge recommendation={skill.recommendation} flags={skill.confidence_flags} />
+          <button class="icon-button compact-circle" type="button" data-dialog-target="recommendation-dialog" aria-label="How recommendation is calculated">i</button>
+        </div>
+        <p>{reviewOutcome}</p>
+        <p class="muted"><strong>Review scope:</strong> Main instructions and scanner evidence only. Other package files were not independently reviewed.</p>
+        <a class="back-link" href={`skills/${skill.skill_id}/?tab=assessment#panel-assessment`}>See assessment details &darr;</a>
       </aside>
     </div>
     <dialog id="recommendation-dialog">
@@ -129,7 +96,7 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
       </form>
       <h2>Recommendation</h2>
       <p>
-        A security scanner looks for possible problems. An AI then checks the scan results and reads the skill’s main instructions.
+        A security scanner looks for possible problems. An AI then checks the scan results and reads the skillÃ¢â‚¬â„¢s main instructions.
       </p>
       <ul>
         <li><strong>Safe to use:</strong> The AI found no safety problems in what it checked.</li>
@@ -137,7 +104,7 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
         <li><strong>Unknown:</strong> The AI review is missing or unfinished.</li>
       </ul>
       <p>
-        The scanner may raise a warning that the AI finds harmless. That’s why the scanner’s risk rating can differ from this recommendation.
+        The scanner may raise a warning that the AI finds harmless. ThatÃ¢â‚¬â„¢s why the scannerÃ¢â‚¬â„¢s risk rating can differ from this recommendation.
       </p>
       <p>The AI review covers the main instructions and scan results. Other files in the package are outside that review.</p>
     </dialog>
@@ -210,44 +177,38 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
       <section class="tab-panel" id="panel-assessment" role="tabpanel" aria-labelledby="tab-assessment-label">
         <section class="card">
           <h2>Summary</h2>
-          <p><strong>Recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} /></p>
-          <p>{skill.adjudication.summary}</p>
-          <dl class="trust-list assessment-facts">
-            <div><dt>Last scanned</dt><dd><LocalDate value={scannerRun?.last_scanned} client:load /></dd></div>
-            <div><dt>Scan mode</dt><dd>{scannerRun?.scan_mode || "Unknown"}</dd></div>
-            <div><dt>Scanner risk</dt><dd>{scannerRun?.display_risk || "Unknown"}</dd></div>
-            <div><dt>Findings</dt><dd>{scannerFindings.length}</dd></div>
-            <div><dt>Adjudication status</dt><dd>{skill.adjudication.status || "Unknown"}</dd></div>
-            <div><dt>Coverage sufficient</dt><dd>{skill.adjudication.coverage_sufficient === true ? "Yes" : skill.adjudication.coverage_sufficient === false ? "No" : "Unknown"}</dd></div>
-          </dl>
-          <p class="metadata-strip">
-            <span><strong>True positives:</strong> {skill.dispositions.true_positive}</span>
-            <span><strong>False positives:</strong> {skill.dispositions.false_positive}</span>
-            <span><strong>Unresolved:</strong> {skill.dispositions.uncertain}</span>
-          </p>
-          <p><strong>Limitations:</strong> {skill.adjudication.scope || "Not stated"}{" "}{skill.adjudication.coverage_reason}</p>
-          <p class="hero-actions">
-            {scannerReport && <a class="secondary-action" href={scannerReport.download_path} download>Download scanner report</a>}
-            <a class="secondary-action" href={skill.assessment_downloads.adjudication} download>Download adjudication.json</a>
-          </p>
-          {scannerRun && (
-            <details class="assessment-advanced">
-              <summary>Advanced details</summary>
-              <dl class="trust-list">
-                <div><dt>Scanner</dt><dd>{scannerRun.scanner_name} {scannerRun.scanner_version}</dd></div>
-                <div><dt>Scanner severity</dt><dd>{scannerRun.native_severity || "Unknown"}</dd></div>
-                <div><dt>Scanner score</dt><dd>{scannerRun.native_score ?? "n/a"}</dd></div>
-                <div><dt>LLM provider</dt><dd>{scannerRun.llm_provider || "Not reported"}</dd></div>
-                <div><dt>LLM model</dt><dd>{scannerRun.llm_model || "Not reported"}</dd></div>
-                <div><dt>Content hash</dt><dd>
-                  <code>{scannerRun.content_hash}</code>{" "}
-                  {scannerRun.content_hash && <button class="icon-button compact" type="button" data-copy-hash={scannerRun.content_hash} aria-label="Copy content hash">copy</button>}
-                </dd></div>
-              </dl>
-              <p data-copy-status role="status" hidden></p>
-              <p><strong>Scan mode:</strong> Static-only skips scanner AI checks; LLM-assisted includes them.</p>
-            </details>
-          )}
+          <p class="assessment-outcome">{reviewHeadline}</p>
+          <p>{reviewOutcome}</p>
+          <p><strong>Review limits:</strong> {skill.adjudication.scope || "Not stated"}{" "}{skill.adjudication.coverage_reason}</p>
+          <p class="muted">Last scanned: <LocalDate value={scannerRun?.last_scanned} client:load /></p>
+          <details class="assessment-advanced">
+            <summary>Advanced details</summary>
+            <dl class="trust-list">
+              {scannerRun && <>
+              <div><dt>Scanner</dt><dd>{scannerRun.scanner_name} {scannerRun.scanner_version}</dd></div>
+              <div><dt>Scanner severity</dt><dd>{scannerRun.native_severity || "Unknown"}</dd></div>
+              <div><dt>Scanner score</dt><dd>{scannerRun.native_score ?? "n/a"}</dd></div>
+              <div><dt>LLM provider</dt><dd>{scannerRun.llm_provider || "Not reported"}</dd></div>
+              <div><dt>LLM model</dt><dd>{scannerRun.llm_model || "Not reported"}</dd></div>
+              <div><dt>Content hash</dt><dd>
+                <code>{scannerRun.content_hash}</code>{" "}
+                {scannerRun.content_hash && <button class="icon-button compact" type="button" data-copy-hash={scannerRun.content_hash} aria-label="Copy content hash">copy</button>}
+              </dd></div>
+              <div><dt>Scan mode</dt><dd>{scannerRun.scan_mode}</dd></div>
+              <div><dt>Scanner risk</dt><dd>{scannerRun.display_risk || "Unknown"}</dd></div>
+              </>}
+              <div><dt>Adjudication status</dt><dd>{skill.adjudication.status || "Unknown"}</dd></div>
+              <div><dt>Coverage sufficient</dt><dd>{skill.adjudication.coverage_sufficient === true ? "Yes" : skill.adjudication.coverage_sufficient === false ? "No" : "Unknown"}</dd></div>
+              <div><dt>Owner</dt><dd>{skill.owner || "Not declared"}</dd></div>
+            </dl>
+            <p data-copy-status role="status" hidden></p>
+            <p><strong>Scan mode:</strong> Static-only skips scanner AI checks; LLM-assisted includes them.</p>
+            <p>{skill.adjudication.summary}</p>
+            <p class="hero-actions">
+              {scannerReport && <a class="secondary-action" href={scannerReport.download_path} download>Download scanner report</a>}
+              <a class="secondary-action" href={skill.assessment_downloads.adjudication} download>Download adjudication.json</a>
+            </p>
+          </details>
         </section>
         <ScannerFindings currentRun={scannerRun} scannerFindings={scannerFindings} client:load />
       </section>

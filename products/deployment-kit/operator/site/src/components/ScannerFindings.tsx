@@ -72,6 +72,8 @@ export default function ScannerFindings({
     }
   }, [currentRun, search, severity]);
 
+  const currentFindings = scannerFindings.filter((finding) => finding.scanner_run_id === currentRun?.id);
+  const falsePositiveCount = currentFindings.filter((finding) => finding.false_positive).length;
   const visibleFindings = scannerFindings.filter((finding) => {
     if (finding.scanner_run_id !== currentRun?.id) {
       return false;
@@ -91,7 +93,7 @@ export default function ScannerFindings({
   return (
     <section className="card">
       <div className="section-title-row">
-        <h2>Findings</h2>
+        <h2>Findings ({currentFindings.length})</h2>
         <button className="icon-button" type="button" onClick={() => dialogRef.current?.showModal()} aria-label="About scanner findings">i</button>
       </div>
       <dialog ref={dialogRef}>
@@ -105,10 +107,8 @@ export default function ScannerFindings({
         <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">NVIDIA SkillSpector</a>
       </dialog>
       <p>
-        <strong>Scanner risk:</strong>{" "}
-        <span className={`risk risk-${(currentRun.display_risk || "Unknown").toLowerCase()}`}>
-          {currentRun.display_risk || "Unknown"}
-        </span>
+        {currentFindings.length} scanner warnings · <strong>{falsePositiveCount} judged false positives</strong><br />
+        <span className="muted">Scanner severity describes the original warning, before AI review.</span>
       </p>
       <div className="controls">
         <select aria-label="Finding severity" value={severity} onChange={(event) => replaceQueryState({ run: null, runs: null, severity: event.target.value }, { severity: "all" })}>
@@ -134,17 +134,18 @@ export default function ScannerFindings({
                     <span className="muted"> {finding.category || "Uncategorized"}</span>
                   </div>
                   <span className="pill-row">
-                    <span className={`risk risk-${String(finding.severity || "unknown").toLowerCase()}`}>
-                      {finding.severity || "Unknown"}
-                    </span>
                     {finding.false_positive && <span className="risk flag">Adjudicated as False Positive</span>}
+                    <span className="muted">Scanner: {finding.severity || "Unknown"}</span>
                   </span>
                 </header>
-                <p><strong>{finding.pattern || "Finding"}</strong></p>
-                <p>{finding.explanation || "No explanation provided."}</p>
-                <p><strong>Location:</strong> <code>{location}</code></p>
-                {finding.code_snippet && <pre><code>{finding.code_snippet}</code></pre>}
-                <p><strong>Remediation:</strong> {finding.remediation || "No remediation provided."}</p>
+                <details className="assessment-advanced">
+                  <summary>View scanner evidence</summary>
+                  <p><strong>{finding.pattern || "Finding"}</strong></p>
+                  <p>{finding.explanation || "No explanation provided."}</p>
+                  <p><strong>Location:</strong> <code>{location}</code></p>
+                  {finding.code_snippet && <pre><code>{finding.code_snippet}</code></pre>}
+                  <p><strong>Remediation:</strong> {finding.remediation || "No remediation provided."}</p>
+                </details>
               </article>
             );
           })}

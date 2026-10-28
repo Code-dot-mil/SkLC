@@ -2,6 +2,8 @@
 name: unit-test-generation
 description: Use when creating or improving unit tests for a bounded code change, bug fix, or documented behavior.
 metadata:
+  ai4sdlc.created: "2026-06-19T23:01:02-05:00"
+  ai4sdlc.updated: "2026-10-20T14:59:35-05:00"
   ai4sdlc.category: testing
   ai4sdlc.tags: unit-tests,testing,code-review
   ai4sdlc.owner: slunsford

@@ -21,12 +21,11 @@ export function getStaticPaths() {
 }
 
 const { skill } = Astro.props;
-const scannerRuns = scannerRunsTable.rows
-  .filter((row) => row.skill_id === skill.skill_id)
-  .sort((left, right) => Date.parse(right.last_scanned || "") - Date.parse(left.last_scanned || ""));
-const scannerRunIds = new Set(scannerRuns.map((run) => run.id));
-const scannerFindings = scannerFindingsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
-const scannerArtifacts = scannerArtifactsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
+const scannerRun = scannerRunsTable.rows.find((row) => row.skill_id === skill.skill_id);
+const scannerFindings = scannerFindingsTable.rows.filter((row) => row.scanner_run_id === scannerRun?.id);
+const scannerReport = scannerArtifactsTable.rows.find(
+  (row) => row.scanner_run_id === scannerRun?.id && row.artifact_kind === "native_report"
+);
 const recommendationLabel = skill.recommendation_label || formatRecommendation(skill.recommendation);
 const risk = skill.risk || "Unknown";
 const scannerProvenance = skill.scanner_provenance || {
@@ -108,10 +107,6 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
           <div>
             <dt>Scanner risk</dt>
             <dd>{risk}</dd>
-          </div>
-          <div>
-            <dt>Scanner</dt>
-            <dd>{scannerProvenance.name || "skillspector"} {scannerProvenance.version || ""}</dd>
           </div>
           <div>
             <dt>Scan mode</dt>
@@ -217,21 +212,44 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
           <h2>Summary</h2>
           <p><strong>Recommendation:</strong> <RecommendationBadge recommendation={skill.recommendation} /></p>
           <p>{skill.adjudication.summary}</p>
-          <table>
-            <tbody>
-              <tr><th scope="row">Adjudication status</th><td>{skill.adjudication.status || "Unknown"}</td></tr>
-              <tr><th scope="row">Coverage sufficient</th><td>{skill.adjudication.coverage_sufficient === true ? "Yes" : skill.adjudication.coverage_sufficient === false ? "No" : "Unknown"}</td></tr>
-              <tr><th scope="row">True positives</th><td>{skill.dispositions.true_positive}</td></tr>
-              <tr><th scope="row">False positives</th><td>{skill.dispositions.false_positive}</td></tr>
-              <tr><th scope="row">Unresolved</th><td>{skill.dispositions.uncertain}</td></tr>
-            </tbody>
-          </table>
-          <p><strong>Limitations:</strong> {skill.adjudication.scope || "Not stated"}{" "}{skill.adjudication.coverage_reason}</p>
-          <p>
-            <a href={skill.assessment_downloads.adjudication} download>Download adjudication.json</a>
+          <dl class="trust-list assessment-facts">
+            <div><dt>Last scanned</dt><dd><LocalDate value={scannerRun?.last_scanned} client:load /></dd></div>
+            <div><dt>Scan mode</dt><dd>{scannerRun?.scan_mode || "Unknown"}</dd></div>
+            <div><dt>Scanner risk</dt><dd>{scannerRun?.display_risk || "Unknown"}</dd></div>
+            <div><dt>Findings</dt><dd>{scannerFindings.length}</dd></div>
+            <div><dt>Adjudication status</dt><dd>{skill.adjudication.status || "Unknown"}</dd></div>
+            <div><dt>Coverage sufficient</dt><dd>{skill.adjudication.coverage_sufficient === true ? "Yes" : skill.adjudication.coverage_sufficient === false ? "No" : "Unknown"}</dd></div>
+          </dl>
+          <p class="metadata-strip">
+            <span><strong>True positives:</strong> {skill.dispositions.true_positive}</span>
+            <span><strong>False positives:</strong> {skill.dispositions.false_positive}</span>
+            <span><strong>Unresolved:</strong> {skill.dispositions.uncertain}</span>
           </p>
+          <p><strong>Limitations:</strong> {skill.adjudication.scope || "Not stated"}{" "}{skill.adjudication.coverage_reason}</p>
+          <p class="hero-actions">
+            {scannerReport && <a class="secondary-action" href={scannerReport.download_path} download>Download scanner report</a>}
+            <a class="secondary-action" href={skill.assessment_downloads.adjudication} download>Download adjudication.json</a>
+          </p>
+          {scannerRun && (
+            <details class="assessment-advanced">
+              <summary>Advanced details</summary>
+              <dl class="trust-list">
+                <div><dt>Scanner</dt><dd>{scannerRun.scanner_name} {scannerRun.scanner_version}</dd></div>
+                <div><dt>Scanner severity</dt><dd>{scannerRun.native_severity || "Unknown"}</dd></div>
+                <div><dt>Scanner score</dt><dd>{scannerRun.native_score ?? "n/a"}</dd></div>
+                <div><dt>LLM provider</dt><dd>{scannerRun.llm_provider || "Not reported"}</dd></div>
+                <div><dt>LLM model</dt><dd>{scannerRun.llm_model || "Not reported"}</dd></div>
+                <div><dt>Content hash</dt><dd>
+                  <code>{scannerRun.content_hash}</code>{" "}
+                  {scannerRun.content_hash && <button class="icon-button compact" type="button" data-copy-hash={scannerRun.content_hash} aria-label="Copy content hash">copy</button>}
+                </dd></div>
+              </dl>
+              <p data-copy-status role="status" hidden></p>
+              <p><strong>Scan mode:</strong> Static-only skips scanner AI checks; LLM-assisted includes them.</p>
+            </details>
+          )}
         </section>
-        <ScannerFindings scannerRuns={scannerRuns} scannerFindings={scannerFindings} scannerArtifacts={scannerArtifacts} client:load />
+        <ScannerFindings currentRun={scannerRun} scannerFindings={scannerFindings} client:load />
       </section>
     </div>
   </section>
@@ -276,6 +294,24 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
             replaceQueryState({ [group.param]: option.value }, { [group.param]: group.defaultValue });
           }
         });
+      });
+    });
+
+    document.querySelectorAll("[data-copy-hash]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const status = document.querySelector("[data-copy-status]");
+        const showCopyError = () => {
+          if (status instanceof HTMLElement) {
+            status.hidden = false;
+            status.textContent = "Could not copy the content hash. Check clipboard permissions and try again.";
+          }
+        };
+        if (status instanceof HTMLElement) status.hidden = true;
+        try {
+          navigator.clipboard.writeText(button.getAttribute("data-copy-hash") || "").catch(showCopyError);
+        } catch {
+          showCopyError();
+        }
       });
     });
 

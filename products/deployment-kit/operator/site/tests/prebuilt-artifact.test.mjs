@@ -28,7 +28,6 @@ test("built site links and assets work unchanged at root and nested hosting path
   const env = {
     ...process.env,
     ASTRO_TELEMETRY_DISABLED: "1",
-    SKILL_EXCHANGE_GENERATED_ROOT: resolve(root, ".exchange/generated"),
   };
   const astroPackage = JSON.parse(readFileSync(resolve(dependencies, "astro/package.json"), "utf-8"));
   for (const args of [

@@ -97,12 +97,12 @@ python -m pip install --upgrade --force-reinstall . -r assessment/requirements.t
 python -m skill_exchange.cli assess-catalog --scan-mode llm-assisted
 python -m skill_exchange.cli generate
 npm ci --prefix site
-SKILL_EXCHANGE_GENERATED_ROOT="$PWD/.exchange/generated" npm --prefix site run build
+npm --prefix site run build
 ```
 
 Configure the provider before requesting `llm-assisted` assessment. Use `--scan-mode static-only` for local diagnostics and summarize those reports; these reports are not eligible for site generation. For private CA trust, follow the image guide's local helper instructions before the wheel installation. Each assessment also writes `assessment.md` by summarizing its existing reports without another scan.
 
-Paths are configurable with `--skills`, `--evidence`, and `--generated`. For a custom generated path, set `SKILL_EXCHANGE_GENERATED_ROOT` to the same absolute path for Node. Local output is in `site/dist/`.
+Input paths are configurable with `--skills` and `--evidence`. Site builds always read `.exchange/generated/` beside `site/`. The generator still accepts `--generated` for standalone use; to build a site, generate into the standard location. Local output is in `site/dist/`.
 
 ## Apply an update
 

@@ -89,7 +89,7 @@ Build the static site from freshly generated local data:
 just build
 ```
 
-Local `just` generation writes to `.exchange/local-generated/` while current assessment reports remain read-only. Use `uv` directly for Python-only checks and `npm --prefix products/deployment-kit/operator/site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
+Local `just` generation writes to `products/deployment-kit/operator/.exchange/generated/` while current assessment reports remain read-only. Use `uv` directly for Python-only checks and `npm --prefix products/deployment-kit/operator/site` for site-only checks. `just` is the local developer wrapper when a task intentionally spans both stacks.
 
 Use [CONTRIBUTING.md](CONTRIBUTING.md) for exchange-site development workflow details.
 

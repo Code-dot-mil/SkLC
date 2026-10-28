@@ -54,7 +54,7 @@ build:
   script:
     - npm ci --prefix site
     - npm --prefix site run lint
-    - SKILL_EXCHANGE_GENERATED_ROOT="$CI_PROJECT_DIR/.exchange/generated" npm --prefix site run build
+    - npm --prefix site run build
     - cp -R site/dist public
   artifacts:
     paths: [public/]

@@ -59,7 +59,7 @@ The `skill-catalog-assessments-<version>.zip` release download contains the curr
 Install the local toolchain:
 
 - Python 3.12 with `uv`.
-- Node.js 22 with `npm`.
+- Node.js 22.23.4 or a newer Node 22 patch with `npm`.
 - `just` for cross-stack commands.
 
 Install dependencies:

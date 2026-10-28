@@ -4,7 +4,7 @@ Assess a skill catalog and publish its exchange with the supplied GitLab pipelin
 
 ## Before you start
 
-You need Git, Docker with BuildKit to build the assessment image, and permission to create and push to a GitLab project and configure its CI/CD variables. The site build needs Node.js 22.22.0 or later; CI supplies it through `NODE_IMAGE`.
+You need Git, Docker with BuildKit to build the assessment image, and permission to create and push to a GitLab project and configure its CI/CD variables. The site build needs Node.js 22.23.4 or later; CI supplies it through `NODE_IMAGE`.
 
 Confirm that the project has access to a trusted Linux runner that supports container job images. Ask its administrator for the runner tag and architecture if necessary. A runner executes the job; the image supplies its software. See [runner availability](https://docs.gitlab.com/ci/runners/runners_scope/) and [container jobs](https://docs.gitlab.com/ci/docker/using_docker_images/). Assessment needs registry/package access and access to the selected model provider. The build job needs access to npm packages.
 
@@ -60,7 +60,7 @@ Open **Settings > CI/CD > Variables** and add the required settings below. Each 
 | `BUILD_RUNNER_TAG` | Required: container runner able to install npm dependencies |
 | `PAGES_RUNNER_TAG` | Required: container runner for the Pages job |
 | `SCAN_MODE` | `llm-assisted` (default) requests model assessment; `static-only` omits model requests |
-| `NODE_IMAGE` | Defaults to `node:22`; replacement must provide Node >=22.22.0 and npm |
+| `NODE_IMAGE` | Defaults to `node:22.23.4`; replacement must provide Node >=22.23.4 and npm |
 | `PAGES_IMAGE` | Defaults to `alpine:3.24.2`; replace for your registry if needed |
 | `ASSESSMENT_CA_CERTIFICATES` | Optional **File** variable containing only verified extra public CA certificates in PEM format; see the image guide |
 
@@ -90,7 +90,7 @@ Pipeline and local assessment runs reuse valid current reports by default and sc
 
 ## Run locally
 
-Activate a Python 3.12+ environment with SkillSpector and Git on PATH, following the [assessment prerequisites](../../../assessment-kit/README.md#prerequisites). Use Node.js 22.22.0 or later. Run from the installed kit root:
+Activate a Python 3.12+ environment with SkillSpector and Git on PATH, following the [assessment prerequisites](../../../assessment-kit/README.md#prerequisites). Use Node.js 22.23.4 or later. Run from the installed kit root:
 
 ```sh
 python -m pip install --upgrade --force-reinstall . -r assessment/requirements.txt

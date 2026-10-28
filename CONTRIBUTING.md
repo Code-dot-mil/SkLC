@@ -21,7 +21,7 @@ Skill packages under `products/skill-catalog/` are exchange content. Treat chang
 
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22, `npm`, and `just`.
+Install Python 3.12, `uv`, Node.js 22.23.4 or a newer Node 22 patch, `npm`, and `just`.
 
 Install project dependencies:
 

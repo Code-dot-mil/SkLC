@@ -823,3 +823,49 @@ tr.selected-row {
     overflow-x: auto;
   }
 }
+
+.assessment-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 0;
+  margin: 20px 0;
+}
+
+.assessment-counts > div {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.assessment-counts > div + div {
+  margin-left: 24px;
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+
+.assessment-counts dt { font-weight: 700; }
+.assessment-counts dd { margin: 0; }
+
+.finding-true_positive { border-left: 3px solid #ff8293; }
+.finding-uncertain { border-left: 3px solid #f2c66d; }
+
+.outcome-true_positive {
+  color: #ff8293;
+  border-color: #ff8293;
+  background: rgb(255 130 147 / 0.08);
+}
+
+.outcome-uncertain {
+  color: #f2c66d;
+  border-color: #f2c66d;
+  background: rgb(242 198 109 / 0.08);
+}
+
+@media (max-width: 480px) {
+  .assessment-counts { flex-direction: column; }
+  .assessment-counts > div + div {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+}

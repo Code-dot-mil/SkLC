@@ -18,6 +18,12 @@ def test_current_pair_becomes_adjudication_and_exact_downloads(current_assessmen
     record = json.loads((output / "index.json").read_text())["skills"][0]
     assert record["skill_id"] == "sample-skill"
     assert record["last_scanned"] is None
+    assert [row["determination"] for row in record["scanner_findings"]] == [
+        "true_positive", "false_positive", "uncertain"
+    ]
+    assert [row["adjudication_reason"] for row in record["scanner_findings"]] == [
+        "Executes input", "Inert example", "Unknown destination"
+    ]
     assert record["adjudication"]["summary"] == adjudication["summary"]
     assert not list(output.rglob("scanner.log")), "scanner logs remain diagnostics, not site downloads"
     for key, download in record["assessment_downloads"].items():

@@ -49,12 +49,18 @@ test("built site links and assets work unchanged at root and nested hosting path
   }
   // A SAFE label must not turn confirmed or unresolved findings into an all-clear.
   assert.ok(!detail.includes("No issues remain after AI review"));
-  assert.ok(detail.includes("1 confirmed issues, 2 unresolved findings, and 3 false positives"));
+  assert.ok(detail.includes("Confirmed issues: 1. Unresolved findings: 2. False positives: 3."));
   const pending = renderedText("skills/review");
   assert.ok(pending.includes("AI review is not complete"));
   assert.ok(!pending.includes("No issues remain after AI review"));
   assert.ok(renderedText("skills/clear").includes("No issues remain after AI review"));
   const html = readFileSync(resolve(dist, "skills/example/index.html"), "utf-8");
+  // Sorting must follow adjudication even when scanner severities are identical.
+  const positions = ["Confirmed issue</span>", "Unresolved: human review needed", "Adjudicated as false positive</span>"]
+    .map((label) => html.indexOf(label));
+  assert.ok(positions.every((position) => position >= 0));
+  assert.ok(positions[0] < positions[1] && positions[1] < positions[2]);
+  assert.ok(detail.includes("Review reason 0") && detail.includes("Review reason 1") && detail.includes("Review reason 2"));
   assert.ok(!/<script[^>]*>alert\(1\)/.test(html), "summary HTML must stay inert");
   assert.ok(!html.includes('href="https://untrusted.example/"'), "summary links must stay inert");
   assert.ok(statSync(resolve(dist, "assets")).isDirectory());
@@ -132,7 +138,11 @@ function writeFixture(root) {
     },
     recommendation: "SAFE", risk: "LOW", confidence_flags: [], tags: [],
     scanner_runs: [{ id: "example-run", skill_id: "example", scanner_name: "skillspector", scanner_version: "2", scan_mode: "llm-assisted", last_scanned: timestamp }],
-    scanner_findings: [],
+    scanner_findings: ["false_positive", "uncertain", "true_positive"].map((determination, index) => ({
+      id: `finding-${index}`, scanner_run_id: "example-run", native_issue_id: `RULE-${index}`,
+      severity: "HIGH", determination, adjudication_reason: `Review reason ${index}`,
+      explanation: `Scanner explanation ${index}`, remediation: `Scanner remediation ${index}`,
+    })),
     scanner_artifacts: [{ scanner_run_id: "example-run", artifact_kind: "native_report", download_path: "downloads/assessments/example/skillspector.json" }],
     adjudication: {
       status: "completed", summary: "Fixture adjudication summary. <script>alert(1)</script> [untrusted](https://untrusted.example/)",
@@ -142,12 +152,12 @@ function writeFixture(root) {
   };
   write("index.json", JSON.stringify({ skills: [example, {
     ...example, skill_id: "review", name: "Review code",
-    description: "Find defects in Python code", scanner_runs: [], scanner_artifacts: [],
+    description: "Find defects in Python code", scanner_runs: [], scanner_findings: [], scanner_artifacts: [],
     adjudication: { ...example.adjudication, status: "pending" },
     dispositions: { true_positive: 0, uncertain: 0, false_positive: 0 },
   }, {
     ...example, skill_id: "clear", name: "Reviewed skill",
-    scanner_runs: [], scanner_artifacts: [],
+    scanner_runs: [], scanner_findings: [], scanner_artifacts: [],
     dispositions: { true_positive: 0, uncertain: 0, false_positive: 0 },
   }] }));
   write("assessments/example/skillspector.json", "{}\n");

@@ -33,8 +33,8 @@ const reviewHeadline = !completed ? "AI review is not complete"
   : skill.recommendation === "SAFE" && confirmed === 0 && unresolved === 0 ? "No issues remain after AI review"
   : "Review the assessment before using this skill";
 const reviewOutcome = !completed ? "A completed AI review is not available."
-  : allDismissed ? `All ${dismissed} scanner warnings were reviewed by AI and judged false positives.`
-  : `AI review: ${confirmed} confirmed issues, ${unresolved} unresolved findings, and ${dismissed} false positives.`;
+  : allDismissed ? `${dismissed} scanner ${dismissed === 1 ? "finding adjudicated as a false positive" : "findings adjudicated as false positives"}.`
+  : `Confirmed issues: ${confirmed}. Unresolved findings: ${unresolved}. False positives: ${dismissed}.`;
 const markdownProcessor = await createMarkdownProcessor({
   rehypePlugins: [sanitizeSkillMarkdown],
 });
@@ -96,7 +96,7 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
       </form>
       <h2>Recommendation</h2>
       <p>
-        A security scanner looks for possible problems. An AI then checks the scan results and reads the skillÃ¢â‚¬â„¢s main instructions.
+        A security scanner looks for possible problems. An AI then checks the scan results and reads the skill's main instructions.
       </p>
       <ul>
         <li><strong>Safe to use:</strong> The AI found no safety problems in what it checked.</li>
@@ -109,6 +109,7 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
       <p>The AI review covers the main instructions and scan results. Other files in the package are outside that review.</p>
     </dialog>
     <div class="metadata-strip">
+      <span><strong>Skill owner:</strong> {skill.owner || "Not declared"}</span>
       <span><strong>Last updated:</strong> <LocalDate value={skill.last_updated} client:load /></span>
       <span><strong>First observed:</strong> <LocalDate value={skill.first_observed} client:load /></span>
     </div>
@@ -178,7 +179,13 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
         <section class="card">
           <h2>Summary</h2>
           <p class="assessment-outcome">{reviewHeadline}</p>
-          <p>{reviewOutcome}</p>
+          {completed ? <>
+            <dl class="assessment-counts">
+              <div><dt>Confirmed issues:</dt><dd>{confirmed}</dd></div>
+              <div><dt>Unresolved findings:</dt><dd>{unresolved}</dd></div>
+            </dl>
+            <p class="muted">{dismissed} scanner {dismissed === 1 ? "finding adjudicated as a false positive" : "findings adjudicated as false positives"}.</p>
+          </> : <p>{reviewOutcome}</p>}
           <p><strong>Review limits:</strong> {skill.adjudication.scope || "Not stated"}{" "}{skill.adjudication.coverage_reason}</p>
           <p class="muted">Last scanned: <LocalDate value={scannerRun?.last_scanned} client:load /></p>
           <details class="assessment-advanced">
@@ -199,7 +206,6 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
               </>}
               <div><dt>Adjudication status</dt><dd>{skill.adjudication.status || "Unknown"}</dd></div>
               <div><dt>Coverage sufficient</dt><dd>{skill.adjudication.coverage_sufficient === true ? "Yes" : skill.adjudication.coverage_sufficient === false ? "No" : "Unknown"}</dd></div>
-              <div><dt>Owner</dt><dd>{skill.owner || "Not declared"}</dd></div>
             </dl>
             <p data-copy-status role="status" hidden></p>
             <p><strong>Scan mode:</strong> Static-only skips scanner AI checks; LLM-assisted includes them.</p>

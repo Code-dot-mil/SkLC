@@ -104,6 +104,7 @@ def display_assessment(skill, report, adjudication, downloads):
             "explanation": issue.get("explanation"), "remediation": issue.get("remediation"),
             "code_snippet": issue.get("code_snippet"),
             "false_positive": finding["determination"] == "false_positive",
+            "determination": finding["determination"], "adjudication_reason": finding["reason"],
         })
     return {
         "recommendation": recommendation, "confidence_flags": [], "risk": risk.get("severity"),

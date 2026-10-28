@@ -30,13 +30,20 @@ export type Finding = {
   explanation?: string;
   remediation?: string;
   code_snippet?: string;
-  false_positive?: boolean;
+  determination: "true_positive" | "uncertain" | "false_positive";
+  adjudication_reason: string;
 };
 
 export type Artifact = {
   scanner_run_id: string;
   artifact_kind: string;
   download_path: string;
+};
+
+const outcomes = {
+  true_positive: { label: "Confirmed issue", priority: 0 },
+  uncertain: { label: "Unresolved: human review needed", priority: 1 },
+  false_positive: { label: "Adjudicated as false positive", priority: 2 },
 };
 
 export default function ScannerFindings({
@@ -73,18 +80,20 @@ export default function ScannerFindings({
   }, [currentRun, search, severity]);
 
   const currentFindings = scannerFindings.filter((finding) => finding.scanner_run_id === currentRun?.id);
-  const falsePositiveCount = currentFindings.filter((finding) => finding.false_positive).length;
-  const visibleFindings = scannerFindings.filter((finding) => {
-    if (finding.scanner_run_id !== currentRun?.id) {
-      return false;
+  for (const finding of currentFindings) {
+    if (!Object.hasOwn(outcomes, finding.determination)) {
+      throw new Error("Finding determination is missing or invalid. Regenerate the site data from current assessments.");
     }
-    return severity === "all" || finding.severity === severity;
-  });
+  }
+  const visibleFindings = currentFindings
+    .filter((finding) => severity === "all" || finding.severity === severity)
+    .sort((left, right) => outcomes[left.determination].priority - outcomes[right.determination].priority);
+
 
   if (!currentRun) {
     return (
       <section className="card">
-        <h2>Findings</h2>
+        <h2>Scanner findings</h2>
         <p>No current assessment is available.</p>
       </section>
     );
@@ -93,7 +102,7 @@ export default function ScannerFindings({
   return (
     <section className="card">
       <div className="section-title-row">
-        <h2>Findings ({currentFindings.length})</h2>
+        <h2>Scanner findings</h2>
         <button className="icon-button" type="button" onClick={() => dialogRef.current?.showModal()} aria-label="About scanner findings">i</button>
       </div>
       <dialog ref={dialogRef}>
@@ -102,14 +111,11 @@ export default function ScannerFindings({
         </form>
         <h2>Scanner findings</h2>
         <p>SkillSpector reports possible problems. A separate AI review checks those findings.</p>
-        <p>A warning marked <strong>Adjudicated as False Positive</strong> was judged to be a false alarm by that review.</p>
+        <p>A warning marked <strong>Adjudicated as false positive</strong> was judged to be a false alarm by that review.</p>
         <p>The scanner risk can differ from the recommendation. The recommendation reflects adjudication.</p>
         <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">NVIDIA SkillSpector</a>
       </dialog>
-      <p>
-        {currentFindings.length} scanner warnings · <strong>{falsePositiveCount} judged false positives</strong><br />
-        <span className="muted">Scanner severity describes the original warning, before AI review.</span>
-      </p>
+      <p className="muted">Original scanner warnings are shown below with their AI review outcomes.</p>
       <div className="controls">
         <select aria-label="Finding severity" value={severity} onChange={(event) => replaceQueryState({ run: null, runs: null, severity: event.target.value }, { severity: "all" })}>
           <option value="all">All finding severities</option>
@@ -127,24 +133,25 @@ export default function ScannerFindings({
           {visibleFindings.map((finding) => {
             const location = finding.path ? `${finding.path}:${finding.start_line || "?"}` : "Unknown";
             return (
-              <article className="finding-card" key={finding.id}>
+              <article className={`finding-card finding-${finding.determination}`} key={finding.id}>
                 <header className="finding-card-header">
                   <div>
                     <strong>{finding.native_issue_id}</strong>
                     <span className="muted"> {finding.category || "Uncategorized"}</span>
                   </div>
                   <span className="pill-row">
-                    {finding.false_positive && <span className="risk flag">Adjudicated as False Positive</span>}
+                    <span className={`risk flag outcome-${finding.determination}`}>{outcomes[finding.determination].label}</span>
                     <span className="muted">Scanner: {finding.severity || "Unknown"}</span>
                   </span>
                 </header>
-                <details className="assessment-advanced">
-                  <summary>View scanner evidence</summary>
+                <details className="assessment-advanced" open={finding.determination !== "false_positive"}>
+                  <summary>View finding details</summary>
+                  <p><strong>AI review:</strong> {finding.adjudication_reason}</p>
                   <p><strong>{finding.pattern || "Finding"}</strong></p>
-                  <p>{finding.explanation || "No explanation provided."}</p>
+                  <p><strong>Scanner explanation:</strong> {finding.explanation || "No explanation provided."}</p>
                   <p><strong>Location:</strong> <code>{location}</code></p>
                   {finding.code_snippet && <pre><code>{finding.code_snippet}</code></pre>}
-                  <p><strong>Remediation:</strong> {finding.remediation || "No remediation provided."}</p>
+                  <p><strong>Scanner remediation:</strong> {finding.remediation || "No remediation provided."}</p>
                 </details>
               </article>
             );

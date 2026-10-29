@@ -17,6 +17,8 @@ The team shall deliver 4 standalone products:
 - Assessment kit
 - Deployment kit
 
+Lifecycle guidance is a parallel, non-gating track published from the Code-dot-mil AI4SDLC GitHub. Its minimum useful customer-facing shape remains to be accepted. The current direction uses Define, Build, Validate, Release, and Operate stages, with user, author, reviewer, and operator roles. Catalog approval authority is recorded at Release rather than introduced as a standing lifecycle role.
+
 ## 4. SkillSpector
 
 NVIDIA SkillSpector will be the baseline skill assessor in `llm-assisted` scan mode. `static-only` has a high false positive rate, must be explicitly requested, and must not be used as a fallback when `llm-assisted` is configured but unavailable.
@@ -29,4 +31,4 @@ Define all assessment-kit exception types in `skill_assessment/errors.py`. Comma
 
 ## 6. Assessment distribution
 
-Publish the existing assessment-kit wheel directly on authorized SkLC releases, as the third product alongside the deployment and catalog ZIPs, using GitHub asset digests for download integrity. Its package version must correspond to the release version under Python packaging normalization. Use `uv build` to build the wheel and rely on the Python packaging tools for wheel validation.
+Publish the assessment-kit wheel independently on authorized SkLC releases alongside the ZIP downloads listed in [CI](../CI.md#prepare-a-draft), using GitHub asset digests for download integrity. All artifacts share one release version; components are not independently versioned. The wheel's package version must correspond to that release version under Python packaging normalization. Use `uv build` to build the wheel and rely on the Python packaging tools for wheel validation.

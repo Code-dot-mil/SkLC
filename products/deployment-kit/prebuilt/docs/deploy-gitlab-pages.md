@@ -23,7 +23,7 @@ git config --global user.email "<git-user-email>"
 
 ## Add the release to the project
 
-The following commands are a template. Replace `<gitlab-project-url>` with the SSH or HTTPS clone URL from the GitLab project's **Code** menu, and replace `<local-project-directory>` with the directory where the repository should be cloned. Choose a location outside the extracted release directory, then run the commands from the extracted release root.
+The following commands are a template. Replace `<gitlab-project-url>` with the SSH or HTTPS clone URL from the GitLab project's **Code** menu, and replace `<local-project-directory>` with the directory where the repository should be cloned. Replace `<default-branch>` with the project's configured default branch; the Pages job runs only on that branch. Choose a location outside the extracted release directory, then run the commands from the extracted release root.
 
 ```sh
 git clone "<gitlab-project-url>" "<local-project-directory>"
@@ -31,8 +31,8 @@ cp -a . "<local-project-directory>/"
 cd "<local-project-directory>"
 git add -A
 git commit -m "Deploy SkLC prebuilt site"
-git branch -M main
-git push origin main
+git branch -M "<default-branch>"
+git push -u origin "<default-branch>"
 ```
 
 ## Verify the deployment

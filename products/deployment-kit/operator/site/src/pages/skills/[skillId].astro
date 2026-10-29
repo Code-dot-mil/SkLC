@@ -148,9 +148,8 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
     </dialog>
     <div class="metadata-strip">
       <span><strong>Last updated:</strong> <LocalDate value={skill.last_updated} client:load /></span>
-      <span><strong>Created (estimated):</strong> <LocalDate value={skill.first_observed} client:load /></span>
+      <span><strong>Created:</strong> <LocalDate value={skill.first_observed} client:load /></span>
     </div>
-    <p>Creation dates are estimated from the earliest available source history.</p>
   </header>
 
   <section class="tabs">

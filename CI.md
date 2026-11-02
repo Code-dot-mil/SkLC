@@ -9,6 +9,8 @@ Two GitHub Actions workflows validate and prepare releases for this repository:
 
 The `CI` workflow runs on every pull request, including PRs targeting another branch in a stack, and every push to `main`. PR validation and packaging use the PR head commit. Every PR attempts all product builds, regardless of changed paths. Validation and packaging use GitHub-hosted Ubuntu runners; provider assessment jobs use a self-hosted runner.
 
+CI and release jobs select Node.js with `>=22.23.4 <23`, matching the minimum required by Astro 7.4.2. This excludes older cached Node 22 versions; `setup-node` downloads a matching version when needed. The Operator build defaults to `node:22.23.4`; custom `NODE_IMAGE` values must provide Node.js >=22.23.4 and npm.
+
 ```mermaid
 flowchart TD
     A["Pull request to any branch<br/>or push to main"]

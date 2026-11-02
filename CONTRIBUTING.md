@@ -23,7 +23,7 @@ For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-r
 
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22.22.0 or later, `npm`, and `just`. Install `actionlint` and `shellcheck` as described in the [linting guide](docs/linting.md).
+Install Python 3.12, `uv`, Node.js 22.23.4 or a newer Node 22 patch, `npm`, and `just`. Install `actionlint` and `shellcheck` as described in the [linting guide](docs/linting.md).
 
 Install project dependencies:
 

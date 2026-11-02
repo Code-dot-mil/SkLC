@@ -34,7 +34,20 @@ Create your local catalog directories:
 mkdir -p skills evidence
 ```
 
-Place your own complete packages in `skills/<skill>/`, with matching `name` and nonempty `description` in `SKILL.md`. To serve upstream developer skills, copy all, some, or none from `upstream/skills/`. Copy each selected skill's matching JSON pair from `upstream/evidence/<skill>/` at the same time. For example, to include the secure code review skill:
+Place your own complete packages in immediate child directories `skills/<skill>/`, with matching `name` and nonempty `description` in `SKILL.md`. Operator rejects symlinks, packages with more than 500 files, and files larger than 5 MiB. Optional metadata supplies the catalog's category, tags, and owner:
+
+```yaml
+---
+name: my-skill
+description: Explain what this skill helps an agent do.
+metadata:
+  ai4sdlc.category: development
+  ai4sdlc.tags: [review, python]
+  ai4sdlc.owner: team-name
+---
+```
+
+Tags also accept a comma-separated string. To serve upstream developer skills, copy all, some, or none from `upstream/skills/`. Copy each selected skill's matching JSON pair from `upstream/evidence/<skill>/` at the same time. For example, to include the secure code review skill:
 
 ```sh
 cp -R upstream/skills/python-secure-code-review skills/
@@ -117,6 +130,8 @@ python -m pip install --upgrade --force-reinstall . -r assessment/requirements.t
 The disposable `build/` directory can retain removed Python modules from earlier installs. Remove it when replacing the upstream runtime so those modules cannot return in the installed package.
 
 The archive and replacement list contain no live `skills/` or `evidence/` paths. Updated upstream skills and their paired reports appear only in `upstream/`; decide explicitly whether to copy any into the live catalog. The requirement file selects the exact bundled wheel. Regenerate and rebuild after updating.
+
+Review changes under `assessment/container/`. When the image's scanner or runtime changes, rebuild and publish the assessment image using the [image guide](../containers/assessment/README.md), then set `ASSESSMENT_IMAGE` to the verified new digest before running CI. Extracting an updated kit does not replace the image already published in your registry.
 
 Supported customization is your skill catalog and its assessments. If you replace another component, you own that entire component. Omit its paths from the removal command **and** exclude them from extraction on every update. For a customized UI:
 

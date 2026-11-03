@@ -1,6 +1,6 @@
 # SkLC
 
-SkLC helps teams install, assess, and share **agent skills**: reusable instructions that guide a coding agent through a task, such as reviewing Python code or writing unit tests.
+Skill Lifecycle (SkLC) helps teams install, assess, and share **agent skills**: reusable instructions that guide a coding agent through a task, such as reviewing Python code or writing unit tests.
 
 A skill is a folder containing a `SKILL.md` file with its name, description, and instructions, plus any supporting files. Developers install that folder in their workspace so their agent can discover and use it. Teams can assess a skill for potential problems and publish it alongside its review evidence in a **Skill Exchange**, a website for browsing and downloading skills.
 

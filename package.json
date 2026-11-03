@@ -4,11 +4,7 @@
   "scripts": {
     "markdown:lint": "markdownlint-cli2",
     "markdown:check": "prettier --check \"**/*.md\" --ignore-path .gitignore --ignore-path .prettierignore",
-    "markdown:format": "prettier --write \"**/*.md\" --ignore-path .gitignore --ignore-path .prettierignore",
-    "site:build": "npm --prefix products/deployment-kit/operator/site run build",
-    "site:lint": "npm --prefix products/deployment-kit/operator/site run lint",
-    "site:test": "npm --prefix products/deployment-kit/operator/site run test",
-    "site:typecheck": "npm --prefix products/deployment-kit/operator/site run typecheck"
+    "markdown:format": "prettier --write \"**/*.md\" --ignore-path .gitignore --ignore-path .prettierignore"
   },
   "devDependencies": {
     "markdownlint-cli2": "0.24.0",

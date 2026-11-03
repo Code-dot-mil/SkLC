@@ -1,0 +1,3 @@
+interface:
+  display_name: "Reader-first documentation"
+  short_description: "Write docs for readers using saved audience profiles"

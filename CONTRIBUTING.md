@@ -23,7 +23,7 @@ For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-r
 
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22.23.4 or a newer Node 22 patch, `npm`, and `just`. Install `actionlint` and `shellcheck` as described in the [linting guide](docs/linting.md).
+Install [Python 3.12](https://www.python.org/downloads/), [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js 22 with npm](https://nodejs.org/en/download) (22.23.4 or a newer Node 22 patch), and [just](https://just.systems/man/en/packages.html). The [local lint guide](docs/linting.md) also covers the required `actionlint` and `shellcheck` tools.
 
 Install project dependencies:
 
@@ -62,7 +62,7 @@ Generation reads `products/skill-catalog-assessments/<skill-name>/`. Use `--evid
 Python code must pass:
 
 ```sh
-uv run --extra test ruff check maintainer products
+just python-lint
 uv run --extra test pytest
 ```
 

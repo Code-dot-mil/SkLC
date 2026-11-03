@@ -6,6 +6,12 @@ It contains evidence, not the skill packages themselves. Obtain the matching `sk
 
 On Linux, use `sha256sum 'skill-catalog-assessments-<version>.zip'`; on macOS, use `shasum -a 256` with that filename. PowerShell provides `Get-FileHash -Algorithm SHA256`. Replace `<version>` with the downloaded version and compare the hexadecimal result with GitHub's value, ignoring the `sha256:` prefix.
 
+After the checksum comparison succeeds, extract the archive, replacing `<version>`:
+
+```sh
+unzip 'skill-catalog-assessments-<version>.zip' -d catalog-assessments
+```
+
 ## Find the report pair
 
 Each skill has its own directory:

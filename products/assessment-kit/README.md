@@ -42,7 +42,7 @@ sha256sum 'skill_assessment-<version>-py3-none-any.whl'
 
 On macOS, use `shasum -a 256` instead; in PowerShell, use `Get-FileHash -Algorithm SHA256`. Compare the hexadecimal result with the release asset's digest, ignoring its `sha256:` prefix. The wheel version corresponds to the release version under Python packaging normalization.
 
-Put the downloaded wheel in a separate working directory. From that directory, replace `<version>` with its filename's version and run:
+Put the downloaded wheel in a separate working directory. From that directory, replace `<version>` with its filename's version, including Python's normalized prerelease spelling where applicable, and run:
 
 ```sh
 uv venv --python 3.12

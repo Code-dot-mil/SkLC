@@ -56,4 +56,4 @@ Completed negative assessments can remain visible on a published exchange. Publi
 - [Architecture](docs/architecture.md) explains how the products fit together and how skills and reports become a website.
 - [Contributing](CONTRIBUTING.md) covers source development, tool installation, local checks, and generated files. Start here to change SkLC itself.
 - [CI and releases](CI.md) explains validation, development-preview downloads, and release preparation.
-- [Roadmap](docs/roadmap.md) records planned milestones and future direction.
+- [Product decisions](docs/decisions.md) records accepted requirements and the parallel lifecycle-guidance direction.

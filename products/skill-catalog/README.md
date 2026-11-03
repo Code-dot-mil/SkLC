@@ -21,4 +21,6 @@ unzip skill-catalog-<version>.zip -d skill-catalog
 
 Copy the complete skill folders from `skill-catalog/skills/` into your workspace's `.agents/skills/`. Keep supporting files with each skill, and compare any existing same-named folders before replacing them. Start a fresh agent session in that workspace and confirm the skills appear in its available-skills list.
 
+To review findings before installation, download `skill-catalog-assessments-<version>.zip` from the same release and follow its README to verify, extract, and summarize the matching JSON pairs. Assessment is optional for installing these skills; the separate assessment-kit wheel provides the `skill-assessment summarize` command. Evidence applies to the exact package contents, so edits require a new assessment.
+
 The CI `skill-catalog.zip` download is also a single ZIP with `skills/` and `README.md` at its root. Unzip it into `skill-catalog/` and install as above. It is a test download, not a published release.

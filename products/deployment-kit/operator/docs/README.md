@@ -25,7 +25,7 @@ Only `skills/` and `evidence/` supply the live catalog; included files in `upstr
 
 You need Git configured for commits, Docker with BuildKit to build the assessment image, and permission to create an empty GitLab project, push to it, and configure CI/CD variables and Pages.
 
-Arrange access to a trusted Linux runner that supports container job images. A runner executes jobs; an image supplies their software. Ask the runner administrator for its tag and CPU architecture. Assessment needs package/registry access and access to your selected model provider; the website build needs npm package access. CI supplies Node through `NODE_IMAGE`, which must provide Node.js 22.22.0 or later.
+Arrange access to a trusted Linux runner that supports container job images. A runner executes jobs; an image supplies their software. Ask the runner administrator for its tag and CPU architecture. Assessment needs package/registry access and access to your selected model provider; the website build needs npm package access. CI supplies Node through `NODE_IMAGE`, which must provide Node.js 22.23.4 or later.
 
 Choose a registry where you can publish the assessment image and from which the runner can pull it. For a private registry, configure [image-pull credentials](https://docs.gitlab.com/ci/docker/using_docker_images/#access-an-image-from-a-private-container-registry) before running the pipeline. A workstation login does not give the runner access, and a job's script starts too late to authenticate the pull of its own image.
 
@@ -50,7 +50,20 @@ The destination must be outside the extracted directory. Confirm that hidden `.g
 
 ## 2. Choose the skills to serve
 
-Place your own complete packages in `skills/<skill>/`. Each `SKILL.md` begins with YAML metadata, called frontmatter, containing nonempty `name` and `description` fields; the name must match the folder. Skill basenames must be unique because evidence is stored by that name.
+Place your own complete packages in immediate child directories `skills/<skill>/`. Each `SKILL.md` begins with YAML metadata, called frontmatter, containing nonempty `name` and `description` fields; the name must match the folder. Skill basenames must be unique because evidence is stored by that name. Operator rejects symlinks, packages with more than 500 files, and files larger than 5 MiB. Optional metadata supplies the category, tags, and owner:
+
+```yaml
+---
+name: my-skill
+description: Explain what this skill helps an agent do.
+metadata:
+  ai4sdlc.category: development
+  ai4sdlc.tags: [review, python]
+  ai4sdlc.owner: team-name
+---
+```
+
+Tags also accept a comma-separated string.
 
 To include a supplied skill, copy its package and matching report pair together. For example:
 
@@ -88,7 +101,7 @@ Optional settings:
 
 | Variable | Default and use |
 | --- | --- |
-| `NODE_IMAGE` | `node:22`; replacements must supply Node >=22.22.0 and npm. |
+| `NODE_IMAGE` | `node:22.23.4`; replacements must supply Node >=22.23.4 and npm. |
 | `PAGES_IMAGE` | `alpine:3.24.2`; override if your runner uses another registry. |
 | `ASSESSMENT_CA_CERTIFICATES` | Optional File variable with verified extra PEM CA certificates; follow the image guide. |
 | `SCAN_MODE` | `llm-assisted`; `static-only` is for diagnostics and stops site generation because adjudication is incomplete. |
@@ -129,7 +142,7 @@ Runs reuse valid current reports and scan changed contents or modes. Use `python
 
 ## Run locally
 
-Install Python 3.12+, SkillSpector and Git, following the [assessment prerequisites](../../../assessment-kit/README.md#prerequisites), and use Node.js 22.22.0 or later. Activate your Python environment and configure the provider. From the installed kit root:
+Install Python 3.12+, SkillSpector and Git, following the [assessment prerequisites](../../../assessment-kit/README.md#prerequisites), and use Node.js 22.23.4 or later. Activate your Python environment and configure the provider. From the installed kit root:
 
 ```sh
 python -m pip install --upgrade --force-reinstall . -r assessment/requirements.txt
@@ -156,6 +169,8 @@ python -m pip install --upgrade --force-reinstall . -r assessment/requirements.t
 ```
 
 Clean replacement removes files no longer shipped upstream. Removing disposable `build/` also prevents obsolete Python modules from returning during installation. The requirement file selects the exact bundled assessment wheel. Regenerate and rebuild after the update.
+
+Review changes under `assessment/container/`. If the scanner or image runtime changes, rebuild and publish the assessment image using the [image guide](../containers/assessment/README.md), then set `ASSESSMENT_IMAGE` to its verified new digest before running CI. Extracting the kit does not replace the image already published in your registry.
 
 ### Preserve a customized component
 

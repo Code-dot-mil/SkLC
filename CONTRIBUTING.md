@@ -19,9 +19,11 @@ Exchange-site developers maintain:
 
 Skill packages under `products/skill-catalog/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
 
+For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-review). Trusted same-repository PRs receive assessment; fork PRs receive no provider-backed assessment and need a maintainer to arrange matching evidence before their changed skills can build. Local generation also requires current evidence. Keep report pairs with their exact skill content; do not hand-edit evidence to make generation pass.
+
 ## First-Time Setup
 
-Install [Python 3.12](https://www.python.org/downloads/), [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js 22 with npm](https://nodejs.org/en/download) (22.22.0 or later), and [just](https://just.systems/man/en/packages.html). The [local lint guide](docs/linting.md) also covers the required `actionlint` and `shellcheck` tools.
+Install [Python 3.12](https://www.python.org/downloads/), [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js 22 with npm](https://nodejs.org/en/download) (22.23.4 or a newer Node 22 patch), and [just](https://just.systems/man/en/packages.html). The [local lint guide](docs/linting.md) also covers the required `actionlint` and `shellcheck` tools.
 
 Install project dependencies:
 
@@ -72,13 +74,15 @@ Site code must pass:
 
 ```sh
 npm --prefix products/deployment-kit/operator/site run lint
+npm --prefix products/deployment-kit/operator/site run lint:code
+npm --prefix products/deployment-kit/operator/site run typecheck:astro
 npm --prefix products/deployment-kit/operator/site run test
 SKILL_EXCHANGE_GENERATED_ROOT="$PWD/.exchange/local-generated" npm --prefix products/deployment-kit/operator/site run build
 ```
 
 Node-based tests belong under `products/deployment-kit/operator/site/tests/`. Python pytest should not depend on Node, npm install state, or `products/deployment-kit/operator/site/node_modules`.
 
-Set `SKILL_EXCHANGE_GENERATED_ROOT` explicitly to the generated-data directory for every site command. Missing data fails the build; an explicitly selected directory containing an empty index renders an empty catalog.
+Set `SKILL_EXCHANGE_GENERATED_ROOT` explicitly for site build and development-server commands. Lint and test commands do not require a caller-supplied generated directory. Missing data fails the build; an explicitly selected directory containing an empty index renders an empty catalog.
 
 ## CI Changes
 

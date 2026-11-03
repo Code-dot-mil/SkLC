@@ -14,6 +14,8 @@ Choose the section for your task:
 
 ## GitHub Validation
 
+CI and release jobs select Node.js with `>=22.23.4 <23`, matching the minimum required by Astro 7.4.2 and excluding older cached Node 22 versions. Operator builds default to `node:22.23.4`; a custom `NODE_IMAGE` must provide Node.js >=22.23.4 and npm.
+
 [ci.yml](.github/workflows/ci.yml) runs on every pull request, including stacked PRs targeting another branch, and pushes to `main`. PR checks and previews use the PR head commit. All product builds are attempted regardless of changed paths; provider assessment is conditional on the source and skill changes described below.
 
 The site preview depends on three kinds of work:
@@ -81,7 +83,7 @@ On main, `--if-changed` is used only when the incoming push left both current JS
 
 Main writes use `GITHUB_TOKEN` with `contents: write`, so branch protection must permit that update. These token-authenticated pushes do not start another push workflow. Main assessment jobs are serialized; if another writer advances the branch, a non-fast-forward push fails without overwriting that work. Available reports and failure diagnostics are retained as artifacts. Site generation uses the report artifact associated with the source revision being built.
 
-### Find PR feedback
+### Pull request assessment review
 
 Read the Actions summary or download `pr-assessments`. It includes per-skill `reports/`, Markdown under `summaries/`, and combined `summary.md`. Its NUL-delimited selection manifests distinguish changed packages, including deletions, from packages still present at the PR head. Failed scans retain available diagnostics; incomplete coverage remains explicit.
 
@@ -123,7 +125,9 @@ uv run --group release python -m sklc_maintainer.release check-ready   --version
 
 This read-only gate checks the clean checkout and notes, that the candidate belongs to main history, that the tag/version is unused locally and on GitHub, and that the latest main-push CI run for that commit succeeded. An older commit in main history can qualify; the local branch name is immaterial.
 
-On success, it prints JSON with the candidate SHA and CI URL. Use that run's previews to inspect packages if needed. Missing authentication, API access, or successful CI blocks readiness. If the candidate changes, repeat the check before tagging.
+On success, it prints JSON with the candidate SHA and CI URL. Use that run's [product previews](#preview-downloads) to inspect the relevant packages if needed. Missing authentication, API access, or successful CI blocks readiness. If the candidate changes, repeat the check before tagging.
+
+An assessment-bot commit can be newer than the last push-triggered CI run because its token does not start another workflow. That commit is not verified for release: a PR run or a successful run for its parent does not satisfy the exact-SHA main-push requirement. Resolve candidate verification before tagging; do not change evidence or bypass the gate.
 
 ### Prepare a draft
 
@@ -144,7 +148,7 @@ The tag starts [release.yml](.github/workflows/release.yml). The workflow valida
 | `skill-catalog-assessments-<version>.zip` | Read those skills' assessment pairs. |
 | `skill_assessment-<version>-py3-none-any.whl` | Install the standalone assessment CLI; its version uses Python normalization. |
 
-Release generation runs no scanner. Missing or stale committed evidence fails the build. The job runs on GitHub-hosted Ubuntu with a 30-minute timeout; runs for the same tag are serialized without cancelling preparation already underway. Source links identify the tagged commit. Temporary packaging files stay under `RUNNER_TEMP`, checkout credentials are not retained, and the draft-creation credential is scoped to its upload step.
+Release generation runs no scanner. Missing or stale committed evidence fails the build. The job runs on GitHub-hosted Ubuntu with a 30-minute timeout; runs for the same tag are serialized without cancelling preparation already underway. Catalog contents come from the tagged commit. Temporary packaging files stay under `RUNNER_TEMP`, checkout credentials are not retained, and the draft-creation credential is scoped to its upload step.
 
 Wait for preparation to finish. The workflow creates the unpublished draft and uploads its assets; do not create a competing draft or upload locally repackaged previews. Existing tags, partial drafts, or failed preparation need investigation and agreed recovery before moving tags or replacing assets. SemVer prerelease suffixes mark the draft as a GitHub prerelease.
 

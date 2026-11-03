@@ -8,7 +8,7 @@ Start here for the product relationships and delivery flow. For ownership rules,
 
 | Product | What a consumer gets | Independent use |
 | --- | --- | --- |
-| Skill catalog | Complete developer skill packages | Install skills in a coding agent's workspace. Assessment and hosting are optional. |
+| Skill catalog | Complete skill packages | Install skills in an AI agent's workspace. Assessment and hosting are optional. |
 | Assessment kit | An installable Python CLI | Assess any local skill package and read its results, using an external SkillSpector installation and a configured provider for LLM-assisted assessment. |
 | Deployment kit: Prebuilt | A finished exchange website and deployment instructions | Host the supplied site with a static host, including GitLab Pages. The consumer needs no assessment or site-build toolchain. |
 | Deployment kit: Operator | Site source, build runtime, assessment wheel, reference CI, and included upstream skills and evidence | Build and host an exchange for the operator's own catalog, with any selected upstream skills. |
@@ -23,7 +23,7 @@ flowchart LR
   releases --> prebuilt["Deployment kit: Prebuilt"]
   releases --> operator["Deployment kit: Operator"]
   releases --> evidence["Catalog assessments"]
-  catalog --> workspace["Developer's agent workspace"]
+  catalog --> workspace["User's agent workspace"]
   assessment --> local["Local skill assessment"]
   prebuilt --> host["Static host / GitLab Pages"]
   operator --> instance["Customer-owned catalog and build"]

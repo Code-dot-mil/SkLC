@@ -1,6 +1,6 @@
 # Read the catalog's assessment results
 
-This download contains assessment reports for the supplied developer skills. Use it to understand confirmed problems, findings that still need investigation, false positives, and review limitations before deciding how to use a skill.
+This download contains assessment reports for the supplied skills. Use it to understand confirmed problems, findings that still need investigation, false positives, and review limitations before deciding how to use a skill.
 
 It contains evidence, not the skill packages themselves. Obtain the matching `skill-catalog-<version>.zip` if you also want to install the skills. Choose both downloads from the same [SkLC release](https://github.com/Code-dot-mil/SkLC/releases) and compare their SHA-256 checksums with the release-page values before unpacking.
 

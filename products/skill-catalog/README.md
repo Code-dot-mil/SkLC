@@ -7,6 +7,10 @@ This download contains these complete skill folders and their supporting files:
 - `inline-documentation`: inline documentation.
 - `code-change-description`: commit messages and pull request descriptions.
 
+New to skills? Read [Using a skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md) before following the installation steps below. These steps require an agent that supports workspace skills in `.agents/skills/` and familiarity with running commands; a technical colleague can help with setup.
+
+## Released product
+
 Download `skill-catalog-<version>.zip` from [SkLC Releases](https://github.com/Code-dot-mil/SkLC/releases). Expand that asset's details to see its `sha256:` digest. Replace `<version>` below with the downloaded version and calculate its SHA-256:
 
 ```sh
@@ -23,4 +27,12 @@ Copy the complete skill folders from `skill-catalog/skills/` into your workspace
 
 To review findings before installation, download `skill-catalog-assessments-<version>.zip` from the same release and follow its README to verify, extract, and summarize the matching JSON pairs. Assessment is optional for installing these skills; the separate assessment-kit wheel provides the `skill-assessment summarize` command. Evidence applies to the exact package contents, so edits require a new assessment.
 
-The CI `skill-catalog.zip` download is also a single ZIP with `skills/` and `README.md` at its root. Unzip it into `skill-catalog/` and install as above. It is a test download, not a published release.
+## CI artifact
+
+For testing a development build, the CI `skill-catalog.zip` download is also a single ZIP with `skills/` and `README.md` at its root. Extract it into a new folder:
+
+```sh
+unzip skill-catalog.zip -d skill-catalog
+```
+
+Copy the complete folders from `skill-catalog/skills/` into `.agents/skills/` and verify discovery as described under [Released product](#released-product). This artifact is a development preview associated with its CI run and commit; use a published release when you want a released version.

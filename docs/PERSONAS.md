@@ -1,6 +1,22 @@
 # Documentation readers
 
-The README first serves teams choosing among installing skills, assessing skills, and hosting an exchange. This audience priority and the introductory knowledge level are confirmed: readers know basic Git and command-line use, with no assumed knowledge of agent skills, SkillSpector, or SkLC. The detailed role goals and reading paths below are inferred from supported workflows and can be refined through reader feedback.
+The README serves both people exploring AI-assisted work and teams choosing among installing skills, assessing skills, and hosting an exchange. The newcomer profile assumes no technical or AI knowledge. Technical knowledge is specific to the other roles below, rather than a prerequisite for the project introduction. These audience choices are confirmed; the encounter scenarios and detailed reading needs are inferred from supported workflows and can be refined through reader feedback.
+
+## Someone exploring AI-assisted work
+
+**Goal:** Understand whether skills could help with their work and what they need to try one.
+
+**Already knows:** No assumed knowledge of AI, agents, skills, software development, Git, or command-line tools.
+
+**Likely encounter:** Follows a colleague's link, a presentation, or a team initiative to the repository or an exchange. May want to understand the idea before choosing an application or asking for setup help.
+
+**Needs explained:** What an agent and a skill are, how a skill differs from the application that uses it, what an exchange offers, and why instructions and results need review.
+
+**Questions:** What can I do here? Do I need to install anything to read about a skill? Will this skill work with my application and my task? What access or software does it need? Who can help me get started? Does an assessment mean I can trust every result?
+
+**Success:** Explains what a skill does, distinguishes browsing from using it, identifies compatibility and task requirements, and chooses either a suitable next step or a concrete question for their team's support contact.
+
+**Reading path:** [Project introduction](../README.md) → [Using a skill](using-skills.md) → a skill's description and instructions on an exchange, or the [supplied catalog](../products/skill-catalog/README.md) when its software tasks fit their needs. Installation and assessment setup can be handed to a technical colleague.
 
 ## A team choosing a starting point
 

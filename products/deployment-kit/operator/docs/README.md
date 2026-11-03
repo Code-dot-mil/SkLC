@@ -14,7 +14,7 @@ The kit separates your live content from the included upstream components:
 | --- | --- |
 | `skills/` | Your live catalog: complete skill folders you choose to serve. You create this directory. |
 | `evidence/` | Matching assessment reports for those skills. Assessment jobs produce these files. |
-| `upstream/` | Included developer skills and reports you may choose to copy into the live catalog. |
+| `upstream/` | Included skills and reports you may choose to copy into the live catalog. |
 | `site/` and `src/` | Website source and the runtime that turns skills and reports into site inputs. |
 | `assessment/` | Bundled assessment kit as an installable Python package (a wheel), its installation requirement, and the scanner-image recipe. |
 | `ci/` and `.gitlab-ci.yml` | The GitLab workflow that assesses, builds, and publishes the catalog. |

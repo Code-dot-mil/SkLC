@@ -4,6 +4,8 @@ The assessment kit helps you find potential problems in an agent skill, decide w
 
 The kit runs the external SkillSpector scanner and asks a configured model to review its findings in context. That second review is called **adjudication**. The scanner report and adjudication stay together; `summarize` turns them into a Markdown explanation of what needs action.
 
+If you want to understand or try a skill before setting up assessment tools, start with [Using a skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). The commands below are for readers comfortable installing Python tools and running commands, or a colleague helping with that setup.
+
 Choose your path:
 
 - **Assess your own skill:** read the scope below, install the kit, configure the scanner and provider, then [run an assessment](#assess).

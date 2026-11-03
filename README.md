@@ -4,9 +4,29 @@ Skill Lifecycle (SkLC) helps teams install, assess, and share **agent skills**: 
 
 A skill is a folder containing a `SKILL.md` file with its name, description, and instructions, plus any supporting files. Developers install that folder in their workspace so their agent can discover and use it. Teams can assess a skill for potential problems and publish it alongside its review evidence in a **Skill Exchange**, a website for browsing and downloading skills.
 
-You can install skills, run assessments, or host an exchange independently. Start with the task you want to accomplish.
+## The skill lifecycle
+
+A skill needs more than useful instructions. Its authors need to understand who will use it, check that it behaves as intended, decide when it is ready to share, and revisit those decisions as the skill, model, or environment changes.
+
+The Skill Lifecycle organizes that work into five stages:
+
+![Five stages: Define, Build, Validate, Release, and Operate. A revision loop connects the stages so feedback can lead to further definition, changes, and testing.](docs/assets/skill-lifecycle-overview.svg)
+
+| Stage | What it accomplishes |
+| --- | --- |
+| **Define** | Establish the problem, intended users, expected behavior, and who is responsible for the skill. |
+| **Build** | Write the instructions and add the examples, scripts, or other supporting material the task needs. |
+| **Validate** | Check when the skill activates, the quality of its results, and potential safety or security problems. Gather evidence for the release decision. |
+| **Release** | Decide whether a version is ready for its intended users and make it available with the relevant review evidence. |
+| **Operate** | Collect feedback, investigate failures, and reassess the skill as its dependencies, models, or operating conditions change. Update or retire it when needed. |
+
+These stages form a cycle. Feedback during use—or a problem found during validation—can send a skill back for further definition, changes, and testing.
+
+The tools in this repository support parts of that lifecycle. The assessment kit helps gather validation evidence, while the catalog and deployment kits help distribute skills and assessment reports. Teams remain responsible for task-specific testing, release decisions, and ongoing review.
 
 ## Choose a starting point
+
+You can install skills, run assessments, or host an exchange independently. Start with the task you want to accomplish.
 
 | Your goal | What to use | Guide |
 | --- | --- | --- |

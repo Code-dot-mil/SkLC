@@ -4,6 +4,13 @@ After the maintainer accepts a version and its notes, append a section headed `#
 
 The workflow uses only that version's nonempty section as the GitHub Release description. Release notes are not uploaded as a separate asset. No release version or release notes have been accepted by adding this document.
 
+## 1.1.0
+
+- Add the Operator deployment kit for building and hosting a customized exchange.
+- Ship the standalone assessment CLI and catalog assessment evidence.
+- Add assessment advice and adjudication workflows.
+- Harden site sanitization and improve deployment guides.
+
 ## 1.0.0
 
 First SkLC release, providing a prebuilt Skill Exchange site and a separate catalog of skills.

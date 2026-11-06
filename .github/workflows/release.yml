@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging bundle --output "$RELEASE_DIR/assets/skill-bundle-$RELEASE_VERSION.zip"
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging assessments --output "$RELEASE_DIR/assets/skill-bundle-assessments-$RELEASE_VERSION.zip"
+          PYTHONPATH=maintainer/src uv run python -m sklc_maintainer.packaging assessments --output "$RELEASE_DIR/assets/skill-bundle-assessments-$RELEASE_VERSION.zip"
           python -m sklc_maintainer.packaging prebuilt \
             --repo-root . --site-dir products/deployment-kit/operator/site/dist \
             --version "$RELEASE_VERSION" \

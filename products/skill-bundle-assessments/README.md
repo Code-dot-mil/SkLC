@@ -1,6 +1,6 @@
 # Read the bundle's assessment results
 
-This download contains assessment reports for the supplied skills. Use it to understand confirmed problems, findings that still need investigation, false positives, and review limitations before deciding how to use a skill.
+This download contains assessment reports and ready-to-read summaries for the supplied skills. Use it to understand confirmed problems, findings that still need investigation, false positives, and review limitations before deciding how to use a skill.
 
 It contains evidence, not the skill packages themselves. Obtain the matching `skill-bundle-<version>.zip` if you also want to install the skills. Choose both downloads from the same [SkLC release](https://github.com/Code-dot-mil/SkLC/releases) and compare their SHA-256 checksums with the release-page values before unpacking.
 
@@ -20,13 +20,20 @@ Each skill has its own directory:
 <skill-name>/
   skillspector.json
   adjudication.json
+  summary.md
 ```
 
 `skillspector.json` contains the scanner's findings and execution/coverage information. `adjudication.json` reviews those findings in context and records the review's status, scope, judgments, limitations, and skill-content hash. Keep both JSON files together; they describe the exact skill contents assessed, rather than every later revision of that skill.
 
-## Produce a readable summary
+## Read the included summary
 
-Install the assessment-kit wheel by following its [installation guide](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/README.md#installation). Reading existing reports requires Python and the installed kit, but no SkillSpector installation, provider credentials, or new scan.
+Open `<skill-name>/summary.md` in a text editor or Markdown viewer. For example, after extracting as above, open `bundle-assessments/python-secure-code-review/summary.md`. No Python installation, assessment kit, scanner, provider credentials, or new scan is needed to read this file.
+
+CI generates each summary from its report pair when packaging this download. Summaries are derived explanations; the original JSON reports are retained unchanged. Read the scope, findings, and coverage limitations together.
+
+### Regenerate a summary when needed
+
+To produce a summary yourself from a report pair, install the assessment-kit wheel by following its [installation guide](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/README.md#installation). Regenerating a summary requires Python and the installed kit, but no SkillSpector installation, provider credentials, or new scan.
 
 From the working directory containing the installation's `.venv`, point `--assessment-dir` at the selected skill's extracted directory. For example, if you extracted this download into `bundle-assessments/` there:
 
@@ -53,4 +60,4 @@ Summarizing checks that findings and determinations agree, but does not compare 
 
 In the source repository, the main assessment workflow maintains current successful pairs under `products/skill-bundle-assessments/`, reusing matching results when eligible. Git retains earlier committed versions. Reports for removed or renamed skills are pruned after successful assessment.
 
-`scanner.log` is troubleshooting output rather than part of this download. Failed runs retain diagnostics as job artifacts and do not commit failed results. The downloaded JSON pairs are retained unchanged.
+`scanner.log` is troubleshooting output rather than part of this download. Failed runs retain diagnostics as job artifacts and do not commit failed results. The downloaded JSON pairs are retained unchanged. The `summary.md` files are generated during CI and release packaging and are not committed to the source repository.

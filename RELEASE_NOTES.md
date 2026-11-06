@@ -4,6 +4,13 @@ After the maintainer accepts a version and its notes, append a section headed `#
 
 The workflow uses only that version's nonempty section as the GitHub Release description. Release notes are not uploaded as a separate asset. No release version or release notes have been accepted by adding this document.
 
+## 1.2.0
+
+- Include a readable assessment summary in each skill download and in the assessment bundle.
+- Rename the skill catalog downloads to `skill-bundle-1.2.0.zip` and `skill-bundle-assessments-1.2.0.zip`. Update download automation that uses the previous `skill-catalog` filenames.
+- Standardize Operator generated data at `.exchange/generated/` beside `site/`. Custom build scripts should use this location.
+- Preserve skill creation and update dates from recorded source history instead of filesystem timestamps.
+
 ## 1.1.0
 
 - Add the Operator deployment kit for building and hosting a customized exchange.

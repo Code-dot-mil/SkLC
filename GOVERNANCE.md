@@ -1,20 +1,38 @@
-# Skill Exchange Governance
+# How skill changes are reviewed
 
-Human contributors own skill content and assessment decisions. Maintainers approve changes after human review. Assessment results provide review context; they do not replace that review.
+SkLC uses human review to decide which skill changes to accept. Assessment results help reviewers investigate problems; they do not approve a skill or replace that decision.
 
-## Existing evidence
+This document describes review in the upstream SkLC repository. Teams running their own Operator exchange also need to establish who can approve publication in their environment.
 
-Current paired reports under `products/skill-catalog-assessments/` preserve the latest assessment; Git preserves earlier results. Do not hand-author or alter those results to make a build pass.
+## Who does what?
 
-The site builder requires exact content freshness through the shared public package hash, successful native execution, completed adjudication, and one matching determination per finding. Missing, stale, or mismatched evidence fails generation. Nonfatal partial coverage and negative safety judgments are advisory and remain visible with their reasons.
+| Participant | Responsibility |
+| --- | --- |
+| Contributor | Propose skill or application changes through a pull request and explain their purpose. |
+| Human reviewer | Inspect a skill's purpose, metadata, instructions, supporting files, and assessment evidence. At least one human reviewer inspects skill changes before merge. |
+| Maintainer | Approve changes after human review and merge accepted contributions. |
 
-The assessment kit owns execution and report interpretation; upstream and customer CI invoke its public commands. A new or changed skill cannot enter the assessed site without matching evidence; the separate skill-catalog download contains skill files without an assessment requirement.
+Skills declare their name and description in `SKILL.md`; the exchange presents that metadata alongside their full instructions. Review the whole package, including supporting files that adjudication does not independently examine.
 
-## Review and generated files
+## From proposed change to published evidence
 
-- Contributors propose skill and application changes by pull request.
-- At least one human reviewer inspects skill changes before a maintainer merges them.
-- Reviewers consider declared purpose, metadata, instructions, supporting files, and available assessment evidence.
-- Skill packages declare their existing name and description in `SKILL.md`; the catalog uses these alongside the full instructions.
-- The index, copied assessment JSON pairs, and skill ZIPs are derived site inputs. Generate them locally or in CI; do not commit them.
-- Keep credentials and environment-specific deployment settings outside the repository.
+1. **Propose the change.** Submit the skill package and explain its intended use. Use [Contributing](CONTRIBUTING.md) for platform changes and local checks; it is not a separate skill-submission procedure.
+2. **Review the content and results.** Read the assessment's confirmed findings, unresolved findings, false-positive reasons, scope, and limitations. The [assessment guide](products/assessment-kit/README.md#summarize) explains how to obtain and interpret that summary.
+3. **Make the human decision.** A maintainer approves changes after human review. An automated scan completing successfully is not that approval.
+4. **Keep evidence tied to the accepted content.** The main assessment workflow maintains current report pairs for catalog skills. Site generation checks that each pair describes the exact skill being published. See [CI](CI.md#main-catalog-assessments) for how upstream automation retains the evidence.
+
+## What the publication checks establish
+
+An assessed site needs matching reports, successful scanner execution, completed adjudication, and a determination associated with every scanner finding. Missing, stale, or mismatched evidence stops site generation. This prevents the site from presenting a report for different skill contents as current evidence.
+
+Those checks establish report eligibility, not approval or absence of risk. Completed negative safety judgments and nonfatal coverage limitations remain advisory and may appear on a published site. The independent skill-catalog download packages skill files without requiring assessment.
+
+The repository does not define a severity-based approval threshold, a formal risk-acceptance record, or an escalation process for disputed findings. These are policy gaps, not permissions granted by a successful build. Reviewers should surface unresolved decisions for the maintainer rather than infer that the pipeline has settled them. Customer operators must define their own publication authority and decision process.
+
+## Preserve the review record
+
+Current reports are `skillspector.json` and `adjudication.json` under `products/skill-catalog-assessments/<skill-name>/`. Git preserves earlier committed results. Keep each pair together and regenerate it through assessment when skill contents change; do not edit report judgments or hashes to make a build pass.
+
+The site index, copied reports, and skill ZIPs are derived output. Generate them rather than committing them. Credentials and environment-specific deployment settings belong outside the repository.
+
+Operator pipelines retain evidence as job artifacts and make no source-control changes. Operators who need durable history must review and commit retained report pairs with their matching catalog revision; see the [Operator guide](products/deployment-kit/operator/docs/README.md#retain-evidence-and-run-again).

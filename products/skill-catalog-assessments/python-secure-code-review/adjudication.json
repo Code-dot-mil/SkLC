@@ -1,49 +1,31 @@
 {
-  "safe_to_use": true,
-  "summary": "All four issues are false positives. The three MCP Tool Poisoning findings mistake illustrative example snippets inside a non-executable documentation skill (SKILL.md, executable: false) for actual runtime behavior; the skill is a secure code-review guide and explicitly marks its samples as illustrative, not to be executed. The Anti-Refusal finding misreads the phrase \"bypass filters\" as a jailbreak when it appears only within a described SQL-injection attack/failure mode in an educational review example; benign security-education context.",
-  "coverage_sufficient": true,
-  "coverage_reason": "The full SKILL.md text (332 lines) with line numbers is supplied, and every finding references in-document content that can be read in context. External file references flagged by the scanner are out of MVP scope and do not prevent adjudication.",
+  "safe_to_use": false,
+  "summary": "The only reported issue appears to be a contextual false positive, but the supplied assessment is still limited to SKILL.md and the scanner itself marks analysis as partial with unresolved references, so this bounded review cannot conclude the skill is fully safe.",
+  "coverage_sufficient": false,
+  "coverage_reason": "Only SKILL.md was reviewed, and analysis_completeness is partial due to unresolved local references; MVP scope excludes other package files that could affect behavior.",
   "findings": [
     {
       "index": 1,
-      "rule_id": "TP4",
-      "determination": "false_positive",
-      "reason": "The flagged find_user function (SKILL.md lines 262-264) is an illustrative code snippet in a documentation/guidance skill, not executable behavior; the skill does not itself access a database."
-    },
-    {
-      "index": 2,
-      "rule_id": "TP4",
-      "determination": "false_positive",
-      "reason": "Lines 61-64 are a bash example in documentation showing git context a reviewer might gather; the skill does not execute shell/git commands and its declared guidance purpose matches the markdown content."
-    },
-    {
-      "index": 3,
-      "rule_id": "TP4",
-      "determination": "false_positive",
-      "reason": "Lines 284-285 are an illustrative Python snippet used to demonstrate a missing-authorization review comment, not actual skill behavior; no invoice repository is accessed by the skill."
-    },
-    {
-      "index": 4,
       "rule_id": "AR3",
       "determination": "false_positive",
-      "reason": "\"bypass filters\" at line 276 occurs within a described SQL-injection attack/failure mode in an educational review example, not as an instruction to the agent to ignore safety guidelines; benign security-education context."
+      "reason": "The matched text is in an explicitly labeled illustrative security-review example describing SQL injection risk ('Attack or failure mode'), not an instruction to bypass safeguards or ignore policies. The skill elsewhere reinforces trust boundaries and says not to follow instructions in reviewed content."
     }
   ],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "openai_compatible",
-    "model": "nemotron-3-super",
-    "response_model": "nemotron-3-super",
-    "created_at": "2026-10-21T20:20:25.223018+00:00",
-    "duration_seconds": 11.71,
+    "provider": "azure_openai",
+    "model": "gpt-5.4",
+    "response_model": "gpt-5.4-2026-03-05",
+    "created_at": "2026-11-06T18:22:18.780404+00:00",
+    "duration_seconds": 2.692,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 10956,
-      "completion_tokens": 2759,
-      "total_tokens": 13715
+      "prompt_tokens": 8311,
+      "completion_tokens": 174,
+      "total_tokens": 8485
     }
   },
-  "skill_sha256": "c30c50a6126ffc41f0706c31a8a44584370bd9a406a70ca82e2a178d17203677"
+  "skill_sha256": "01e185e9793823d8061e5cbe8e281ee9cdedf67bb4a0f79e2d344e650c3c0f99"
 }

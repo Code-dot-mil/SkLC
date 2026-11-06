@@ -19,14 +19,17 @@ Exchange-site developers maintain:
 
 Skill packages under `products/skill-catalog/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
 
+For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-review). Trusted same-repository PRs receive assessment; fork PRs receive no provider-backed assessment and need a maintainer to arrange matching evidence before their changed skills can build. Local generation also requires current evidence. Keep report pairs with their exact skill content; do not hand-edit evidence to make generation pass.
+
 ## First-Time Setup
 
-Install Python 3.12, `uv`, Node.js 22, `npm`, and `just`.
+Install [Python 3.12](https://www.python.org/downloads/), [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js 22 with npm](https://nodejs.org/en/download) (22.23.4 or a newer Node 22 patch), and [just](https://just.systems/man/en/packages.html). The [local lint guide](docs/linting.md) also covers the required `actionlint` and `shellcheck` tools.
 
 Install project dependencies:
 
 ```sh
-uv sync --extra test
+uv sync --extra test --group lint
+npm ci
 npm ci --prefix products/deployment-kit/operator/site
 ```
 
@@ -59,9 +62,8 @@ Generation reads `products/skill-catalog-assessments/<skill-name>/`. Use `--evid
 Python code must pass:
 
 ```sh
-uv run --extra test ruff check scripts tests products/assessment-kit
+just python-lint
 uv run --extra test pytest
-uv run python -m compileall scripts tests
 ```
 
 Keep Python code focused on exchange validation, evidence verification, generated index creation, and packaging. Do not put frontend build behavior in Python unless it is part of generated exchange data.
@@ -72,13 +74,15 @@ Site code must pass:
 
 ```sh
 npm --prefix products/deployment-kit/operator/site run lint
+npm --prefix products/deployment-kit/operator/site run lint:code
+npm --prefix products/deployment-kit/operator/site run typecheck:astro
 npm --prefix products/deployment-kit/operator/site run test
 npm --prefix products/deployment-kit/operator/site run build
 ```
 
 Node-based tests belong under `products/deployment-kit/operator/site/tests/`. Python pytest should not depend on Node, npm install state, or `products/deployment-kit/operator/site/node_modules`.
 
-Site builds and development servers always read `.exchange/generated/` beside the `site/` directory. Run `just generate` first. Missing data fails the build; an index containing an empty skills array renders an empty catalog.
+Site builds and development servers always read `.exchange/generated/` beside the `site/` directory. Run `just generate` first. Lint and test commands do not require generated data. Missing data fails the build; an index containing an empty skills array renders an empty catalog.
 
 ## CI Changes
 

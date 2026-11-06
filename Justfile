@@ -48,7 +48,6 @@ gitlab-lint:
     cp products/deployment-kit/operator/ci/gitlab/assessment.yml "$staging/operator/ci/"
     result=0
     for config in \
-        products/assessment-kit/ci/gitlab/profile.yml \
         products/deployment-kit/operator/ci/gitlab/assessment.yml \
         products/deployment-kit/prebuilt/ci/gitlab/.gitlab-ci.yml; do
         uv run --group lint gitlab-ci-verify --no-lint-api --gitlab-ci-file "$config" || result=$?

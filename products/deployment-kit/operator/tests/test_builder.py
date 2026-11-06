@@ -1,13 +1,75 @@
 import json
+import os
+import shutil
 from zipfile import ZipFile
 
 import pytest
+from skill_assessment.hashing import skill_digest
 from skill_exchange.builder import build_exchange
 
 
 def generate(current_assessment, output):
     skills, directory, *_ = current_assessment
     return build_exchange(skills_root=skills, generated_dir=output, assessments_dir=directory.parent)
+
+
+def set_dates(current_assessment, metadata):
+    skills, _, _, adjudication, save = current_assessment
+    skill = skills / "sample-skill"
+    source = skill / "SKILL.md"
+    source.write_text(source.read_text().replace("metadata:\n", metadata or "metadata:\n", 1))
+    adjudication["skill_sha256"] = skill_digest(skill)
+    save()
+
+
+def test_skill_dates_survive_copying_and_timestamp_changes(current_assessment, tmp_path):
+    set_dates(current_assessment, 'metadata:\n  ai4sdlc.created: "2026-06-19T19:49:27-05:00"\n'
+              '  ai4sdlc.updated: "2026-10-20T14:59:35-05:00"\n')
+    output = tmp_path / "generated"
+    generate(current_assessment, output)
+    original = (output / "index.json").read_bytes()
+    record = json.loads(original)["skills"][0]
+    assert record["first_observed"] == "2026-06-20T00:49:27+00:00"
+    assert record["last_updated"] == "2026-10-20T19:59:35+00:00"
+    skills, *_ = current_assessment
+    copied = tmp_path / "extracted-skills"
+    shutil.copytree(skills, copied)
+    for path in copied.rglob("*"):
+        if path.is_file():
+            os.utime(path, (1700000000, 1700000000))
+    generate((copied, *current_assessment[1:]), output)
+    assert (output / "index.json").read_bytes() == original
+
+
+@pytest.mark.parametrize("metadata,created,updated", [
+    ("", None, None),
+    ('metadata:\n  ai4sdlc.created: "2026-06-19T00:00:00Z"\n', "2026-06-19T00:00:00+00:00", None),
+    ('metadata:\n  ai4sdlc.updated: "2026-10-20T00:00:00Z"\n', None, "2026-10-20T00:00:00+00:00"),
+])
+def test_unknown_dates_are_not_invented(current_assessment, tmp_path, metadata, created, updated):
+    set_dates(current_assessment, metadata)
+    output = tmp_path / "generated"
+    generate(current_assessment, output)
+    record = json.loads((output / "index.json").read_text())["skills"][0]
+    assert record["first_observed"] == created
+    assert record["last_updated"] == updated
+
+
+@pytest.mark.parametrize("metadata", [
+    'metadata:\n  ai4sdlc.created: "not-a-date"\n',
+    'metadata:\n  ai4sdlc.updated: "2026-02-30T00:00:00Z"\n',
+    'metadata:\n  ai4sdlc.created: "2026-06-19T00:00:00"\n',
+    'metadata:\n  ai4sdlc.updated: 42\n',
+    'metadata:\n  ai4sdlc.created: "2026-10-20T00:00:00Z"\n  ai4sdlc.updated: "2026-06-19T00:00:00Z"\n',
+])
+def test_invalid_dates_preserve_published_output(current_assessment, tmp_path, metadata):
+    output = tmp_path / "generated"
+    generate(current_assessment, output)
+    before = {path: path.read_bytes() for path in output.rglob("*") if path.is_file()}
+    set_dates(current_assessment, metadata)
+    with pytest.raises(ValueError):
+        generate(current_assessment, output)
+    assert {path: path.read_bytes() for path in output.rglob("*") if path.is_file()} == before
 
 
 def test_current_pair_becomes_adjudication_and_exact_downloads(current_assessment, tmp_path):

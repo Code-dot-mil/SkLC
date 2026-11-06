@@ -16,7 +16,7 @@ export type Skill = {
   risk?: string;
   risk_reason?: string;
   confidence_flags: string[];
-  last_updated: string;
+  last_updated: string | null;
   last_scanned?: string | null;
   owner?: string;
   scanner_provenance?: {
@@ -92,7 +92,9 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
         );
       }
       if (sort === "last_updated") {
-        return Date.parse(right.last_updated || "") - Date.parse(left.last_updated || "") || left.skill_id.localeCompare(right.skill_id);
+        const leftUpdated = left.last_updated ? Date.parse(left.last_updated) : -Infinity;
+        const rightUpdated = right.last_updated ? Date.parse(right.last_updated) : -Infinity;
+        return rightUpdated - leftUpdated || left.skill_id.localeCompare(right.skill_id);
       }
       if (sort === "last_scanned") {
         return Date.parse(right.last_scanned || "") - Date.parse(left.last_scanned || "") || left.skill_id.localeCompare(right.skill_id);

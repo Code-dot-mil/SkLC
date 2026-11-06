@@ -2,6 +2,8 @@
 name: python-secure-code-review
 description: Use when reviewing Python code changes for vulnerabilities, unsafe input handling, authorization gaps, insecure data flows, or weak remediation.
 metadata:
+  ai4sdlc.created: "2026-06-19T15:47:47-05:00"
+  ai4sdlc.updated: "2026-10-20T14:59:35-05:00"
   ai4sdlc.category: security
   ai4sdlc.tags: code-review,python,security
   ai4sdlc.owner: slunsford

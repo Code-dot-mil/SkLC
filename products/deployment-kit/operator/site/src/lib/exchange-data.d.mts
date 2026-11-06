@@ -6,7 +6,7 @@ export type ExchangeSkill = Skill & {
   skill_md_content: string;
   skill_files: { path: string; size_bytes: number }[];
   download_path: string;
-  first_observed: string;
+  first_observed: string | null;
   scan_mode: string;
   assessment_downloads: { skillspector: string; adjudication: string };
   adjudication: {

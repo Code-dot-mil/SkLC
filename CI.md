@@ -62,7 +62,7 @@ An assessment produces two reports: findings from SkillSpector, the scanner that
 
 A completed assessment can report problems or limited coverage and still be included on the website. Including a report makes that evidence visible; it does not approve the skill for use. The [assessment guide](products/assessment-kit/README.md#review-scope) explains what the review covers and what its judgments mean.
 
-Python prepares the website's data and downloads. Node.js, the software runtime used by the site tools, consumes that data to build the website. The final website preview requires this preparation and every code/configuration check job to succeed. The skill bundle is packaged separately, so that download can be available even when the website cannot be built.
+Python prepares the website's data and downloads under `products/deployment-kit/operator/.exchange/generated/`, beside `site/`. Node.js, the software runtime used by the site tools, always reads that standard location to build the website; no generated-data environment variable is needed. The final website preview requires this preparation and every code/configuration check job to succeed. The skill bundle is packaged separately, so that download can be available even when the website cannot be built.
 
 ### Find a result and decide what to do
 

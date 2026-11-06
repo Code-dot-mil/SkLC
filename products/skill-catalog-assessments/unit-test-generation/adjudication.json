@@ -1,24 +1,24 @@
 {
   "safe_to_use": true,
-  "summary": "The SkillSpector report contains zero findings; every applicable analyzer completed, risk is LOW/SAFE, and SKILL.md is non-executable and describes benign unit-test generation guidance with no observable malicious behavior.",
+  "summary": "No security issues were reported in the supplied SKILL.md, and the visible skill content is limited to benign guidance for generating focused unit tests with appropriate scope and reporting.",
   "coverage_sufficient": true,
-  "coverage_reason": "100% of the single supplied component (SKILL.md) was scanned, all applicable analyzers completed with no uninspected files, ledger exceptions, or scope exclusions within the MVP scope.",
+  "coverage_reason": "Assessment scope is limited to SKILL.md and scanner evidence; that single file was fully scanned with no reported findings or noted inspection gaps within this scope.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "openai_compatible",
-    "model": "nemotron-3-super",
-    "response_model": "nemotron-3-super",
-    "created_at": "2026-10-21T20:19:52.122285+00:00",
-    "duration_seconds": 4.828,
+    "provider": "azure_openai",
+    "model": "gpt-5.4",
+    "response_model": "gpt-5.4-2026-03-05",
+    "created_at": "2026-11-06T18:22:27.677617+00:00",
+    "duration_seconds": 2.148,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 4599,
-      "completion_tokens": 875,
-      "total_tokens": 5474
+      "prompt_tokens": 3523,
+      "completion_tokens": 91,
+      "total_tokens": 3614
     }
   },
-  "skill_sha256": "bfc3ad60666cf917c3188d50a5a77d5cad3a2f93e212bec3100087bf24b42de0"
+  "skill_sha256": "ef6ed63a04ac4e471f7b3956b50d9630a7a8594656c20f4f012d3e0c2ba8eddb"
 }

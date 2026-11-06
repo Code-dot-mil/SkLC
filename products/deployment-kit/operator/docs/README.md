@@ -182,7 +182,7 @@ Review changes under `assessment/container/`. If the scanner or image runtime ch
 
 ### Preserve a customized component
 
-Your skill catalog and evidence are the supported customization surface. If you replace another component, you own that whole component and its compatibility. Preserve it by omitting its removal **and** excluding its files during extraction:
+Your live skills and evidence are the supported customization surface. If you replace another component, you own that whole component and its compatibility. Preserve it by omitting its removal **and** excluding its files during extraction:
 
 | Component | Omit from removal | Exclude from extraction |
 | --- | --- | --- |

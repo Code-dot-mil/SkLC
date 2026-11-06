@@ -11,8 +11,8 @@ In an Operator instance, `python -m skill_exchange.cli assess-catalog` assesses 
 Upstream Prebuilt generation uses the same CLI with explicit inputs:
 
 ```sh
-python -m skill_exchange.cli generate --skills products/skill-catalog \
-  --evidence products/skill-catalog-assessments --generated products/deployment-kit/operator/.exchange/generated
+python -m skill_exchange.cli generate --skills products/skill-bundle \
+  --evidence products/skill-bundle-assessments --generated products/deployment-kit/operator/.exchange/generated
 ```
 
 Node always consumes `.exchange/generated/` beside the `site/` directory, resolved from the site's Astro root. The index supplies identity, description, instructions, package download paths, adjudication, disposition counts, native display rows, and `assessment_downloads` for the two JSON reports. Scope and limitations follow the adjudication summary. Generation copies reports under `assessments/<skill>/` and creates individual skill archives under `zips/`.

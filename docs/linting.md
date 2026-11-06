@@ -22,7 +22,7 @@ The npm lockfiles pin ESLint, typescript-eslint, React Hooks and Astro plugins, 
 | `just site-typecheck` | Existing TypeScript compiler check |
 | `just site-code-lint` | JavaScript, TypeScript, React Hooks, and Astro syntax through ESLint |
 | `just site-astro-check` | Astro and TypeScript diagnostics through `astro check` |
-| `just markdown-lint` | Markdown structure, including agent and catalog skills |
+| `just markdown-lint` | Markdown structure, including agent and bundled skills |
 | `just markdown-check` | Markdown formatting through Prettier |
 | `just github-lint` | GitHub Actions configuration and embedded ShellCheck diagnostics |
 | `just gitlab-lint` | GitLab template scripts through the verifier's bundled ShellCheck |

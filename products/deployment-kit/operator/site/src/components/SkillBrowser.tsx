@@ -53,7 +53,7 @@ function RecommendationPills({
   );
 }
 
-export default function SkillCatalog({ skills }: { skills: Skill[] }) {
+export default function SkillBrowser({ skills }: { skills: Skill[] }) {
   const search = useQueryString();
 
   // Keep ordering identical during static rendering and browser hydration.
@@ -107,7 +107,7 @@ export default function SkillCatalog({ skills }: { skills: Skill[] }) {
     <section className="catalog-shell">
       <div className="catalog-summary">
         <div>
-          <p className="eyebrow">Skill catalog</p>
+          <p className="eyebrow">Available skills</p>
           <h2>Assessed skills for mission work</h2>
         </div>
         <p>{filtered.length} of {skills.length} skills shown</p>

@@ -16,7 +16,7 @@ The README serves both people exploring AI-assisted work and teams choosing amon
 
 **Success:** Explains what a skill does, distinguishes browsing from using it, identifies compatibility and task requirements, and chooses either a suitable next step or a concrete question for their team's support contact.
 
-**Reading path:** [Project introduction](../README.md) → [Using a skill](using-skills.md) → a skill's description and instructions on an exchange, or the [supplied catalog](../products/skill-catalog/README.md) when its software tasks fit their needs. Installation and assessment setup can be handed to a technical colleague.
+**Reading path:** [Project introduction](../README.md) → [Using a skill](using-skills.md) → a skill's description and instructions on an exchange, or the [supplied bundle](../products/skill-bundle/README.md) when its software tasks fit their needs. Installation and assessment setup can be handed to a technical colleague.
 
 ## A team choosing a starting point
 
@@ -24,7 +24,7 @@ The README serves both people exploring AI-assisted work and teams choosing amon
 
 **Already knows:** How to work in a source repository and run documented commands.
 
-**Needs explained:** What an agent skill contains, why assessment is useful, and how the catalog, assessment kit, and deployment modes differ.
+**Needs explained:** What an agent skill contains, why assessment is useful, and how the skill bundle, assessment kit, and deployment modes differ.
 
 **Questions:** What problem does SkLC solve? Which download fits my task? What else must I install? Can I use one product independently?
 
@@ -44,7 +44,7 @@ The README serves both people exploring AI-assisted work and teams choosing amon
 
 **Success:** Produces or locates a report pair, obtains a summary, identifies the next action and assessment limitations, and knows how to reassess after changes.
 
-**Reading path:** [Assessment kit](../products/assessment-kit/README.md), followed by [governance](../GOVERNANCE.md) when proposing a catalog change.
+**Reading path:** [Assessment kit](../products/assessment-kit/README.md), followed by [governance](../GOVERNANCE.md) when proposing a change to the supplied skills.
 
 ## An operator sharing a catalog
 

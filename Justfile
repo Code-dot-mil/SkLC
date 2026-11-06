@@ -5,7 +5,7 @@ default:
 
 generate:
     uv run python -m skill_exchange.cli generate \
-        --skills products/skill-catalog --evidence products/skill-catalog-assessments \
+        --skills products/skill-bundle --evidence products/skill-bundle-assessments \
         --generated products/deployment-kit/operator/.exchange/generated
 
 python-lint:

@@ -139,7 +139,7 @@ def check_ready(*, version: str, expected_commit: str) -> dict[str, str]:
 def _draft_asset_digests(assets: list[GitReleaseAsset], version: str) -> dict[str, str]:
     """Require four product ZIPs and the assessment wheel with GitHub digests."""
     expected_assets = {f"deployment-kit-{mode}-{version}.zip" for mode in ("prebuilt", "operator")}
-    expected_assets.update({f"skill-catalog-{version}.zip", f"skill-catalog-assessments-{version}.zip"})
+    expected_assets.update({f"skill-bundle-{version}.zip", f"skill-bundle-assessments-{version}.zip"})
     wheels = [
         asset.name for asset in assets
         if asset.name.startswith("skill_assessment-") and asset.name.endswith(".whl")

@@ -53,7 +53,7 @@ just ci-local
 
 Use `uv` directly for Python-only commands and `npm --prefix products/deployment-kit/operator/site` for site-only commands. Do not hide Python work inside npm scripts or Node work inside Python tests.
 
-`just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds leave current assessment reports untouched.
+`just generate` writes to `products/deployment-kit/operator/.exchange/generated/`, beside the Operator site. Generation reads current assessment reports without modifying them.
 
 Generation reads `products/skill-bundle-assessments/<skill-name>/`. Use `--evidence` with `python -m skill_exchange.cli generate` for a separate current-report root. Missing, stale, or mismatched report pairs fail generation; nonfatal partial coverage remains visible. Generation produces no evidence.
 
@@ -77,12 +77,12 @@ npm --prefix products/deployment-kit/operator/site run lint
 npm --prefix products/deployment-kit/operator/site run lint:code
 npm --prefix products/deployment-kit/operator/site run typecheck:astro
 npm --prefix products/deployment-kit/operator/site run test
-SKILL_EXCHANGE_GENERATED_ROOT="$PWD/.exchange/local-generated" npm --prefix products/deployment-kit/operator/site run build
+npm --prefix products/deployment-kit/operator/site run build
 ```
 
 Node-based tests belong under `products/deployment-kit/operator/site/tests/`. Python pytest should not depend on Node, npm install state, or `products/deployment-kit/operator/site/node_modules`.
 
-Set `SKILL_EXCHANGE_GENERATED_ROOT` explicitly for site build and development-server commands. Lint and test commands do not require a caller-supplied generated directory. Missing data fails the build; an explicitly selected directory containing an empty index renders an empty catalog.
+Site builds and development servers always read `.exchange/generated/` beside the `site/` directory. Run `just generate` first. Lint and test commands do not require generated data. Missing data fails the build; an index containing an empty skills array renders an empty catalog.
 
 ## CI Changes
 
@@ -100,7 +100,7 @@ When changing CI:
 
 ## Generated Files
 
-Do not hand-edit generated exchange data under `.exchange/generated/`. Current reports under `products/skill-bundle-assessments/` are durable generated evidence. Derived site data such as `index.json`, `assessments/`, and `zips/` should be regenerated locally or by CI and not committed.
+Do not hand-edit generated exchange data under `products/deployment-kit/operator/.exchange/generated/`. Current reports under `products/skill-bundle-assessments/` are durable generated evidence. Derived site data such as `index.json`, `assessments/`, and `zips/` should be regenerated locally or by CI and not committed.
 
 Do not commit local caches or build output such as `products/deployment-kit/operator/site/dist/`, `products/deployment-kit/operator/site/.astro/`, `products/deployment-kit/operator/site/node_modules/`, `.pytest_cache/`, or `.venv/`.
 

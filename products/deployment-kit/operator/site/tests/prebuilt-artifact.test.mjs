@@ -28,7 +28,6 @@ test("built site links and assets work unchanged at root and nested hosting path
   const env = {
     ...process.env,
     ASTRO_TELEMETRY_DISABLED: "1",
-    SKILL_EXCHANGE_GENERATED_ROOT: resolve(root, ".exchange/generated"),
   };
   const astroPackage = JSON.parse(readFileSync(resolve(dependencies, "astro/package.json"), "utf-8"));
   for (const args of [
@@ -44,6 +43,8 @@ test("built site links and assets work unchanged at root and nested hosting path
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "")
     .replace(/<[^>]*>/g, " ");
   const detail = renderedText("skills/example");
+  assert.ok(detail.includes("Jun 19, 2020"), "creation estimate must survive the static build");
+  assert.ok(detail.includes("Oct 20, 2025"), "last update must remain distinct from scan time");
   for (const expected of ["Fixture adjudication summary", "Adjudication status", "Coverage sufficient", "external references were not assessed", "2026"]) {
     assert.ok(detail.includes(expected), `missing assessment outcome: ${expected}`);
   }
@@ -115,7 +116,8 @@ function writeFixture(root) {
   const timestamp = "2026-01-01T00:00:00Z";
   const example = {
     skill_id: "example", name: "Example skill",
-    description: "Portable site test skill", last_updated: timestamp, first_observed: timestamp, last_scanned: timestamp,
+    description: "Portable site test skill", last_updated: "2025-10-20T12:00:00Z",
+    first_observed: "2020-06-19T12:00:00Z", last_scanned: timestamp,
     skill_files: [{ path: "SKILL.md", size_bytes: 100 }],
     skill_md_content: "---\nname: example\ndescription: Portable site test skill\n---\n# Example instructions\nRead the complete instructions before use.\n",
     download_path: "downloads/example.zip",

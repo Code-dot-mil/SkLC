@@ -1,10 +1,9 @@
 import { cpSync, mkdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const generatedRoot = process.env.SKILL_EXCHANGE_GENERATED_ROOT;
-if (!generatedRoot) throw new Error("Set SKILL_EXCHANGE_GENERATED_ROOT to the generated site data directory.");
-const generated = resolve(generatedRoot);
-const target = resolve("public", "downloads");
+const generated = fileURLToPath(new URL("../../.exchange/generated", import.meta.url));
+const target = fileURLToPath(new URL("../public/downloads", import.meta.url));
 const index = JSON.parse(readFileSync(resolve(generated, "index.json"), "utf-8"));
 
 rmSync(target, { force: true, recursive: true });

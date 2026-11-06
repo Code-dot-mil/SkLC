@@ -2,6 +2,8 @@
 name: code-change-description
 description: Use when drafting or refining a pull request or merge request description from diffs, file-by-file notes, or an existing draft.
 metadata:
+  ai4sdlc.created: "2026-06-19T19:49:27-05:00"
+  ai4sdlc.updated: "2026-10-20T14:59:35-05:00"
   ai4sdlc.category: collaboration
   ai4sdlc.tags: pull-requests,documentation,code-review
   ai4sdlc.owner: slunsford

@@ -1,8 +1,8 @@
 {
   "safe_to_use": false,
-  "summary": "No security issues were reported in the reviewed SKILL.md, but assessment scope is limited and scanner reports partial completeness due to unresolved references in the markdown.",
+  "summary": "No scanner issues were reported in the reviewed SKILL.md, and the content appears to be a benign documentation-focused skill. However, assessment scope is limited to SKILL.md and analysis completeness is marked partial due to unresolved local references.",
   "coverage_sufficient": false,
-  "coverage_reason": "Only SKILL.md was reviewed, and analysis_completeness is partial because two local path-like references in SKILL.md could not be resolved unambiguously.",
+  "coverage_reason": "Only SKILL.md was reviewed, and the scanner reports partial completeness with unresolved references in that file; additional referenced context was not available.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
@@ -10,14 +10,14 @@
     "provider": "azure_openai",
     "model": "gpt-5.4",
     "response_model": "gpt-5.4-2026-03-05",
-    "created_at": "2026-11-06T18:22:06.032687+00:00",
-    "duration_seconds": 1.681,
+    "created_at": "2026-11-06T18:47:07.051850+00:00",
+    "duration_seconds": 1.728,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 4334,
-      "completion_tokens": 90,
-      "total_tokens": 4424
+      "prompt_tokens": 4336,
+      "completion_tokens": 101,
+      "total_tokens": 4437
     }
   },
   "skill_sha256": "f90047f021de188b92058b1cdb4b9872d9b3c3a317c457cea5a2697b58b975e4"

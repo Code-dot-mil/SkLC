@@ -1,8 +1,8 @@
 {
   "skill": {
     "name": "unit-test-generation",
-    "source": "products/skill-catalog/unit-test-generation",
-    "scanned_at": "2026-11-06T18:22:27.163641+00:00"
+    "source": "products/skill-bundle/unit-test-generation",
+    "scanned_at": "2026-11-06T18:47:29.391629+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -42,7 +42,7 @@
         "usage_source": "provider_response",
         "prompt_tokens": 2147,
         "completion_tokens": 14,
-        "cached_tokens": 1152,
+        "cached_tokens": 0,
         "reasoning_tokens": 0,
         "total_tokens": 2161
       },

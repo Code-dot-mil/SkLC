@@ -1,8 +1,8 @@
 {
   "skill": {
     "name": "inline-documentation",
-    "source": "products/skill-catalog/inline-documentation",
-    "scanned_at": "2026-11-06T18:22:05.549965+00:00"
+    "source": "products/skill-bundle/inline-documentation",
+    "scanned_at": "2026-11-06T18:47:06.479403+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -42,7 +42,7 @@
         "usage_source": "provider_response",
         "prompt_tokens": 2713,
         "completion_tokens": 14,
-        "cached_tokens": 0,
+        "cached_tokens": 2560,
         "reasoning_tokens": 0,
         "total_tokens": 2727
       },
@@ -55,7 +55,7 @@
         "usage_source": "provider_response",
         "prompt_tokens": 2778,
         "completion_tokens": 14,
-        "cached_tokens": 0,
+        "cached_tokens": 2560,
         "reasoning_tokens": 0,
         "total_tokens": 2792
       },

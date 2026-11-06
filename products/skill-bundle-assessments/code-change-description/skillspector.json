@@ -1,8 +1,8 @@
 {
   "skill": {
     "name": "code-change-description",
-    "source": "products/skill-catalog/code-change-description",
-    "scanned_at": "2026-11-06T18:21:56.336163+00:00"
+    "source": "products/skill-bundle/code-change-description",
+    "scanned_at": "2026-11-06T18:46:57.276770+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -42,7 +42,7 @@
         "usage_source": "provider_response",
         "prompt_tokens": 3187,
         "completion_tokens": 14,
-        "cached_tokens": 0,
+        "cached_tokens": 3072,
         "reasoning_tokens": 0,
         "total_tokens": 3201
       },
@@ -55,7 +55,7 @@
         "usage_source": "provider_response",
         "prompt_tokens": 3253,
         "completion_tokens": 14,
-        "cached_tokens": 0,
+        "cached_tokens": 1152,
         "reasoning_tokens": 0,
         "total_tokens": 3267
       },

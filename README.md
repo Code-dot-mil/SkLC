@@ -66,6 +66,8 @@ An assessment is evidence for a human decision, not a safety certificate. Adjudi
 
 ## Share skills through an exchange
 
+Maintainers can publish the supplied exchange as a browsable GitHub Pages site using the [repository deployment setup](CI.md#github-pages). The deployment records the site URL when it succeeds.
+
 An exchange lets visitors browse skill descriptions, read instructions and assessment results, and download skill packages and reports. It is a static website: assessment and site building happen before publication, and visitors do not trigger model requests.
 
 Choose **Prebuilt** to host the supplied four-skill bundle without building the site. Choose **Operator** to maintain your own catalog, select any supplied skills you want to include, and run the assessment, build, and publication pipeline. Operator setup requires GitLab runners, an assessment container image, and access to a configured model provider; the [Operator guide](products/deployment-kit/operator/docs/README.md) walks through those requirements and ongoing updates.

@@ -18,12 +18,12 @@ There are two workflows in this repository:
 
 | Workflow | When it starts | What it produces |
 | --- | --- | --- |
-| **CI** | A pull request is opened or updated, or commits are pushed to `main`. | Check results, assessment reports when needed, and development-preview downloads. |
+| **CI** | A pull request is opened or updated, or commits are pushed to `main`. | Check results, assessment reports when needed, and development-preview downloads. Successful `main` builds also publish the example website to GitHub Pages. |
 | **Release** | A version tag is pushed. A tag is a Git label identifying a particular commit. | An unpublished release draft containing versioned downloads. A maintainer publishes it after verification. |
 
-A change normally progresses through PR review, acceptance into `main`, and eventual selection for a release. A successful CI run creates a preview; it does not publish a release or deploy a website.
+A change normally progresses through PR review, acceptance into `main`, and eventual selection for a release. PR runs create previews for review. Successful pushes to `main` also publish the rendered Prebuilt website to GitHub Pages, once Pages is enabled. Publishing a versioned release remains a separate maintainer action.
 
-The workflows described here maintain SkLC itself on GitHub. Teams hosting an exchange run separate deployment procedures in their own environment. Follow the [Prebuilt deployment guide](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md) or [Operator guide](products/deployment-kit/operator/docs/README.md) for that work.
+The workflows described here maintain SkLC itself and its example exchange on GitHub. Teams hosting an exchange run separate deployment procedures in their own environment. Follow the [Prebuilt deployment guide](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md) or [Operator guide](products/deployment-kit/operator/docs/README.md) for that work.
 
 ## GitHub validation
 
@@ -93,6 +93,27 @@ These have the same layouts as their release counterparts. GitHub turns the stag
 Bundle packaging reads one saved Git revision, excluding uncommitted edits and files Git does not track. A changed-skill PR preview uses matching reports from that same run. It does not silently substitute an older report for a changed skill.
 
 Contributors who need to package the current commit locally can use the commands under [Local packaging](#local-packaging). You do not need those commands to download CI previews.
+
+## GitHub Pages
+
+GitHub Pages hosts a browsable copy of the supplied exchange, so visitors can read skill instructions, inspect assessment results, and download individual skills without installing or hosting the Prebuilt kit themselves.
+
+After a push to `main`, the **Deploy GitHub Pages** job waits for **Static site artifact** to succeed. That artifact already depends on the code/configuration checks and matching assessment evidence. Deployment downloads that run's Prebuilt artifact and publishes only the contents of `public/`: the rendered website, its assets, and skill/report downloads. Installation guides and deployment configuration outside `public/` remain in the kit download.
+
+PRs, including forks and branches used for stacked PRs, do not deploy. The hosted example follows successful `main` builds; it is not pinned to the latest versioned release. Deployment runs one at a time, and the **github-pages** environment records the URL returned by GitHub.
+
+### Enable the repository's site
+
+An administrator completes this setup once:
+
+1. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. Pages must be available for the repository's visibility and GitHub plan.
+2. In **Settings → Environments**, configure the **github-pages** environment to allow deployment from `main`. Check whether organizational policies require additional environment approvals or restrict the official Pages actions.
+3. After this workflow is merged, open its CI run for a push to `main` and watch **Deploy GitHub Pages**. If it failed because Pages had not yet been enabled, enable Pages and rerun the failed job from that run.
+4. Follow the deployment URL shown on the run or environment. Confirm the home page styling and interactive filters, open a skill detail page, and download its ZIP and both JSON reports.
+
+The site uses relative links, so the same Prebuilt contents support a repository path such as `/SkLC/` and a domain root. Use the URL returned by deployment; a conventional project address is not evidence that a site is live. A custom domain is optional and configured separately in Pages settings.
+
+This job uses GitHub's [Pages workflow actions](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages). Its `pages: write` permission allows publication, and `id-token: write` supplies the identity token GitHub requires. These permissions belong only to the deployment job. Site generation and assessment are completed beforehand; deployment runs no scanner or model requests.
 
 ## Main bundle assessments
 

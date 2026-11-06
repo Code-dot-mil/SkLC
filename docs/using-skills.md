@@ -29,7 +29,7 @@ An assessment looks for potential problems in the skill's instructions. On an ex
 
 An assessment helps you decide what needs attention. It does not guarantee that a skill is suitable for your task or that its results will be correct. SkLC's contextual review examines the main instruction file and scanner evidence; it does not independently review supporting files. Ask the author or your team's reviewer about concerns you cannot evaluate yourself.
 
-If you have downloaded assessment files instead of reading them on an exchange, they are technical reports. A colleague can use the [assessment results guide](../products/skill-bundle-assessments/README.md) to produce a readable summary. You do not need to configure a new scan to read existing results.
+If you have downloaded SkLC's assessment results instead of reading them on an exchange, open `summary.md` in the directory named for your skill. The [assessment results guide](../products/skill-bundle-assessments/README.md) explains the archive layout and findings. Reading the included summaries requires no assessment tools or new scan.
 
 ## Install and try a task
 

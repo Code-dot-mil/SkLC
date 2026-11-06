@@ -44,6 +44,8 @@ def package_bundle(source: Path, output: Path) -> Path:
 
 
 def package_assessments(source: Path, output: Path, source_dir: Path | None) -> Path:
+    from skill_assessment.commands.summarize import summarize
+
     if output.exists():
         raise FileExistsError(output)
     committed = source / "products/skill-bundle-assessments"
@@ -55,6 +57,7 @@ def package_assessments(source: Path, output: Path, source_dir: Path | None) -> 
             if any(path.is_symlink() for path in (reports, report.parent, report)) or not report.is_file():
                 raise ValueError(f"Missing or symlinked report: {report}")
             files[f"{name}/{filename}"] = report.read_bytes()
+        files[f"{name}/summary.md"] = summarize(reports / name).encode("utf-8")
     return write_zip(output, files)
 
 

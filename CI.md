@@ -84,7 +84,7 @@ On the selected CI run's summary page, find the artifacts produced by successful
 | --- | --- |
 | `static-site` | A finished Prebuilt website under `public/`, deployment guides, and hidden `.gitlab-ci.yml` configuration. Extract the ZIP once, then follow its deployment guide. |
 | `skill-bundle.zip` | Complete skill folders under `skills/` and their installation README. Follow that README to install them. |
-| `skill-bundle-assessments.zip` | A README and two JSON reports per selected skill. Follow the README to produce a readable summary. JSON is the structured data format used for these reports. |
+| `skill-bundle-assessments.zip` | A README, two original JSON reports, and a generated `summary.md` per selected skill. Open the included summary to read the findings. JSON is the structured data format used for these reports. |
 | `skill_assessment-*.whl` | The standalone assessment command-line tool. A `.whl` file is an installable Python package; follow the [assessment installation guide](products/assessment-kit/README.md#installation). SkillSpector is installed separately. |
 | `deployment-kit-operator-*.zip` | The tools, website source, automation configuration, assessment wheel, and included skills/reports needed to maintain an exchange. Follow its README. |
 
@@ -170,10 +170,10 @@ The tag starts the [Release workflow](.github/workflows/release.yml). It validat
 | `deployment-kit-prebuilt-<version>.zip` | Deploy the finished example website. |
 | `deployment-kit-operator-<version>.zip` | Build and deploy a maintained catalog. |
 | `skill-bundle-<version>.zip` | Install the supplied skills. |
-| `skill-bundle-assessments-<version>.zip` | Read those skills' assessment reports. |
+| `skill-bundle-assessments-<version>.zip` | Read those skills' assessment reports and included summaries. |
 | `skill_assessment-<version>-py3-none-any.whl` | Install the assessment command-line tool. Its filename uses Python's normalized version. |
 
-Release preparation runs no scanner, so missing or outdated committed evidence fails the build. Bundle contents come from the tagged commit. Wait for the workflow to finish creating the draft and uploading these files. A prerelease version is marked as a prerelease in GitHub.
+CI and release packaging generate each assessment summary from its report pair without committing the summary to the repository. Release preparation runs no scanner, so missing or outdated committed evidence fails the build. Bundle contents come from the tagged commit. Wait for the workflow to finish creating the draft and uploading these files. A prerelease version is marked as a prerelease in GitHub.
 
 The workflow owns draft creation and asset uploads. Do not create a competing draft or substitute locally repackaged previews: doing so would break the connection between the verified commit, workflow, and downloads. Existing tags, partial drafts, or failed preparation need investigation and agreed recovery before moving tags or replacing assets.
 

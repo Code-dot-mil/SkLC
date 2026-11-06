@@ -383,7 +383,7 @@ jobs:
       - name: Build operator kit preview
         run: |
           PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging bundle --output "$RUNNER_TEMP/operator-bundle.zip"
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging assessments --output "$RUNNER_TEMP/skill-bundle-assessments.zip" \
+          PYTHONPATH=maintainer/src uv run python -m sklc_maintainer.packaging assessments --output "$RUNNER_TEMP/skill-bundle-assessments.zip" \
             --source-dir "$RUNNER_TEMP/current-assessments"
           uv build --wheel --python 3.12 products/assessment-kit --out-dir "$RUNNER_TEMP/operator"
           version=$(python -c 'import tomllib; print(tomllib.load(open("products/assessment-kit/pyproject.toml", "rb"))["project"]["version"])')

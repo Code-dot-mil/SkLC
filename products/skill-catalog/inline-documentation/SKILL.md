@@ -2,6 +2,8 @@
 name: inline-documentation
 description: Use when adding or improving code-adjacent documentation such as comments, docstrings, type notes, or small README/API clarifications.
 metadata:
+  ai4sdlc.created: "2026-06-25T11:06:07-04:00"
+  ai4sdlc.updated: "2026-10-20T14:59:35-05:00"
   ai4sdlc.category: documentation
   ai4sdlc.tags: documentation
   ai4sdlc.owner: ai4sdlc-skills-team

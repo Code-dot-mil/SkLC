@@ -132,6 +132,14 @@ Completed negative judgments and coverage limitations can allow publication and 
 
 After success, open **Deploy > Pages** and follow its URL. Verify the styled catalog, a skill detail page, its ZIP download, and both JSON report downloads. The site shows adjudication guidance alongside original scanner findings. The assessment job's `assessment.md` provides an action summary without opening the site.
 
+### Skill dates
+
+The catalog reads `ai4sdlc.created` and `ai4sdlc.updated` from each skill's `SKILL.md` metadata. Use quoted ISO timestamps with explicit timezones, for example `ai4sdlc.created: "2026-06-19T19:49:27-05:00"`. Missing dates display as Unknown; invalid timestamps or an update before creation stop generation. Last updated sorting puts known dates first, newest first, with skill ID ordering for ties and unknown dates. Last scanned comes independently from the assessment report.
+
+The bundled skills' creation estimates use the earliest available Git author timestamp across their package files, following each file's renames; their update dates use the latest recorded package change before this metadata backfill. Creation means earliest recorded source history, which may be later than original authorship. These dates remain stable across checkout, copying, and extraction; generation does not read Git history or filesystem timestamps.
+
+Preserve creation when importing a skill. For new skills, record creation and update together; advance update when changing instructions or supporting files, before assessment. Leave unavailable dates absent rather than guessing. Changing date metadata changes the package hash and requires a fresh assessment.
+
 ## Retain evidence and run again
 
 Download the specific assessment job's archive from the job or **Build > Artifacts**. The template requests 30-day expiry; GitLab retention settings may keep current artifacts longer. A latest-artifacts link can change after another run.

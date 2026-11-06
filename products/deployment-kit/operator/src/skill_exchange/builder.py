@@ -29,7 +29,7 @@ def build_exchange(*, skills_root: Path, generated_dir: Path, assessments_dir: P
             raise ValueError("Generated output and input skills or evidence must not overlap")
     skills = discover_skills(skills_root)
     # Validate all inputs before replacing any generated output.
-    current = [(skill, *read_current_assessment(assessments_dir, skill)) for skill in skills]
+    current = [(skill, *read_current_assessment(assessments_dir, skill), catalog_metadata(skill)) for skill in skills]
     generated_dir.mkdir(parents=True, exist_ok=True)
     for name in ("zips", "skills", "assessments", "tables", "scanner-runs"):
         directory = generated_dir / name
@@ -40,7 +40,7 @@ def build_exchange(*, skills_root: Path, generated_dir: Path, assessments_dir: P
         if directory.exists():
             shutil.rmtree(directory)
     records = []
-    for skill, directory, report, adjudication in current:
+    for skill, directory, report, adjudication, metadata in current:
         identifier = skill.metadata.skill_id
         destination = generated_dir / "assessments" / identifier
         destination.mkdir(parents=True)
@@ -59,10 +59,8 @@ def build_exchange(*, skills_root: Path, generated_dir: Path, assessments_dir: P
                             for path in sorted(skill.path.rglob("*")) if path.is_file()],
             "download_path": f"downloads/{archive.name}",
             **display_assessment(skill, report, adjudication, downloads),
-            **catalog_metadata(skill),
+            **metadata,
             "last_scanned": report.get("skill", {}).get("scanned_at"),
-            "last_updated": skill_last_updated(skill),
-            "first_observed": skill_first_observed(skill),
             "assessment_downloads": downloads,
         })
     (generated_dir / "index.json").write_text(json.dumps({"skills": records}, indent=2) + "\n", encoding="utf-8")
@@ -122,6 +120,23 @@ def display_assessment(skill, report, adjudication, downloads):
 
 def catalog_metadata(skill):
     metadata = skill.metadata.raw.get("metadata") or {}
+    dates = {}
+    for key in ("created", "updated"):
+        value = metadata.get(f"ai4sdlc.{key}")
+        if value is None:
+            dates[key] = None
+            continue
+        try:
+            parsed = datetime.fromisoformat(value)
+            if parsed.utcoffset() is None:
+                raise ValueError("timezone is required")
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                f"{skill.metadata.skill_id}: ai4sdlc.{key} must be a quoted ISO timestamp with timezone"
+            ) from error
+        dates[key] = parsed.astimezone(UTC)
+    if dates["created"] is not None and dates["updated"] is not None and dates["updated"] < dates["created"]:
+        raise ValueError(f"{skill.metadata.skill_id}: updated must not precede created")
     raw_tags = metadata.get("ai4sdlc.tags") or ""
     if isinstance(raw_tags, str):
         tags = [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
@@ -132,14 +147,6 @@ def catalog_metadata(skill):
     return {
         "category": metadata.get("ai4sdlc.category"), "tags": tags,
         "owner": metadata.get("ai4sdlc.owner"),
+        "first_observed": dates["created"].isoformat() if dates["created"] else None,
+        "last_updated": dates["updated"].isoformat() if dates["updated"] else None,
     }
-
-
-def skill_last_updated(skill) -> str:
-    newest_mtime = max(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
-    return datetime.fromtimestamp(newest_mtime, tz=UTC).isoformat()
-
-
-def skill_first_observed(skill) -> str:
-    oldest_mtime = min(path.stat().st_mtime for path in skill.path.rglob("*") if path.is_file())
-    return datetime.fromtimestamp(oldest_mtime, tz=UTC).isoformat()

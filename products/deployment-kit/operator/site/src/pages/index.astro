@@ -1,13 +1,13 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import SkillCatalog from "../components/SkillCatalog";
+import SkillBrowser from "../components/SkillBrowser";
 import { exchangeIndex as index } from "../lib/exchange-data.mjs";
 ---
 
 <BaseLayout title="Skill Exchange">
   <header class="header home-header">
     <div>
-      <p class="eyebrow">Agent skill catalog</p>
+      <p class="eyebrow">Agent skills</p>
       <h1>Skill Exchange</h1>
       <p class="home-lede">Browse scanner-assessed, evidence-backed skill packages for AI agents.</p>
     </div>
@@ -18,5 +18,5 @@ import { exchangeIndex as index } from "../lib/exchange-data.mjs";
       </a>: a <code>SKILL.md</code> file with metadata and instructions, plus optional scripts, references, assets, and resources an agent can load when a task calls for them.
     </p>
   </header>
-  <SkillCatalog client:load skills={index.skills} />
+  <SkillBrowser client:load skills={index.skills} />
 </BaseLayout>

@@ -17,8 +17,8 @@ The intended source layout is:
 ```text
 products/
   assessment-kit/
-  skill-catalog/
-  skill-catalog-assessments/
+  skill-bundle/
+  skill-bundle-assessments/
   deployment-kit/
     prebuilt/
     operator/

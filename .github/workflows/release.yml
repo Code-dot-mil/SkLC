@@ -61,8 +61,8 @@ jobs:
       - name: Generate exchange data from current assessments
         run: >-
           uv run python -m skill_exchange.cli generate
-          --skills products/skill-catalog
-          --evidence products/skill-catalog-assessments
+          --skills products/skill-bundle
+          --evidence products/skill-bundle-assessments
           --generated .exchange/generated
       - name: Build static site
         run: SKILL_EXCHANGE_GENERATED_ROOT="$GITHUB_WORKSPACE/.exchange/generated" npm --prefix products/deployment-kit/operator/site run build
@@ -70,8 +70,8 @@ jobs:
         id: release-assets
         shell: bash
         run: |
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip"
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging assessments --output "$RELEASE_DIR/assets/skill-catalog-assessments-$RELEASE_VERSION.zip"
+          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging bundle --output "$RELEASE_DIR/assets/skill-bundle-$RELEASE_VERSION.zip"
+          PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging assessments --output "$RELEASE_DIR/assets/skill-bundle-assessments-$RELEASE_VERSION.zip"
           python -m sklc_maintainer.packaging prebuilt \
             --repo-root . --site-dir products/deployment-kit/operator/site/dist \
             --version "$RELEASE_VERSION" \
@@ -84,8 +84,8 @@ jobs:
       - name: Build operator kit
         run: >-
           uv run python -m sklc_maintainer.packaging operator --version "$RELEASE_VERSION"
-          --catalog "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip"
-          --assessments "$RELEASE_DIR/assets/skill-catalog-assessments-$RELEASE_VERSION.zip"
+          --bundle "$RELEASE_DIR/assets/skill-bundle-$RELEASE_VERSION.zip"
+          --assessments "$RELEASE_DIR/assets/skill-bundle-assessments-$RELEASE_VERSION.zip"
           --wheel "$RELEASE_DIR"/assets/*.whl --output-dir "$RELEASE_DIR/assets"
       - name: Create draft GitHub Release
         id: draft-release
@@ -100,8 +100,8 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             "$RELEASE_DIR/assets/deployment-kit-prebuilt-$RELEASE_VERSION.zip" \
             "$RELEASE_DIR/assets/deployment-kit-operator-$RELEASE_VERSION.zip" \
-            "$RELEASE_DIR/assets/skill-catalog-$RELEASE_VERSION.zip" \
-            "$RELEASE_DIR/assets/skill-catalog-assessments-$RELEASE_VERSION.zip" \
+            "$RELEASE_DIR/assets/skill-bundle-$RELEASE_VERSION.zip" \
+            "$RELEASE_DIR/assets/skill-bundle-assessments-$RELEASE_VERSION.zip" \
             "$RELEASE_DIR"/assets/*.whl \
             --verify-tag --draft --target "$SOURCE_REVISION" --title "$GITHUB_REF_NAME" \
             --notes-file "$RELEASE_DIR/release-body.md" \

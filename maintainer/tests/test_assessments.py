@@ -20,7 +20,7 @@ def repository(tmp_path, monkeypatch):
     git("config", "user.name", "CI Test")
     git("config", "user.email", "ci@example.invalid")
     for name in ("a", "b"):
-        skill = tmp_path / "catalog" / name
+        skill = tmp_path / "bundle" / name
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text(f"---\nname: {name}\ndescription: Test package\n---\nInstructions.\n")
         (skill / "reference.md").write_text("Supporting instructions")
@@ -28,9 +28,9 @@ def repository(tmp_path, monkeypatch):
         reports.mkdir(parents=True)
         for filename in ("skillspector.json", "adjudication.json", "scanner.log"):
             (reports / filename).write_text("original")
-    (tmp_path / "catalog/README.md").write_text("Catalog documentation")
+    (tmp_path / "bundle/README.md").write_text("Bundle documentation")
     git("add", ".")
-    git("commit", "-qm", "initial catalog")
+    git("commit", "-qm", "initial bundle")
     executable = tmp_path / "bin/skill-assessment"
     executable.parent.mkdir()
     # Exercise the real process boundary; assessment-kit owns report interpretation.
@@ -71,21 +71,21 @@ else:
 def test_selection_tracks_supporting_changes_and_deletions_and_rejects_invalid_refs(repository):
     root, git, run, calls = repository
     base = git("rev-parse", "HEAD")
-    (root / "catalog/a/reference.md").unlink()
-    shutil.rmtree(root / "catalog/b")
+    (root / "bundle/a/reference.md").unlink()
+    shutil.rmtree(root / "bundle/b")
     git("add", "-A")
     git("commit", "-qm", "change support and remove package")
-    run("select", "--skills", "catalog", "--output-dir", "selection", "--base-sha", base)
-    assert (root / "selection/changed-skills.nul").read_bytes() == b"catalog/a\0catalog/b\0"
-    assert (root / "selection/current-skills.nul").read_bytes() == b"catalog/a\0"
+    run("select", "--skills", "bundle", "--output-dir", "selection", "--base-sha", base)
+    assert (root / "selection/changed-skills.nul").read_bytes() == b"bundle/a\0bundle/b\0"
+    assert (root / "selection/current-skills.nul").read_bytes() == b"bundle/a\0"
     base = git("rev-parse", "HEAD")
-    (root / "catalog/README.md").write_text("Unrelated documentation")
+    (root / "bundle/README.md").write_text("Unrelated documentation")
     git("add", "-A")
     git("commit", "-qm", "documentation only")
-    run("select", "--skills", "catalog", "--output-dir", "selection", "--base-sha", base)
+    run("select", "--skills", "bundle", "--output-dir", "selection", "--base-sha", base)
     assert not (root / "selection/current-skills.nul").read_bytes()
     for invalid in ("invalid", ""):
-        run("select", "--skills", "catalog", "--output-dir", "invalid", "--base-sha", invalid, success=False)
+        run("select", "--skills", "bundle", "--output-dir", "invalid", "--base-sha", invalid, success=False)
     run("select", "--skills", "missing", "--output-dir", "invalid", success=False)
     assert not (root / "invalid").exists() and not calls()
 
@@ -100,7 +100,7 @@ def test_only_unchanged_incoming_pairs_allow_public_cli_reuse(repository, incomi
         (root / "reports/a" / incoming).write_text("author changed report")
         git("add", "-A")
         git("commit", "-qm", "incoming report edit")
-    run("select", "--skills", "catalog", "--output-dir", "selection")
+    run("select", "--skills", "bundle", "--output-dir", "selection")
     run("assess", "--selection", "selection/current-skills.nul", "--reports", "reports", "--before-sha", before)
     observed = {Path(call[call.index("--skill") + 1]).name: "--if-changed" in call for call in calls()}
     assert observed == {"a": incoming is None, "b": incoming != "initial"}
@@ -119,15 +119,15 @@ def test_pruning_retains_live_bytes_notes_and_symlinks_and_handles_last_skill_re
     (outside / "skillspector.json").write_text("untouched")
     (root / "reports/outside-link").symlink_to(outside, target_is_directory=True)
     live = {path: path.read_bytes() for path in (root / "reports/a").iterdir()}
-    run("select", "--skills", "catalog", "--output-dir", "selection")
+    run("select", "--skills", "bundle", "--output-dir", "selection")
     run("prune", "--selection", "selection/current-skills.nul", "--reports", "reports")
     assert all(path.read_bytes() == data for path, data in live.items())
     assert not (root / "reports/retired").exists()
     assert sorted(path.name for path in (root / "reports/retired-with-notes").iterdir()) == ["notes.md"]
     assert (outside / "skillspector.json").read_text() == "untouched"
     for name in ("a", "b"):
-        shutil.rmtree(root / "catalog" / name)
-    run("select", "--skills", "catalog", "--output-dir", "selection")
+        shutil.rmtree(root / "bundle" / name)
+    run("select", "--skills", "bundle", "--output-dir", "selection")
     run("assess", "--selection", "selection/current-skills.nul", "--reports", "reports",
         "--before-sha", "invalid", success=False)
     assert all(path.read_bytes() == data for path, data in live.items()) and not calls()
@@ -141,7 +141,7 @@ def test_pruning_retains_live_bytes_notes_and_symlinks_and_handles_last_skill_re
 def test_partial_failures_retain_outputs_and_action_summaries(repository, monkeypatch, keep_going):
     root, _, run, calls = repository
     monkeypatch.setenv("FAIL_SKILL", "a")
-    run("select", "--skills", "catalog", "--output-dir", "selection")
+    run("select", "--skills", "bundle", "--output-dir", "selection")
     result = run("assess", "--selection", "selection/current-skills.nul", "--reports", "reports",
                  *(["--keep-going"] if keep_going else []), success=False)
     assert result.returncode == 3 and len(calls()) == (2 if keep_going else 1)
@@ -164,13 +164,13 @@ def test_workflow_commits_only_pairs_and_does_not_force_over_another_writer(repo
 
     root, git, _, _ = repository
     workflow = Path(__file__).resolve().parents[2] / ".github/workflows/ci.yml"
-    steps = yaml.safe_load(workflow.read_text())["jobs"]["catalog-assessments"]["steps"]
+    steps = yaml.safe_load(workflow.read_text())["jobs"]["bundle-assessments"]["steps"]
     body = next(step["run"] for step in steps if step.get("name") == "Commit current assessments")
-    # An intentionally empty catalog has no matching tracked or untracked pairs.
+    # An intentionally empty bundle has no matching tracked or untracked pairs.
     before = git("rev-parse", "HEAD")
     assert subprocess.run(["bash", "-e", "-c", body], capture_output=True).returncode == 0
     assert git("rev-parse", "HEAD") == before
-    reports = root / "products/skill-catalog-assessments"
+    reports = root / "products/skill-bundle-assessments"
     shutil.copytree(root / "reports", reports)
     git("add", "products")
     git("commit", "-qm", "existing current pairs")
@@ -183,14 +183,14 @@ def test_workflow_commits_only_pairs_and_does_not_force_over_another_writer(repo
     (reports / "b/skillspector.json").unlink()
     (reports / "a/scanner.log").write_text("new diagnostic")
     (reports / "notes.md").write_text("separately staged notes")
-    git("add", "products/skill-catalog-assessments/notes.md")
+    git("add", "products/skill-bundle-assessments/notes.md")
     result = subprocess.run(["bash", "-e", "-c", body], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     committed = git("diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").splitlines()
-    assert committed == [f"products/skill-catalog-assessments/{name}" for name in (
+    assert committed == [f"products/skill-bundle-assessments/{name}" for name in (
         "a/skillspector.json", "b/adjudication.json", "b/skillspector.json",
     )]
-    assert git("diff", "--cached", "--name-only") == "products/skill-catalog-assessments/notes.md"
+    assert git("diff", "--cached", "--name-only") == "products/skill-bundle-assessments/notes.md"
     for name in ("skillspector.json", "adjudication.json"):
         (reports / "a" / name).unlink()
     result = subprocess.run(["bash", "-e", "-c", body], capture_output=True, text=True)

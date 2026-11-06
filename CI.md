@@ -38,7 +38,7 @@ flowchart LR
     evidence --> generate["Prepare website data and skill downloads"]
     checks --> build["Build and package the website"]
     generate --> build
-    revision --> catalog["Package the skill catalog separately"]
+    revision --> bundle["Package the skill bundle separately"]
 ```
 
 ### What the checks evaluate
@@ -49,7 +49,7 @@ Tests exercise program behavior and compare the results with expectations. **Lin
 | --- | --- | --- |
 | Python programs | Code rules and automated behavior tests. | Ruff inspects code; pytest runs tests. |
 | Website | Code rules, consistency between declared data types and their use, page diagnostics, and behavior tests. | TypeScript, ESLint, Astro, and the site test commands. Astro is the framework used to build the website. |
-| Documentation | Markdown structure and formatting. | Markdownlint and Prettier. Catalog skill files are checked by Markdownlint but excluded from formatting to preserve their assessed contents. |
+| Documentation | Markdown structure and formatting. | Markdownlint and Prettier. Bundled skill files are checked by Markdownlint but excluded from formatting to preserve their assessed contents. |
 | Automation configuration | GitHub workflow rules and shell commands; scripts in the supplied GitLab deployment templates. | actionlint, ShellCheck, and GitLab script checks. Shell commands are instructions executed by the job's command interpreter. |
 
 The GitLab script checks inspect the templates in the arrangement customers receive. They do not submit them to GitLab's validation service or prove that a customer's project can start a pipeline. A **pipeline** is GitLab's term for an automated run of jobs. See [local lint checks](docs/linting.md) for exact commands and limitations, and [Contributing](CONTRIBUTING.md#local-checks) to run checks before submitting changes.
@@ -62,7 +62,7 @@ An assessment produces two reports: findings from SkillSpector, the scanner that
 
 A completed assessment can report problems or limited coverage and still be included on the website. Including a report makes that evidence visible; it does not approve the skill for use. The [assessment guide](products/assessment-kit/README.md#review-scope) explains what the review covers and what its judgments mean.
 
-Python prepares the website's data and downloads. Node.js, the software runtime used by the site tools, consumes that data to build the website. The final website preview requires this preparation and every code/configuration check job to succeed. The skill catalog is packaged separately, so that download can be available even when the website cannot be built.
+Python prepares the website's data and downloads. Node.js, the software runtime used by the site tools, consumes that data to build the website. The final website preview requires this preparation and every code/configuration check job to succeed. The skill bundle is packaged separately, so that download can be available even when the website cannot be built.
 
 ### Find a result and decide what to do
 
@@ -83,24 +83,24 @@ On the selected CI run's summary page, find the artifacts produced by successful
 | Download | Contents and next step |
 | --- | --- |
 | `static-site` | A finished Prebuilt website under `public/`, deployment guides, and hidden `.gitlab-ci.yml` configuration. Extract the ZIP once, then follow its deployment guide. |
-| `skill-catalog.zip` | Complete skill folders under `skills/` and their installation README. Follow that README to install them. |
-| `skill-catalog-assessments.zip` | A README and two JSON reports per selected skill. Follow the README to produce a readable summary. JSON is the structured data format used for these reports. |
+| `skill-bundle.zip` | Complete skill folders under `skills/` and their installation README. Follow that README to install them. |
+| `skill-bundle-assessments.zip` | A README and two JSON reports per selected skill. Follow the README to produce a readable summary. JSON is the structured data format used for these reports. |
 | `skill_assessment-*.whl` | The standalone assessment command-line tool. A `.whl` file is an installable Python package; follow the [assessment installation guide](products/assessment-kit/README.md#installation). SkillSpector is installed separately. |
 | `deployment-kit-operator-*.zip` | The tools, website source, automation configuration, assessment wheel, and included skills/reports needed to maintain an exchange. Follow its README. |
 
 These have the same layouts as their release counterparts. GitHub turns the staged `static-site` directory into a ZIP. The other product ZIPs are offered directly, without a second archive layer. Hidden deployment files are included; enable hidden-file display if your file browser does not show `.gitlab-ci.yml`.
 
-Catalog packaging reads one saved Git revision, excluding uncommitted edits and files Git does not track. A changed-skill PR preview uses matching reports from that same run. It does not silently substitute an older report for a changed skill.
+Bundle packaging reads one saved Git revision, excluding uncommitted edits and files Git does not track. A changed-skill PR preview uses matching reports from that same run. It does not silently substitute an older report for a changed skill.
 
 Contributors who need to package the current commit locally can use the commands under [Local packaging](#local-packaging). You do not need those commands to download CI previews.
 
-## Main catalog assessments
+## Main bundle assessments
 
 Assessment needs access to a **model provider**, the service hosting the model that reviews skill content. Because that access uses credentials and sends content to the provider, CI treats PRs from this repository differently from PRs originating in a fork.
 
 | Source | What is assessed | Where results go |
 | --- | --- | --- |
-| Push to `main` | The catalog, reusing eligible unchanged reports. | Current report pairs are committed to the repository only after every assessment succeeds. Obsolete reports are then pruned. |
+| Push to `main` | The bundle, reusing eligible unchanged reports. | Current report pairs are committed to the repository only after every assessment succeeds. Obsolete reports are then pruned. |
 | PR from a branch in this repository | Changed skill packages, including changes to supporting files. | Temporary reports and summaries attached to the run. The job does not commit them or post PR comments. |
 | PR from a fork | No new provider-backed assessment. A notice explains the skip. | Website generation uses reports already tracked in Git. If those do not match changed skills, generation fails. Ask a maintainer to arrange matching evidence before those skills can build; the [assessment guide](products/assessment-kit/README.md#assess) covers producing reports for the changed package. |
 
@@ -116,7 +116,7 @@ Website preparation starts from the tracked reports and replaces the changed ski
 
 ### How accepted assessments are kept current
 
-On `main`, assessment stops at its first failure. Only after all assessments succeed does automation remove obsolete report pairs and scanner logs and commit updated JSON report pairs under `products/skill-catalog-assessments/<skill-name>/`. Unrelated files are preserved. Available results and failure diagnostics are also retained as run artifacts, and website generation uses the reports from the run for its source revision.
+On `main`, assessment stops at its first failure. Only after all assessments succeed does automation remove obsolete report pairs and scanner logs and commit updated JSON report pairs under `products/skill-bundle-assessments/<skill-name>/`. Unrelated files are preserved. Available results and failure diagnostics are also retained as run artifacts, and website generation uses the reports from the run for its source revision.
 
 Unchanged skills can reuse eligible reports through the assessment kit's `--if-changed` option. The workflow permits this only when the incoming push did not alter either JSON report. An initial push or incoming edits to reports force assessment rather than trusting the edited evidence.
 
@@ -169,11 +169,11 @@ The tag starts the [Release workflow](.github/workflows/release.yml). It validat
 | --- | --- |
 | `deployment-kit-prebuilt-<version>.zip` | Deploy the finished example website. |
 | `deployment-kit-operator-<version>.zip` | Build and deploy a maintained catalog. |
-| `skill-catalog-<version>.zip` | Install the supplied skills. |
-| `skill-catalog-assessments-<version>.zip` | Read those skills' assessment reports. |
+| `skill-bundle-<version>.zip` | Install the supplied skills. |
+| `skill-bundle-assessments-<version>.zip` | Read those skills' assessment reports. |
 | `skill_assessment-<version>-py3-none-any.whl` | Install the assessment command-line tool. Its filename uses Python's normalized version. |
 
-Release preparation runs no scanner, so missing or outdated committed evidence fails the build. Catalog contents come from the tagged commit. Wait for the workflow to finish creating the draft and uploading these files. A prerelease version is marked as a prerelease in GitHub.
+Release preparation runs no scanner, so missing or outdated committed evidence fails the build. Bundle contents come from the tagged commit. Wait for the workflow to finish creating the draft and uploading these files. A prerelease version is marked as a prerelease in GitHub.
 
 The workflow owns draft creation and asset uploads. Do not create a competing draft or substitute locally repackaged previews: doing so would break the connection between the verified commit, workflow, and downloads. Existing tags, partial drafts, or failed preparation need investigation and agreed recovery before moving tags or replacing assets.
 
@@ -233,10 +233,10 @@ Main report updates use `GITHUB_TOKEN` with `contents: write`. Repository branch
 
 ### Local packaging
 
-After [development setup](CONTRIBUTING.md#first-time-setup), run this from the repository root to package the current committed catalog:
+After [development setup](CONTRIBUTING.md#first-time-setup), run this from the repository root to package the current committed bundle:
 
 ```sh
-PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging catalog --output release/skill-catalog.zip
+PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging bundle --output release/skill-bundle.zip
 ```
 
 The command creates the ZIP at the given output path. Uncommitted edits are not included. `PYTHONPATH` tells Python where to find the maintainer code. The packaging command also supports `assessments`, `operator`, and `prebuilt`; use `--help` for their inputs. [Product boundaries](docs/product-boundaries.md) explains which components belong in each download.

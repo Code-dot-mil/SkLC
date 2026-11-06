@@ -1,8 +1,10 @@
 # Assess a skill and understand the results
 
-The assessment kit helps you find potential problems in an agent skill, decide which findings need attention, and check your revisions. A skill is a directory containing `SKILL.md` and any supporting files. You can assess one local skill without installing the SkLC catalog or hosting a website.
+The assessment kit helps you find potential problems in an agent skill, decide which findings need attention, and check your revisions. It is distributed as a **Python wheel**: an installable package file ending in `.whl`. Installing the wheel with a Python package tool such as uv makes the `skill-assessment` command-line tool available. The wheel contains the assessment tool, rather than the skills you want to review.
 
-The kit runs the external SkillSpector scanner and asks a configured model to review its findings in context. That second review is called **adjudication**. The scanner report and adjudication stay together; `summarize` turns them into a Markdown explanation of what needs action.
+A skill is a directory containing `SKILL.md` and any supporting files. You can assess one local skill without installing the SkLC skill bundle or hosting a website.
+
+The kit runs the external SkillSpector scanner and asks a configured model to review its findings in context. That second review is called **adjudication**. Together, the scanner report (`skillspector.json`) and contextual review (`adjudication.json`) form a **report pair** for the assessed skill contents. Keep these two files together; the `summarize` command reads the pair and produces a Markdown explanation of what needs action.
 
 If you want to understand or try a skill before setting up assessment tools, start with [Using a skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). The commands below are for readers comfortable installing Python tools and running commands, or a colleague helping with that setup.
 

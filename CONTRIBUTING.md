@@ -17,7 +17,7 @@ Exchange-site developers maintain:
 - Developer and operator documentation.
 - Tests for validation, generated data, CI behavior, site behavior, and security-sensitive rendering.
 
-Skill packages under `products/skill-catalog/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
+Skill packages under `products/skill-bundle/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
 
 For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-review). Trusted same-repository PRs receive assessment; fork PRs receive no provider-backed assessment and need a maintainer to arrange matching evidence before their changed skills can build. Local generation also requires current evidence. Keep report pairs with their exact skill content; do not hand-edit evidence to make generation pass.
 
@@ -55,7 +55,7 @@ Use `uv` directly for Python-only commands and `npm --prefix products/deployment
 
 `just generate` writes to `.exchange/local-generated/`, not `.exchange/generated/`, so local builds leave current assessment reports untouched.
 
-Generation reads `products/skill-catalog-assessments/<skill-name>/`. Use `--evidence` with `python -m skill_exchange.cli generate` for a separate current-report root. Missing, stale, or mismatched report pairs fail generation; nonfatal partial coverage remains visible. Generation produces no evidence.
+Generation reads `products/skill-bundle-assessments/<skill-name>/`. Use `--evidence` with `python -m skill_exchange.cli generate` for a separate current-report root. Missing, stale, or mismatched report pairs fail generation; nonfatal partial coverage remains visible. Generation produces no evidence.
 
 ## Python Tooling
 
@@ -100,7 +100,7 @@ When changing CI:
 
 ## Generated Files
 
-Do not hand-edit generated exchange data under `.exchange/generated/`. Current reports under `products/skill-catalog-assessments/` are durable generated evidence. Derived site data such as `index.json`, `assessments/`, and `zips/` should be regenerated locally or by CI and not committed.
+Do not hand-edit generated exchange data under `.exchange/generated/`. Current reports under `products/skill-bundle-assessments/` are durable generated evidence. Derived site data such as `index.json`, `assessments/`, and `zips/` should be regenerated locally or by CI and not committed.
 
 Do not commit local caches or build output such as `products/deployment-kit/operator/site/dist/`, `products/deployment-kit/operator/site/.astro/`, `products/deployment-kit/operator/site/node_modules/`, `.pytest_cache/`, or `.venv/`.
 

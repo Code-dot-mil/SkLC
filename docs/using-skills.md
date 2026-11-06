@@ -2,13 +2,13 @@
 
 A skill gives an AI agent reusable instructions for a task. An AI agent is an application that can follow instructions and use tools to carry out work. You supply your goal and the information it needs; the skill describes a process for the agent to follow. You still need to review the result.
 
-For example, a team could write a skill to check whether a draft report covers an agreed checklist. Instead of explaining the checklist in every request, someone could ask the agent to use that skill on a draft. This is an example of how skills can help; SkLC's supplied catalog contains skills for software tasks.
+For example, a team could write a skill to check whether a draft report covers an agreed checklist. Instead of explaining the checklist in every request, someone could ask the agent to use that skill on a draft. This is an example of how skills can help; SkLC's supplied bundle contains skills for software tasks.
 
 ## Start by reading
 
 You do not need to install SkLC or run commands to learn about a skill. If your team has a **Skill Exchange**, open that website to browse descriptions, read instructions and assessment results, and download skills. Ask the person who shared SkLC whether your team has an exchange to browse. This repository contains the tools for creating one, rather than a running exchange you must sign up for.
 
-To see what is supplied here, read the [catalog's four skill descriptions](../products/skill-catalog/README.md). They cover Python code review, unit tests, inline documentation, and change descriptions. Choose based on the task you need help with; these packages may not fit your work.
+To see what is supplied here, read the [bundle's four skill descriptions](../products/skill-bundle/README.md). They cover Python code review, unit tests, inline documentation, and change descriptions. Choose based on the task you need help with; these packages may not fit your work.
 
 ## Check whether you can use it
 
@@ -29,11 +29,11 @@ An assessment looks for potential problems in the skill's instructions. On an ex
 
 An assessment helps you decide what needs attention. It does not guarantee that a skill is suitable for your task or that its results will be correct. SkLC's contextual review examines the main instruction file and scanner evidence; it does not independently review supporting files. Ask the author or your team's reviewer about concerns you cannot evaluate yourself.
 
-If you have downloaded assessment files instead of reading them on an exchange, they are technical reports. A colleague can use the [assessment results guide](../products/skill-catalog-assessments/README.md) to produce a readable summary. You do not need to configure a new scan to read existing results.
+If you have downloaded assessment files instead of reading them on an exchange, they are technical reports. A colleague can use the [assessment results guide](../products/skill-bundle-assessments/README.md) to produce a readable summary. You do not need to configure a new scan to read existing results.
 
 ## Install and try a task
 
-Once you have chosen a suitable skill and compatible agent, follow the agent's installation instructions. Keep the complete skill folder together, including supporting files. For SkLC's supplied packages, the [catalog installation guide](../products/skill-catalog/README.md) explains the download and installation steps for agents that use `.agents/skills/` folders. If the guide's commands are unfamiliar, ask a technical colleague to help with setup.
+Once you have chosen a suitable skill and compatible agent, follow the agent's installation instructions. Keep the complete skill folder together, including supporting files. For SkLC's supplied packages, the [bundle installation guide](../products/skill-bundle/README.md) explains the download and installation steps for agents that use `.agents/skills/` folders. If the guide's commands are unfamiliar, ask a technical colleague to help with setup.
 
 Confirm that the agent recognizes the installed skill. Then try a small task whose result you can check. Name the skill in your request and explain the outcome you want. For the report-checking example, that might be: “Use the report-checking skill on this draft and list any checklist items it does not cover.”
 

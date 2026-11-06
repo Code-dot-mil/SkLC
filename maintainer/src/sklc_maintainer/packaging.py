@@ -12,13 +12,13 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from .release import validate_version
 
 
-def catalog_selection(source: Path) -> dict[str, Path]:
+def bundle_selection(source: Path) -> dict[str, Path]:
     skills = {}
-    for skill_file in sorted((source / "products/skill-catalog").glob("*/SKILL.md")):
+    for skill_file in sorted((source / "products/skill-bundle").glob("*/SKILL.md")):
         name = skill_file.parent.name
         skills[name] = skill_file.parent
     if not skills:
-        raise ValueError("Committed catalog contains no skills")
+        raise ValueError("Committed bundle contains no skills")
     return skills
 
 
@@ -30,11 +30,11 @@ def write_zip(output: Path, files: dict[str, bytes]) -> Path:
     return output
 
 
-def package_catalog(source: Path, output: Path) -> Path:
+def package_bundle(source: Path, output: Path) -> Path:
     if output.exists():
         raise FileExistsError(output)
-    files = {"README.md": (source / "products/skill-catalog/README.md").read_bytes()}
-    for name, directory in catalog_selection(source).items():
+    files = {"README.md": (source / "products/skill-bundle/README.md").read_bytes()}
+    for name, directory in bundle_selection(source).items():
         for path in directory.rglob("*"):
             if path.is_symlink():
                 raise ValueError(f"Skill package must not contain symlinks: {path}")
@@ -46,10 +46,10 @@ def package_catalog(source: Path, output: Path) -> Path:
 def package_assessments(source: Path, output: Path, source_dir: Path | None) -> Path:
     if output.exists():
         raise FileExistsError(output)
-    committed = source / "products/skill-catalog-assessments"
+    committed = source / "products/skill-bundle-assessments"
     reports = committed if source_dir is None else source_dir
     files = {"README.md": (committed / "README.md").read_bytes()}
-    for name in catalog_selection(source):
+    for name in bundle_selection(source):
         for filename in ("skillspector.json", "adjudication.json"):
             report = reports / name / filename
             if any(path.is_symlink() for path in (reports, report.parent, report)) or not report.is_file():
@@ -61,11 +61,11 @@ def package_assessments(source: Path, output: Path, source_dir: Path | None) -> 
 def checked_path(name: str) -> PurePosixPath:
     path = PurePosixPath(name)
     if path.is_absolute() or ".." in path.parts or "\\" in name:
-        raise ValueError(f"Invalid catalog path: {name}")
+        raise ValueError(f"Invalid bundle path: {name}")
     return path
 
 
-def package_operator(source: Path, catalog_path: Path, assessments_path: Path,
+def package_operator(source: Path, bundle_path: Path, assessments_path: Path,
                      wheel: Path, output_dir: Path, version: str) -> Path:
     from skill_assessment.hashing import skill_digest
     from skill_assessment.reports import is_current_assessment
@@ -104,20 +104,20 @@ def package_operator(source: Path, catalog_path: Path, assessments_path: Path,
             b"../../../../assessment-kit/README.md", b"../README.md",
         )
     names = set()
-    with ZipFile(catalog_path) as catalog:
-        for item in catalog.infolist():
+    with ZipFile(bundle_path) as bundle:
+        for item in bundle.infolist():
             path = checked_path(item.filename)
             if item.is_dir():
                 continue
             if path.parts[0] == "skills" and len(path.parts) > 2:
                 names.add(path.parts[1])
-                files[f"upstream/skills/{path.relative_to('skills')}"] = catalog.read(item)
+                files[f"upstream/skills/{path.relative_to('skills')}"] = bundle.read(item)
             elif item.filename == "README.md":
-                files["upstream/catalog.md"] = catalog.read(item)
+                files["upstream/bundle.md"] = bundle.read(item)
             else:
-                raise ValueError(f"Unexpected catalog member: {item.filename}")
+                raise ValueError(f"Unexpected bundle member: {item.filename}")
     if not names:
-        raise ValueError("Catalog archive contains no upstream skills")
+        raise ValueError("Bundle archive contains no upstream skills")
     with ZipFile(assessments_path) as assessments:
         for name in sorted(names):
             for report in ("skillspector.json", "adjudication.json"):
@@ -160,17 +160,17 @@ def package_prebuilt(source: Path, site_dir: Path, output_dir: Path, version: st
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("catalog", "assessments", "operator", "prebuilt"):
+    for name in ("bundle", "assessments", "operator", "prebuilt"):
         command = commands.add_parser(name)
         command.add_argument("--repo-root", type=Path, default=Path.cwd())
-        if name in {"catalog", "assessments"}:
+        if name in {"bundle", "assessments"}:
             command.add_argument("--output", type=Path, required=True)
         else:
             command.add_argument("--output-dir", type=Path, required=True)
         if name == "assessments":
             command.add_argument("--source-dir", type=Path)
         if name == "operator":
-            for option in ("catalog", "assessments", "wheel"):
+            for option in ("bundle", "assessments", "wheel"):
                 command.add_argument(f"--{option}", type=Path, required=True)
             command.add_argument("--version", required=True)
         if name == "prebuilt":
@@ -190,12 +190,12 @@ def main() -> None:
         source = Path(temporary)
         with tarfile.open(fileobj=io.BytesIO(committed)) as archive:
             archive.extractall(source, filter="data")
-        if args.command == "catalog":
-            output = package_catalog(source, args.output)
+        if args.command == "bundle":
+            output = package_bundle(source, args.output)
         elif args.command == "assessments":
             output = package_assessments(source, args.output, args.source_dir)
         elif args.command == "operator":
-            output = package_operator(source, args.catalog, args.assessments, args.wheel, args.output_dir, args.version)
+            output = package_operator(source, args.bundle, args.assessments, args.wheel, args.output_dir, args.version)
         else:
             site = args.site_dir if args.site_dir.is_absolute() else args.repo_root / args.site_dir
             if args.stage:

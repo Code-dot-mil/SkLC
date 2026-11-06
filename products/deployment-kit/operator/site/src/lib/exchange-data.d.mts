@@ -1,7 +1,7 @@
-import type { Skill } from "../components/SkillCatalog";
+import type { Skill } from "../components/SkillBrowser";
 import type { Artifact, Finding, ScannerRun } from "../components/ScannerFindings";
 
-export type CatalogSkill = Skill & {
+export type ExchangeSkill = Skill & {
   content_hash: string;
   skill_md_content: string;
   skill_files: { path: string; size_bytes: number }[];
@@ -19,7 +19,7 @@ export type CatalogSkill = Skill & {
   dispositions: { true_positive: number; false_positive: number; uncertain: number };
 };
 
-export const exchangeIndex: { skills: CatalogSkill[] };
+export const exchangeIndex: { skills: ExchangeSkill[] };
 export const scannerRunsTable: { rows: (ScannerRun & { skill_id: string })[] };
 export const scannerFindingsTable: { rows: Finding[] };
 export const scannerArtifactsTable: { rows: Artifact[] };

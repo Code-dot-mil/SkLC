@@ -18,7 +18,7 @@ def read_paths(path: Path) -> list[Path]:
 
 def select(skills: Path, output: Path, base_sha: str | None) -> None:
     if not skills.is_dir():
-        raise ValueError(f"Catalog root does not exist: {skills}")
+        raise ValueError(f"Skill root does not exist: {skills}")
     skills = skills.resolve().relative_to(Path.cwd().resolve())
     changed_files = b""
     if base_sha is not None:

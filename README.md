@@ -26,7 +26,7 @@ The Skill Lifecycle organizes that work into five stages:
 
 These stages form a cycle. Feedback during use—or a problem found during validation—can send a skill back for further definition, changes, and testing.
 
-The tools in this repository support parts of that lifecycle. The assessment kit helps gather validation evidence, while the catalog and deployment kits help distribute skills and assessment reports. Teams remain responsible for task-specific testing, release decisions, and ongoing review.
+The tools in this repository support parts of that lifecycle. The assessment kit helps gather validation evidence, while the skill bundle and deployment kits help distribute skills and assessment reports. Teams remain responsible for task-specific testing, release decisions, and ongoing review.
 
 ## Choose a starting point
 
@@ -34,7 +34,7 @@ You can install skills, run assessments, or host an exchange independently. Star
 
 | Your goal | What to use | Guide |
 | --- | --- | --- |
-| Install the supplied skills | **Skill catalog** — four complete skill packages | [Install skills in your workspace](products/skill-catalog/README.md) |
+| Install the supplied skills | **Skill bundle** — four complete skill packages | [Install skills in your workspace](products/skill-bundle/README.md) |
 | Assess a skill you wrote or received | **Assessment kit** — a standalone Python command-line tool | [Install the kit and assess a local skill](products/assessment-kit/README.md) |
 | Understand an existing assessment | **Assessment kit** plus an existing report pair | [Install the kit](products/assessment-kit/README.md#installation), then [summarize the reports](products/assessment-kit/README.md#summarize) |
 | Put the supplied example exchange online | **Prebuilt deployment kit** — a ready-to-host website | [Install the site](products/deployment-kit/prebuilt/docs/install.md), then deploy to [GitLab Pages](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md) or [another static host](products/deployment-kit/prebuilt/docs/deploy-static-hosting.md) |
@@ -44,7 +44,7 @@ Download the package for your chosen path from [GitHub Releases](https://github.
 
 ## Use the supplied skills
 
-The supplied catalog contains four skills for software tasks:
+The supplied bundle contains four skills for software tasks:
 
 - **Secure Python code review:** review Python changes for security weaknesses.
 - **Unit test generation:** create focused tests for a change or bug fix.
@@ -55,7 +55,7 @@ Use an AI agent that supports workspace skills in `.agents/skills/`. Install the
 
 > Use the python-secure-code-review skill to review the Python changes in this branch.
 
-The [catalog installation guide](products/skill-catalog/README.md) explains the archive layout and installation steps. Using the catalog requires neither a hosted exchange nor assessment tooling.
+The [bundle installation guide](products/skill-bundle/README.md) explains the archive layout and installation steps. Using the bundle requires neither a hosted exchange nor assessment tooling.
 
 ## Understand what assessment tells you
 
@@ -65,13 +65,13 @@ The kit produces a scanner report and an adjudication report. Its `summarize` co
 
 An assessment is evidence for a human decision, not a safety certificate. Adjudication examines `SKILL.md` and scanner evidence; supporting files are not independently reviewed. A successful command can still report problems or incomplete coverage. Read the [review scope](products/assessment-kit/README.md#review-scope) before relying on a judgment.
 
-To read existing results for the supplied skills, download `skill-catalog-assessments-<version>.zip` and follow [Summarize](products/assessment-kit/README.md#summarize). Once the assessment kit is installed, reading these reports needs no scanner or model-provider setup.
+To read existing results for the supplied skills, download `skill-bundle-assessments-<version>.zip` and follow [Summarize](products/assessment-kit/README.md#summarize). Once the assessment kit is installed, reading these reports needs no scanner or model-provider setup.
 
 ## Share skills through an exchange
 
 An exchange lets visitors browse skill descriptions, read instructions and assessment results, and download skill packages and reports. It is a static website: assessment and site building happen before publication, and visitors do not trigger model requests.
 
-Choose **Prebuilt** to host the supplied four-skill catalog without building the site. Choose **Operator** to maintain your own catalog, select any supplied skills you want to include, and run the assessment, build, and publication pipeline. Operator setup requires GitLab runners, an assessment container image, and access to a configured model provider; the [Operator guide](products/deployment-kit/operator/docs/README.md) walks through those requirements and ongoing updates.
+Choose **Prebuilt** to host the supplied four-skill bundle without building the site. Choose **Operator** to maintain your own catalog, select any supplied skills you want to include, and run the assessment, build, and publication pipeline. Operator setup requires GitLab runners, an assessment container image, and access to a configured model provider; the [Operator guide](products/deployment-kit/operator/docs/README.md) walks through those requirements and ongoing updates.
 
 Completed negative assessments can remain visible on a published exchange. Publication does not imply that every finding has been resolved; [governance](GOVERNANCE.md) describes human review and approval responsibilities.
 

@@ -30,7 +30,7 @@ For the next three substantive contributions, record skills used, the initial ou
 - Define assessment commands in `skill_assessment/commands/<command>.py`. Each module owns its command name, option flags, argument parsing, and execution through `register(subparsers)` and `run(args)`; `cli.py` only registers and dispatches commands.
 - Skill packages live under `products/skill-catalog/<skill-id>/`.
 - Operator runtime, site, and tests live under `products/deployment-kit/operator/`; upstream packaging and release tooling live under `maintainer/`.
-- Generated exchange data lives under `.exchange/generated/` and should be produced by the generate command or CI, not hand-authored.
+- Generated exchange data lives under `products/deployment-kit/operator/.exchange/generated/` in this checkout (`.exchange/generated/` beside `site/` in an installed Operator kit) and should be produced by the generate command or CI, not hand-authored.
 - Durable generated evidence lives under `products/skill-catalog-assessments/`. Other generated site data is derived and should not be committed.
 
 ## Configuration Rules
@@ -56,14 +56,14 @@ For the next three substantive contributions, record skills used, the initial ou
 - Use `uv run --extra test pytest` for Python tests.
 - Use `npm --prefix products/deployment-kit/operator/site run test` for Node-based site tests.
 - Use `just generate` for upstream catalog generation with explicit source and evidence paths.
-- Prefer `.exchange/local-generated/` for local generated site data. Keep current reports under `products/skill-catalog-assessments/` read-only during generation.
+- Use the standard Operator generated-data location for local builds and CI. Keep current reports under `products/skill-catalog-assessments/` read-only during generation.
 
 ## Boundaries
 
 - Do not leave red-green scaffolding or placeholder tests in the repository. Tests must prove real behavior, not merely lock package script strings, command spelling, or implementation trivia.
 - Python tests must not invoke Node or npm. Node-dependent behavior belongs in `products/deployment-kit/operator/site/tests/` and must run through `npm --prefix products/deployment-kit/operator/site run test`.
 - Do not hide Python generation in npm scripts or Node builds in Python tooling. Use `just` when local developer convenience needs to orchestrate both stacks.
-- Remove local generated artifacts after experiments. Do not leave ignored derived `.exchange/generated/` output, caches, or build directories around as hidden workspace state. Treat current assessments under `products/skill-catalog-assessments/` as durable evidence and replace them through the assessment command.
+- Remove local generated artifacts after experiments. Do not leave ignored derived Operator `.exchange/generated/` output, caches, or build directories around as hidden workspace state. Treat current assessments under `products/skill-catalog-assessments/` as durable evidence and replace them through the assessment command.
 - Do not commit `products/deployment-kit/operator/site/dist/`, `products/deployment-kit/operator/site/.astro/`, `products/deployment-kit/operator/site/node_modules/`, `.pytest_cache/`, `.venv/`, or other local build/cache output.
 - Keep documentation free of local machine paths and local workspace state.
 - Pass PR/MR prose through structured arguments or literal body files.

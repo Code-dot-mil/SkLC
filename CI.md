@@ -41,7 +41,7 @@ The GitLab script checks do not call GitLab's remote lint API or prove a pipelin
 
 Python generation verifies that each report pair describes the exact selected skill, that scanner execution succeeded, and that adjudication completed with matching findings. Missing or stale evidence stops generation. Completed negative judgments and nonfatal coverage gaps remain visible advisory results. Generation neither scans nor changes evidence.
 
-Node consumes the generated inputs and builds the website. The final static-site artifact requires generation and all code/configuration check jobs to succeed. A catalog-only download can still be produced independently of the site build.
+Node consumes the generated inputs from `products/deployment-kit/operator/.exchange/generated/`, beside the Operator site, and builds the website. Site builds use this standard location without a generated-data environment variable. The final static-site artifact requires generation and all code/configuration check jobs to succeed. A catalog-only download can still be produced independently of the site build.
 
 ## Preview downloads
 

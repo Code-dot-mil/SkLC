@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,8 +12,9 @@ function fixture(t) {
   const root = mkdtempSync(resolve(tmpdir(), "skill-exchange-downloads-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const site = resolve(root, "site");
-  const generated = resolve(root, "custom-data");
-  mkdirSync(site);
+  const generated = resolve(root, ".exchange/generated");
+  mkdirSync(resolve(site, "scripts"), { recursive: true });
+  cpSync(script, resolve(site, "scripts/copy-downloads.mjs"));
   mkdirSync(resolve(generated, "zips"), { recursive: true });
   mkdirSync(resolve(generated, "assessments/example"), { recursive: true });
   const skill = {
@@ -32,12 +33,12 @@ function fixture(t) {
 
 function run({ site, generated, skill }) {
   writeFileSync(resolve(generated, "index.json"), JSON.stringify({ skills: [skill] }));
-  return spawnSync(process.execPath, [script], {
-    cwd: site, env: { ...process.env, SKILL_EXCHANGE_GENERATED_ROOT: generated }, encoding: "utf-8",
+  return spawnSync(process.execPath, [resolve(site, "scripts/copy-downloads.mjs")], {
+    cwd: dirname(site), encoding: "utf-8",
   });
 }
 
-test("copies the skill package and exact report pair from a configured generated root", (t) => {
+test("copies the skill package and exact report pair from the standard generated directory regardless of working directory", (t) => {
   const data = fixture(t);
   const result = run(data);
   assert.equal(result.status, 0, result.stderr);
@@ -72,4 +73,13 @@ test("fails when an indexed assessment report is missing", (t) => {
   const data = fixture(t);
   rmSync(resolve(data.generated, "assessments/example/adjudication.json"));
   assert.notEqual(run(data).status, 0);
+});
+
+test("fails when the generated catalog index is missing", (t) => {
+  const { root, site } = fixture(t);
+  const result = spawnSync(process.execPath, [resolve(site, "scripts/copy-downloads.mjs")], {
+    cwd: root, encoding: "utf-8",
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /ENOENT/);
 });

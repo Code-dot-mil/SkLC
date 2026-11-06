@@ -63,9 +63,9 @@ jobs:
           uv run python -m skill_exchange.cli generate
           --skills products/skill-catalog
           --evidence products/skill-catalog-assessments
-          --generated .exchange/generated
+          --generated products/deployment-kit/operator/.exchange/generated
       - name: Build static site
-        run: SKILL_EXCHANGE_GENERATED_ROOT="$GITHUB_WORKSPACE/.exchange/generated" npm --prefix products/deployment-kit/operator/site run build
+        run: npm --prefix products/deployment-kit/operator/site run build
       - name: Build product downloads
         id: release-assets
         shell: bash

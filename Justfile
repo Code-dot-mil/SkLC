@@ -3,12 +3,10 @@ export UV_CACHE_DIR := ".uv-cache"
 default:
     just --list
 
-local_generated := ".exchange/local-generated"
-
 generate:
     uv run python -m skill_exchange.cli generate \
         --skills products/skill-catalog --evidence products/skill-catalog-assessments \
-        --generated {{local_generated}}
+        --generated products/deployment-kit/operator/.exchange/generated
 
 python-lint:
     uv run --extra test ruff check maintainer products
@@ -62,7 +60,7 @@ site-test:
     npm --prefix products/deployment-kit/operator/site run test
 
 site-build:
-    SKILL_EXCHANGE_GENERATED_ROOT="$PWD/{{local_generated}}" npm --prefix products/deployment-kit/operator/site run build
+    npm --prefix products/deployment-kit/operator/site run build
 
 lint: python-lint site-lint markdown-lint markdown-check github-lint gitlab-lint
 

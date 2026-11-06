@@ -1,5 +1,3 @@
-.exchange/generated/*
-.exchange/local-generated/
 /release/
 /assessment-reports/
 products/deployment-kit/operator/site/dist/

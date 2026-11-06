@@ -13,7 +13,7 @@ The environment that maintainers must use as source of truth and produce release
 The team shall deliver 4 standalone products:
 
 - Skill lifecycle (SkLC) guidance and documentation
-- Initial skill bundle for a developer persona with 4 skills
+- Initial skill catalog for a developer persona with 4 skills
 - Assessment kit
 - Deployment kit
 

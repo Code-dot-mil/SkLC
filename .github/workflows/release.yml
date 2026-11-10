@@ -64,6 +64,17 @@ jobs:
           --skills products/skill-bundle
           --evidence products/skill-bundle-assessments
           --generated products/deployment-kit/operator/.exchange/generated
+      - name: Require a plain matching release version
+        run: |
+          python - <<'PYTHON'
+          import json
+          import os
+          import re
+          version = json.load(open("products/deployment-kit/operator/.exchange/generated/index.json"))["version"]
+          expected = os.environ["RELEASE_VERSION"]
+          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) or version != expected:
+              raise SystemExit(f"Release requires plain {expected}; generated site version is {version}")
+          PYTHON
       - name: Require Safe to use determinations for every catalog skill
         run: >-
           PYTHONPATH=maintainer/src python -m sklc_maintainer.safety_gate

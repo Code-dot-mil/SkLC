@@ -5,7 +5,9 @@ from pathlib import Path
 
 
 def git(root: Path, *args: str) -> str:
-    return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
+    return subprocess.check_output(
+        ["git", "-c", f"safe.directory={root.resolve()}", *args], cwd=root, text=True,
+    ).strip()
 
 
 def site_version(root: Path) -> str:

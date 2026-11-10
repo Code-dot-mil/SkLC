@@ -43,6 +43,9 @@ test("built site links and assets work unchanged at root and nested hosting path
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "")
     .replace(/<[^>]*>/g, " ");
   const detail = renderedText("skills/example");
+  for (const page of ["", "skills/example"]) {
+    assert.ok(renderedText(page).includes("SkLC 1.2.0+dev.4 · Build abcd1234 from"));
+  }
   assert.ok(detail.includes("Jun 19, 2020"), "creation estimate must survive the static build");
   assert.ok(detail.includes("Oct 20, 2025"), "last update must remain distinct from scan time");
   for (const expected of ["Fixture adjudication summary", "Adjudication status", "Coverage sufficient", "external references were not assessed", "2026"]) {
@@ -135,7 +138,7 @@ function writeFixture(root) {
     },
     dispositions: { true_positive: 1, uncertain: 2, false_positive: 3 },
   };
-  write("index.json", JSON.stringify({ skills: [example, {
+  write("index.json", JSON.stringify({ version: "1.2.0+dev.4", revision: "abcd1234", skills: [example, {
     ...example, skill_id: "review", name: "Review code",
     description: "Find defects in Python code", scanner_runs: [], scanner_artifacts: [],
   }] }));

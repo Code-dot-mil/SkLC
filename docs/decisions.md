@@ -13,7 +13,7 @@ The environment that maintainers must use as source of truth and produce release
 The team shall deliver 4 standalone products:
 
 - Skill lifecycle (SkLC) guidance and documentation
-- Initial skill catalog for a developer persona with 4 skills
+- Initial skill bundle for a developer persona with 4 skills
 - Assessment kit
 - Deployment kit
 
@@ -44,3 +44,7 @@ PR CI and release CI require every catalog skill to have a Safe to use determina
 ## 9. SkillSpector and its reports
 
 We will not change SkillSpector or its reports.
+
+## 10. Skill bundle naming
+
+`skill-catalog` was renamed to `skill-bundle` to better describe a group of skills distributed together; “catalog” was too synonymous with the exchange.

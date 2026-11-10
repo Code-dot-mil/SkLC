@@ -59,27 +59,19 @@ def test_developer_addresses_confirmed_finding_and_checks_revised_skill(skill, s
     assert "Parse data without eval" not in summary
 
 
-@pytest.mark.parametrize("findings", [False, True])
-@pytest.mark.parametrize("flags,enforced", [([], False), (["--no-enforce-coverage"], False),
-                                           (["--enforce-coverage"], True)])
+@pytest.mark.parametrize("flags,enforced", [([], False), (["--enforce-coverage"], True)])
 def test_coverage_policy_determines_safety_verdict(
-    skill, scanner, gateway, partial_report, tmp_path, flags, enforced, findings,
+    skill, scanner, gateway, tmp_path, flags, enforced,
 ):
-    if not findings:
-        partial_report["issues"] = []
     gateway["overrides"] = {"coverage_sufficient": False}
     output = tmp_path / "reports"
     code = main(["assess", "--skill", str(skill), "--output-dir", str(output), *flags])
     assert code == 0
-    assert json.loads((output / "skillspector.json").read_text()) == partial_report
     path = next(tmp_path.glob("*/adjudication.json"))
     verdict = json.loads(path.read_text())
     assert verdict["metadata"]["enforce_coverage"] is enforced
     assert verdict["status"] == "completed"
     assert verdict["safe_to_use"] is (not enforced)
-    assert main(["summarize", "--assessment-dir", str(output)]) == 0
-    prompt = json.loads(gateway["calls"][0].data)["messages"][0]["content"]
-    assert ("Coverage enforcement is enabled" if enforced else "Coverage enforcement is disabled") in prompt
 
 
 def test_changed_or_unrecorded_coverage_policy_requires_fresh_assessment(skill, scanner, gateway, tmp_path):

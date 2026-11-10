@@ -159,16 +159,9 @@ class GatewayResponse:
         return json.loads(choice["message"]["content"])
 
 
-def request_completion(config: GatewayConfig, evidence: dict, metadata: dict, *, timeout: int,
-                       enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE) -> GatewayResponse:
+def request_completion(config: GatewayConfig, evidence: dict, metadata: dict, *, timeout: int) -> GatewayResponse:
     """Request a completion while tracking attempts even when the gateway fails."""
     prompt = files("skill_assessment").joinpath("prompts/adjudicate.md").read_text(encoding="utf-8")
-    prompt += "\n" + (
-        "Coverage enforcement is enabled: material coverage gaps must prevent a safe_to_use verdict."
-        if enforce_coverage else
-        "Coverage enforcement is disabled: coverage diagnostics are informational and must not independently "
-        "cause an unsafe verdict."
-    )
     payload = {
         "model": config.model, "messages": [{"role": "system", "content": prompt},
                                            {"role": "user", "content": json.dumps(evidence)}],
@@ -239,8 +232,7 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
             config = gateway_config()
             metadata.update(provider=config.provider, model=config.model)
             evidence = build_evidence(report, skill_file)
-            completion = request_completion(config, evidence, metadata, timeout=timeout,
-                                            enforce_coverage=enforce_coverage)
+            completion = request_completion(config, evidence, metadata, timeout=timeout)
             metadata.update(response_model=completion.response_model, token_usage=completion.token_usage)
             verdict = completion.verdict()
             validate_verdict(verdict, issues)

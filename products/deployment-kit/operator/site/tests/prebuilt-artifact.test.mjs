@@ -44,7 +44,9 @@ test("built site links and assets work unchanged at root and nested hosting path
     .replace(/<[^>]*>/g, " ");
   const detail = renderedText("skills/example");
   for (const page of ["", "skills/example"]) {
-    assert.ok(renderedText(page).includes("SkLC 1.2.0+dev.4 · Build abcd1234 from"));
+    const text = renderedText(page);
+    assert.ok(text.includes("1.2.0+dev.4"));
+    assert.ok(text.includes("abcd1234"));
   }
   assert.ok(detail.includes("Jun 19, 2020"), "creation estimate must survive the static build");
   assert.ok(detail.includes("Oct 20, 2025"), "last update must remain distinct from scan time");

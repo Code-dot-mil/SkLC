@@ -7,7 +7,6 @@ from pathlib import Path
 
 from skill_assessment.reports import is_current_assessment
 
-from .build_info import git, site_version
 from .skills import discover_skills, write_skill_zip
 
 
@@ -31,8 +30,6 @@ def build_exchange(*, skills_root: Path, generated_dir: Path, assessments_dir: P
     skills = discover_skills(skills_root)
     # Validate all inputs before replacing any generated output.
     current = [(skill, *read_current_assessment(assessments_dir, skill), catalog_metadata(skill)) for skill in skills]
-    build_root = Path.cwd()
-    index = {"version": site_version(build_root), "revision": git(build_root, "rev-parse", "--short=8", "HEAD")}
     generated_dir.mkdir(parents=True, exist_ok=True)
     for name in ("zips", "skills", "assessments", "tables", "scanner-runs"):
         directory = generated_dir / name
@@ -66,8 +63,7 @@ def build_exchange(*, skills_root: Path, generated_dir: Path, assessments_dir: P
             "last_scanned": report.get("skill", {}).get("scanned_at"),
             "assessment_downloads": downloads,
         })
-    index["skills"] = records
-    (generated_dir / "index.json").write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+    (generated_dir / "index.json").write_text(json.dumps({"skills": records}, indent=2) + "\n", encoding="utf-8")
     return {"skills_written": len(records)}
 
 

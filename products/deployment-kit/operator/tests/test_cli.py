@@ -13,7 +13,6 @@ def test_assessment_then_generation_uses_included_report_pair(current_assessment
     skills, source, *_ = current_assessment
     evidence = tmp_path / "evidence"
     calls = []
-    run_process = subprocess.run
 
     def assessment_cli(command, **kwargs):
         calls.append(command)
@@ -37,9 +36,7 @@ def test_assessment_then_generation_uses_included_report_pair(current_assessment
     assert len([command for command in calls if command[1] == "assess"]) == 1
     before = {path: path.read_bytes() for path in evidence.rglob("*") if path.is_file()}
 
-    def no_process(command, **kwargs):
-        if command[0] == "git":
-            return run_process(command, **kwargs)
+    def no_process(*args, **kwargs):
         pytest.fail("Generating a catalog must not execute any assessment or scanner process")
 
     monkeypatch.setattr(subprocess, "run", no_process)
@@ -55,10 +52,6 @@ def test_assessment_then_generation_uses_included_report_pair(current_assessment
 
 def test_generate_uses_selected_evidence_and_output(current_assessment, tmp_path, monkeypatch, capsys):
     skills, evidence, *_ = current_assessment
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    subprocess.run(["git", "-C", str(tmp_path), "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
-                    "commit", "--allow-empty", "-qm", "Installed Operator"], check=True, capture_output=True)
-    (tmp_path / "VERSION").write_text("1.2.0\n")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(sys, "argv", ["catalog", "generate", "--skills", str(skills),
                                      "--generated", "preview", "--evidence", str(evidence.parent)])

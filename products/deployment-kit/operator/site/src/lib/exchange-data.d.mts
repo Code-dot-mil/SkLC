@@ -19,9 +19,7 @@ export type ExchangeSkill = Skill & {
   dispositions: { true_positive: number; false_positive: number; uncertain: number };
 };
 
-export const exchangeIndex: { skills: ExchangeSkill[]; version: string; revision: string };
+export const exchangeIndex: { skills: ExchangeSkill[] };
 export const scannerRunsTable: { rows: (ScannerRun & { skill_id: string })[] };
 export const scannerFindingsTable: { rows: Finding[] };
 export const scannerArtifactsTable: { rows: Artifact[] };
-
-export const builtAt: string;

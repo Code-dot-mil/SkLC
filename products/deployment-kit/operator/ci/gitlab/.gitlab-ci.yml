@@ -5,6 +5,7 @@ stages: [assess, generate, build, deploy]
 
 workflow:
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "web"'
     - when: never
 
@@ -28,6 +29,11 @@ variables:
 
 assess:
   extends: .operator-runtime
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+      allow_failure: true
+    - if: '$CI_PIPELINE_SOURCE == "web"'
   stage: assess
   dependencies: []
   script:
@@ -39,6 +45,8 @@ assess:
 
 generate:
   extends: .operator-runtime
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
   stage: generate
   dependencies: [assess]
   script:
@@ -48,6 +56,8 @@ generate:
 
 build:
   stage: build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
   image: "$NODE_IMAGE"
   tags: ["$BUILD_RUNNER_TAG"]
   dependencies: [generate]
@@ -61,6 +71,8 @@ build:
 
 pages:
   stage: deploy
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
   image: "$PAGES_IMAGE"
   tags: ["$PAGES_RUNNER_TAG"]
   dependencies: [build]

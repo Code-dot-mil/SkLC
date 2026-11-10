@@ -102,10 +102,12 @@ def validate_verdict(result: object, issues: list[dict]) -> None:
         raise ValueError("Every issue must be adjudicated")
     for index, (verdict, issue) in enumerate(zip(verdicts, issues, strict=True), 1):
         validate_finding(verdict, issue, index)
-    if result["safe_to_use"] and (not result["coverage_sufficient"] or any(
+    # Current catalog skills contain only SKILL.md; coverage remains informational.
+    # Arbitrary multi-file coverage is deferred; see docs/decisions.md, decision 7.
+    if result["safe_to_use"] and any(
         verdict["determination"] != "false_positive" for verdict in verdicts
-    )):
-        raise ValueError("Approval contradicts findings or coverage")
+    ):
+        raise ValueError("Approval contradicts findings")
 
 
 def not_adjudicated(issues: list[dict], reason: str) -> dict:

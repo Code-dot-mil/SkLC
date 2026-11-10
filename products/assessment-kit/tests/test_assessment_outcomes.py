@@ -57,3 +57,22 @@ def test_developer_addresses_confirmed_finding_and_checks_revised_skill(skill, s
     summary = capsys.readouterr().out
     assert "0 confirmed findings require remediation" in summary
     assert "Parse data without eval" not in summary
+
+
+@pytest.mark.parametrize("findings", [False, True])
+def test_safe_single_file_assessment_can_be_reused_despite_coverage_warnings(
+    skill, scanner, gateway, partial_report, tmp_path, findings,
+):
+    if not findings:
+        partial_report["issues"] = []
+    gateway["overrides"] = {"coverage_sufficient": False}
+    output = tmp_path / "reports"
+    args = ["assess", "--skill", str(skill), "--output-dir", str(output)]
+    assert main(args) == 0
+    verdict = json.loads((output / "adjudication.json").read_text())
+    assert verdict["status"] == "completed"
+    assert verdict["safe_to_use"] is True
+    assert verdict["coverage_sufficient"] is False
+    assert json.loads((output / "skillspector.json").read_text()) == partial_report
+    assert main([*args, "--if-changed"]) == 0
+    assert len(scanner["calls"]) == 1

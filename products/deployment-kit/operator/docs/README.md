@@ -162,8 +162,6 @@ npm --prefix site run build
 
 For private CA trust, follow the image guide's local helper instructions before installing the wheel. Each assessment also writes `assessment.md` by summarizing existing reports without a second scan. Static-only diagnostics can be summarized locally, but cannot feed a site build.
 
-Run generation from the repository being built. The footer shows its short commit SHA and the site build time in the viewer’s locale and time zone. Tagged upstream builds show the release version; later commits show `X.Y.Z+dev.N`, where N is commits since that tag. Uncommitted upstream edits add `.dirty`. Installed Operator kits retain their upstream identity from `VERSION` and show the customer repository’s build SHA.
-
 Input paths are configurable with `--skills` and `--evidence`. Site builds always read `.exchange/generated/` beside `site/`. The generator still accepts `--generated` for standalone use; to build a site, generate into the standard location. Local output is in `site/dist/`.
 
 ## Apply an update

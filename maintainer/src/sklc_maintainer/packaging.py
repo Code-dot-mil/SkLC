@@ -69,7 +69,7 @@ def checked_path(name: str) -> PurePosixPath:
 
 
 def package_operator(source: Path, bundle_path: Path, assessments_path: Path,
-                     wheel: Path, output_dir: Path, version: str, source_version: str) -> Path:
+                     wheel: Path, output_dir: Path, version: str) -> Path:
     from skill_assessment.hashing import skill_digest
     from skill_assessment.reports import is_current_assessment
 
@@ -98,7 +98,7 @@ def package_operator(source: Path, bundle_path: Path, assessments_path: Path,
         "assessment/README.md": (source / "products/assessment-kit/README.md").read_bytes(),
         f"assessment/{wheel.name}": wheel.read_bytes(),
         "assessment/requirements.txt": f"./assessment/{wheel.name}\n".encode(),
-        "VERSION": (source_version + "\n").encode(),
+        "VERSION": (version + "\n").encode(),
         ".gitignore": (operator / ".gitignore").read_bytes(),
     })
     for name in ("Dockerfile", ".dockerignore", "README.md"):
@@ -198,10 +198,7 @@ def main() -> None:
         elif args.command == "assessments":
             output = package_assessments(source, args.output, args.source_dir)
         elif args.command == "operator":
-            from skill_exchange.build_info import site_version
-
-            output = package_operator(source, args.bundle, args.assessments, args.wheel, args.output_dir, args.version,
-                                      site_version(args.repo_root / "products/deployment-kit/operator"))
+            output = package_operator(source, args.bundle, args.assessments, args.wheel, args.output_dir, args.version)
         else:
             site = args.site_dir if args.site_dir.is_absolute() else args.repo_root / args.site_dir
             if args.stage:

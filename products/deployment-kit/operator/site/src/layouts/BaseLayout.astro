@@ -1,6 +1,4 @@
 ---
-import LocalDate from "../components/LocalDate";
-import { exchangeIndex, builtAt } from "../lib/exchange-data.mjs";
 import "../styles/global.css";
 import { relativeSiteRoot } from "../lib/portable-paths.mjs";
 const { title } = Astro.props;
@@ -19,22 +17,5 @@ const { title } = Astro.props;
     <main class="page">
       <slot />
     </main>
-    <footer>SkLC {exchangeIndex.version} · Build {exchangeIndex.revision} from <LocalDate value={builtAt} client:load /></footer>
   </body>
 </html>
-
-<style>
-  body {
-    display: flex;
-    flex-direction: column;
-  }
-  main {
-    flex: 1;
-  }
-  footer {
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.875rem;
-  }
-</style>

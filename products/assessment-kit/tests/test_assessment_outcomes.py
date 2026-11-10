@@ -73,6 +73,48 @@ def test_safe_single_file_assessment_can_be_reused_despite_coverage_warnings(
     assert verdict["status"] == "completed"
     assert verdict["safe_to_use"] is True
     assert verdict["coverage_sufficient"] is False
+    assert main(["summarize", "--assessment-dir", str(output)]) == 0
     assert json.loads((output / "skillspector.json").read_text()) == partial_report
     assert main([*args, "--if-changed"]) == 0
     assert len(scanner["calls"]) == 1
+
+
+@pytest.mark.parametrize("flags,enforced", [([], False), (["--no-enforce-coverage"], False),
+                                           (["--enforce-coverage"], True)])
+def test_coverage_policy_controls_approval_validation(
+    skill, scanner, gateway, partial_report, tmp_path, flags, enforced,
+):
+    gateway["overrides"] = {"coverage_sufficient": False}
+    output = tmp_path / "reports"
+    code = main(["assess", "--skill", str(skill), "--output-dir", str(output), *flags])
+    assert code == (3 if enforced else 0)
+    path = next(tmp_path.glob("*/adjudication.json"))
+    verdict = json.loads(path.read_text())
+    assert verdict["metadata"]["enforce_coverage"] is enforced
+    assert verdict["status"] == ("failed" if enforced else "completed")
+    prompt = json.loads(gateway["calls"][0].data)["messages"][0]["content"]
+    assert ("Coverage enforcement is enabled" if enforced else "Coverage enforcement is disabled") in prompt
+
+
+def test_changed_or_unrecorded_coverage_policy_requires_fresh_assessment(skill, scanner, gateway, tmp_path):
+    output = tmp_path / "reports"
+    args = ["assess", "--skill", str(skill), "--output-dir", str(output), "--if-changed"]
+    for flags, calls in [([], 1), (["--enforce-coverage"], 2), (["--enforce-coverage"], 2),
+                         (["--no-enforce-coverage"], 3)]:
+        assert main([*args, *flags]) == 0
+        assert len(scanner["calls"]) == calls
+    path = output / "adjudication.json"
+    verdict = json.loads(path.read_text())
+    del verdict["metadata"]["enforce_coverage"]
+    path.write_text(json.dumps(verdict))
+    assert main(args) == 0
+    assert len(scanner["calls"]) == 4
+
+
+def test_enforced_coverage_can_produce_reusable_caution_verdict(skill, scanner, gateway, partial_report, tmp_path):
+    gateway["overrides"] = {"coverage_sufficient": False, "safe_to_use": False}
+    output = tmp_path / "reports"
+    args = ["assess", "--skill", str(skill), "--output-dir", str(output), "--enforce-coverage", "--if-changed"]
+    assert main(args) == main(args) == 0
+    assert len(scanner["calls"]) == 1
+    assert main(["summarize", "--assessment-dir", str(output)]) == 0

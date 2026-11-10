@@ -48,7 +48,8 @@ def validate_assessment_report(report: dict, report_dir: Path, *, static_only: b
     validate_requested_mode(report, report_dir, static_only=static_only)
 
 
-def is_current_assessment(output_dir: Path, digest: str, *, static_only: bool) -> bool:
+def is_current_assessment(output_dir: Path, digest: str, *, static_only: bool,
+                          enforce_coverage: bool | None = None) -> bool:
     """Only reuse a successful assessment of these bytes in this mode."""
     try:
         report = load_scanner_report(output_dir / "skillspector.json")
@@ -72,9 +73,14 @@ def is_current_assessment(output_dir: Path, digest: str, *, static_only: bool) -
                         or not isinstance(finding["reason"], str) or not finding["reason"].strip()):
                     return False
         else:
+            # Legacy artifacts predate the option and used enforced coverage.
+            recorded_policy = adjudication["metadata"].get("enforce_coverage", True)
+            if (enforce_coverage is not None
+                    and adjudication["metadata"].get("enforce_coverage") is not enforce_coverage):
+                return False
             validate_verdict({key: adjudication[key] for key in (
                 "safe_to_use", "summary", "coverage_sufficient", "coverage_reason", "findings",
-            )}, report["issues"])
+            )}, report["issues"], enforce_coverage=recorded_policy)
         return (
             adjudication.get("skill_sha256") == digest
             and adjudication.get("status") == ("not_performed" if static_only else "completed")

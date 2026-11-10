@@ -35,11 +35,11 @@ Publish the assessment-kit wheel independently on authorized SkLC releases along
 
 ## 7. Coverage and current assessment scope
 
-The current catalog skills each contain only SKILL.md and no supporting files. Coverage diagnostics do not determine the safety verdict; safety is judged from SKILL.md content and adjudicated findings. Preserve native coverage diagnostics as information. Reliable coverage assessment for arbitrary multi-file skill packages is deferred to future work.
+The current catalog skills each contain only SKILL.md and no supporting files. Adjudication defaults to `enforce_coverage=False`: coverage diagnostics are informational, and safety is judged from SKILL.md content and adjudicated findings. Users can opt in with `--enforce-coverage`, which allows material coverage gaps to block a safe verdict; `--no-enforce-coverage` explicitly disables enforcement. The current single-file catalog uses the default. Preserve native coverage diagnostics as information. Reliable coverage assessment for arbitrary multi-file skill packages is deferred to future work.
 
 ## 8. Catalog safety gate
 
-PR CI and release CI require every catalog skill to have a Safe to use determination after validating current assessments against exact skill content. Missing, unknown, or unfavorable determinations fail the gate before packaging and draft release creation. Coverage diagnostics do not affect this gate. Operator sites may still display unfavorable assessments.
+PR CI and release CI require every catalog skill to have a Safe to use determination after validating current assessments against exact skill content. Missing, unknown, or unfavorable determinations fail the gate before packaging and draft release creation. The gate checks the safety determination, not coverage diagnostics; adjudication may enforce coverage when explicitly requested. Operator sites may still display unfavorable assessments.
 
 ## 9. SkillSpector and its reports
 

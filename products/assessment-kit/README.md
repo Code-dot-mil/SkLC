@@ -121,7 +121,7 @@ After changing a skill, repeat `assess` and `summarize`. By default, every invoc
 uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports --if-changed
 ```
 
-Reuse requires matching JSON reports and the package hash, successful scanning in the requested mode, and completed adjudication (`not_performed` for static-only). Diagnostics are optional. Coverage limitations can remain advisory; malformed, failed, missing, or mismatched reports trigger a new scan. The scanner must still be on `PATH` even for reuse; if absent, `assess` exits with `3` before creating files.
+Reuse requires matching JSON reports and the package hash, successful scanning in the requested mode, a matching recorded coverage-enforcement setting for LLM-assisted runs, and completed adjudication (`not_performed` for static-only). Diagnostics are optional. Coverage limitations can remain advisory; malformed, failed, missing, or mismatched reports trigger a new scan. The scanner must still be on `PATH` even for reuse; if absent, `assess` exits with `3` before creating files.
 
 Successful runs replace the three output files and keep no history. Copy earlier pairs elsewhere if needed. Assessment is prepared in a separate sibling directory; a scanning or adjudication failure preserves current reports and identifies the directory with retained diagnostics and available outputs. Current reports may therefore describe an earlier successful run. Successful replacement happens one file at a time rather than as a transaction; other output-directory files and skill inputs remain unchanged.
 
@@ -132,6 +132,16 @@ Successful runs replace the three output files and keep no history. Copy earlier
 `--scan-mode llm-assisted` is the default. `--scan-mode static-only` runs the scanner without model analysis or adjudication; findings remain unresolved and the adjudication report has `status: not_performed` with unknown safety and coverage judgments. Static-only results are useful for diagnostics but do not qualify for exchange-site generation. A failed LLM-assisted run never switches modes automatically.
 
 The scanner and adjudication request each have a five-minute timeout. Set `--timeout SECONDS` to a positive whole number; `--timeout 600` permits up to ten minutes per stage.
+
+### Coverage enforcement
+
+Coverage is informational by default. Use `--enforce-coverage` to require sufficient adjudication coverage for a safe verdict, or `--no-enforce-coverage` to explicitly disable enforcement. These flags affect the adjudication prompt and validation; they do not alter SkillSpector or its reports. Static-only runs do not adjudicate or enforce coverage.
+
+```sh
+uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports --enforce-coverage
+```
+
+LLM adjudications record `enforce_coverage` in metadata. `--if-changed` requires a matching setting; legacy reports without it require a fresh assessment. Summaries and catalog generation can still read legacy reports under their original enforced-coverage policy.
 
 ### Shorten the source path
 
@@ -149,7 +159,7 @@ Rewriting happens after scanning and before adjudication, including usable retai
 
 The packaged [system prompt](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/src/skill_assessment/prompts/adjudicate.md) instructs the model to treat skill text and scanner output as evidence. Each finding receives a true-positive, false-positive, or uncertain determination with a reason. Confidence scores, scanner tags, and coverage diagnostics inform the review without establishing safety by themselves.
 
-The kit validates finding order and identity and checks that the safety judgment agrees with the findings and coverage judgment. Reports include scope, status, provider/model, creation time, duration, call counts, and token usage when available. Unknown token usage is null; credentials and endpoint URLs are excluded.
+The kit validates finding order and identity and checks that the safety judgment agrees with the findings and, when enforcement is enabled, the coverage judgment. Reports include scope, status, provider/model, creation time, duration, call counts, and token usage when available. Unknown token usage is null; credentials and endpoint URLs are excluded.
 
 Partial scanner coverage can still produce current reports when execution succeeds in the requested mode and adjudication completes. Missing configuration yields `status: unavailable`; a failed request or invalid response yields `status: failed`. Both leave safety and coverage unknown and findings `not_adjudicated`. Readable scanner failure reports are retained when available. Static-only failures retain `status: not_performed`; readable findings are kept, otherwise the list is empty. Static-only provider/model/usage fields are null, and call counts and duration are zero.
 

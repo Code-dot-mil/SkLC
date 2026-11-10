@@ -13,6 +13,10 @@ from urllib.parse import quote, urlencode, urlsplit
 
 from .errors import ConfigurationUnavailable, OutputDirectoryError
 
+# Current catalog skills contain only SKILL.md; default coverage to informational.
+# Arbitrary multi-file coverage is deferred; see docs/decisions.md, decision 7.
+DEFAULT_ENFORCE_COVERAGE = False
+
 SCOPE = "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed."
 
 
@@ -86,7 +90,9 @@ def validate_finding(verdict: object, issue: dict, index: int) -> None:
         raise ValueError("Missing finding rationale")
 
 
-def validate_verdict(result: object, issues: list[dict]) -> None:
+def validate_verdict(
+    result: object, issues: list[dict], *, enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE,
+) -> None:
     """Reject omitted findings, invented identities, and contradictory approvals."""
     keys = {"safe_to_use", "summary", "coverage_sufficient", "coverage_reason", "findings"}
     if not isinstance(result, dict) or set(result) != keys:
@@ -102,12 +108,12 @@ def validate_verdict(result: object, issues: list[dict]) -> None:
         raise ValueError("Every issue must be adjudicated")
     for index, (verdict, issue) in enumerate(zip(verdicts, issues, strict=True), 1):
         validate_finding(verdict, issue, index)
-    # Current catalog skills contain only SKILL.md; coverage remains informational.
-    # Arbitrary multi-file coverage is deferred; see docs/decisions.md, decision 7.
-    if result["safe_to_use"] and any(
+    if type(enforce_coverage) is not bool:
+        raise ValueError("Expected boolean coverage policy")
+    if result["safe_to_use"] and ((enforce_coverage and not result["coverage_sufficient"]) or any(
         verdict["determination"] != "false_positive" for verdict in verdicts
-    ):
-        raise ValueError("Approval contradicts findings")
+    )):
+        raise ValueError("Approval contradicts findings or enforced coverage")
 
 
 def not_adjudicated(issues: list[dict], reason: str) -> dict:
@@ -157,9 +163,16 @@ class GatewayResponse:
         return json.loads(choice["message"]["content"])
 
 
-def request_completion(config: GatewayConfig, evidence: dict, metadata: dict, *, timeout: int) -> GatewayResponse:
+def request_completion(config: GatewayConfig, evidence: dict, metadata: dict, *, timeout: int,
+                       enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE) -> GatewayResponse:
     """Request a completion while tracking attempts even when the gateway fails."""
     prompt = files("skill_assessment").joinpath("prompts/adjudicate.md").read_text(encoding="utf-8")
+    prompt += "\n" + (
+        "Coverage enforcement is enabled: material coverage gaps must prevent a safe_to_use verdict."
+        if enforce_coverage else
+        "Coverage enforcement is disabled: coverage diagnostics are informational and must not independently "
+        "cause an unsafe verdict."
+    )
     payload = {
         "model": config.model, "messages": [{"role": "system", "content": prompt},
                                            {"role": "user", "content": json.dumps(evidence)}],
@@ -210,7 +223,8 @@ def record_static_adjudication(report: dict, output: Path) -> dict:
 
 
 def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: int = 300, static_only: bool = False,
-                      unavailable_reason: str | None = None) -> dict:
+                      unavailable_reason: str | None = None,
+                      enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE) -> dict:
     """Save a verdict or explicit non-adjudication, leaving the raw report unchanged."""
     if static_only:
         return record_static_adjudication(report, output)
@@ -220,6 +234,7 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
         provider=os.environ.get("SKILLSPECTOR_PROVIDER", "").strip().lower() or None,
         model=os.environ.get("SKILLSPECTOR_MODEL", "").strip() or None,
     )
+    metadata["enforce_coverage"] = enforce_coverage
     reason = unavailable_reason or "Adjudication did not complete."
     status = "unavailable"
     result = not_adjudicated(issues, reason)
@@ -228,10 +243,11 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
             config = gateway_config()
             metadata.update(provider=config.provider, model=config.model)
             evidence = build_evidence(report, skill_file)
-            completion = request_completion(config, evidence, metadata, timeout=timeout)
+            completion = request_completion(config, evidence, metadata, timeout=timeout,
+                                            enforce_coverage=enforce_coverage)
             metadata.update(response_model=completion.response_model, token_usage=completion.token_usage)
             verdict = completion.verdict()
-            validate_verdict(verdict, issues)
+            validate_verdict(verdict, issues, enforce_coverage=enforce_coverage)
             result = verdict
             status = "completed"
         except ConfigurationUnavailable as exc:

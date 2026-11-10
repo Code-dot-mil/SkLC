@@ -28,12 +28,12 @@ def assess_skill(
     if output_dir.is_relative_to(skill):
         raise OutputDirectoryError("choose an output directory outside the skill")
     digest = skill_digest(skill)
-    if if_changed and is_current_assessment(
-        output_dir, digest, static_only=static_only, enforce_coverage=enforce_coverage,
-    ):
-        if base_dir is not None:
-            strip_source_base(output_dir / "skillspector.json", base_dir)
-        return output_dir
+    if if_changed and is_current_assessment(output_dir, digest, static_only=static_only):
+        prior = json.loads((output_dir / "adjudication.json").read_text(encoding="utf-8"))
+        if static_only or prior["metadata"].get("enforce_coverage") is enforce_coverage:
+            if base_dir is not None:
+                strip_source_base(output_dir / "skillspector.json", base_dir)
+            return output_dir
     # Scanning creates a unique sibling directory, keeping failed scans out of current output.
     report = scan_skill(skill, output_dir.parent, static_only=static_only, timeout=timeout, base_dir=base_dir,
                         enforce_coverage=enforce_coverage)

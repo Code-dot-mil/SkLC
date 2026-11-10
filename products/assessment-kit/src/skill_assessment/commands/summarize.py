@@ -26,7 +26,7 @@ def summarize(directory: Path) -> str:
     if status == "completed":
         validate_verdict({key: verdict[key] for key in (
             "safe_to_use", "summary", "coverage_sufficient", "coverage_reason", "findings"
-        )}, issues, enforce_coverage=verdict.get("metadata", {}).get("enforce_coverage", True))
+        )}, issues)
     elif status not in {"not_performed", "unavailable", "failed"}:
         raise ValueError("Unknown adjudication status")
     if status != "completed":

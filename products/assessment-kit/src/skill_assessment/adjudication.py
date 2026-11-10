@@ -90,9 +90,7 @@ def validate_finding(verdict: object, issue: dict, index: int) -> None:
         raise ValueError("Missing finding rationale")
 
 
-def validate_verdict(
-    result: object, issues: list[dict], *, enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE,
-) -> None:
+def validate_verdict(result: object, issues: list[dict]) -> None:
     """Reject omitted findings, invented identities, and contradictory approvals."""
     keys = {"safe_to_use", "summary", "coverage_sufficient", "coverage_reason", "findings"}
     if not isinstance(result, dict) or set(result) != keys:
@@ -108,12 +106,10 @@ def validate_verdict(
         raise ValueError("Every issue must be adjudicated")
     for index, (verdict, issue) in enumerate(zip(verdicts, issues, strict=True), 1):
         validate_finding(verdict, issue, index)
-    if type(enforce_coverage) is not bool:
-        raise ValueError("Expected boolean coverage policy")
-    if result["safe_to_use"] and ((enforce_coverage and not result["coverage_sufficient"]) or any(
+    if result["safe_to_use"] and any(
         verdict["determination"] != "false_positive" for verdict in verdicts
-    )):
-        raise ValueError("Approval contradicts findings or enforced coverage")
+    ):
+        raise ValueError("Approval contradicts findings")
 
 
 def not_adjudicated(issues: list[dict], reason: str) -> dict:
@@ -247,7 +243,9 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
                                             enforce_coverage=enforce_coverage)
             metadata.update(response_model=completion.response_model, token_usage=completion.token_usage)
             verdict = completion.verdict()
-            validate_verdict(verdict, issues, enforce_coverage=enforce_coverage)
+            validate_verdict(verdict, issues)
+            if enforce_coverage and not verdict["coverage_sufficient"]:
+                verdict["safe_to_use"] = False
             result = verdict
             status = "completed"
         except ConfigurationUnavailable as exc:

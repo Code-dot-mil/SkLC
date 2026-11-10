@@ -135,13 +135,13 @@ The scanner and adjudication request each have a five-minute timeout. Set `--tim
 
 ### Coverage enforcement
 
-Coverage is informational by default. Use `--enforce-coverage` to require sufficient adjudication coverage for a safe verdict, or `--no-enforce-coverage` to explicitly disable enforcement. These flags affect the adjudication prompt and validation; they do not alter SkillSpector or its reports. Static-only runs do not adjudicate or enforce coverage.
+Coverage is informational by default. Use `--enforce-coverage` to require sufficient adjudication coverage for a safe verdict, or `--no-enforce-coverage` to explicitly disable enforcement. These flags affect how adjudication determines `safe_to_use`; they do not alter SkillSpector or its reports. Static-only runs do not adjudicate or enforce coverage.
 
 ```sh
 uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports --enforce-coverage
 ```
 
-LLM adjudications record `enforce_coverage` in metadata. `--if-changed` requires a matching setting; legacy reports without it require a fresh assessment. Summaries and catalog generation can still read legacy reports under their original enforced-coverage policy.
+LLM adjudications record `enforce_coverage` in metadata. `--if-changed` requires a matching setting; legacy reports without it require a fresh assessment. Summaries and catalog generation consume the recorded safety verdict without applying coverage policy again.
 
 ### Shorten the source path
 
@@ -159,7 +159,7 @@ Rewriting happens after scanning and before adjudication, including usable retai
 
 The packaged [system prompt](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/src/skill_assessment/prompts/adjudicate.md) instructs the model to treat skill text and scanner output as evidence. Each finding receives a true-positive, false-positive, or uncertain determination with a reason. Confidence scores, scanner tags, and coverage diagnostics inform the review without establishing safety by themselves.
 
-The kit validates finding order and identity and checks that the safety judgment agrees with the findings and, when enforcement is enabled, the coverage judgment. Reports include scope, status, provider/model, creation time, duration, call counts, and token usage when available. Unknown token usage is null; credentials and endpoint URLs are excluded.
+The kit validates finding order and identity and checks that the safety judgment agrees with the findings. Coverage enforcement, when enabled, sets `safe_to_use` to false if adjudication reports insufficient coverage. Reports include scope, status, provider/model, creation time, duration, call counts, and token usage when available. Unknown token usage is null; credentials and endpoint URLs are excluded.
 
 Partial scanner coverage can still produce current reports when execution succeeds in the requested mode and adjudication completes. Missing configuration yields `status: unavailable`; a failed request or invalid response yields `status: failed`. Both leave safety and coverage unknown and findings `not_adjudicated`. Readable scanner failure reports are retained when available. Static-only failures retain `status: not_performed`; readable findings are kept, otherwise the list is empty. Static-only provider/model/usage fields are null, and call counts and duration are zero.
 

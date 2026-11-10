@@ -121,7 +121,7 @@ After changing a skill, repeat `assess` and `summarize`. By default, every invoc
 uv run --no-project skill-assessment assess --skill ./my-skill --output-dir ./reports --if-changed
 ```
 
-Reuse requires matching JSON reports and the package hash, successful scanning in the requested mode, a matching recorded coverage-enforcement setting for LLM-assisted runs, and completed adjudication (`not_performed` for static-only). Diagnostics are optional. Coverage limitations can remain advisory; malformed, failed, missing, or mismatched reports trigger a new scan. The scanner must still be on `PATH` even for reuse; if absent, `assess` exits with `3` before creating files.
+`--if-changed` reuses a successful assessment when the skill content, scan mode, and coverage-enforcement setting are unchanged. Otherwise, it runs a new assessment.
 
 Successful runs replace the three output files and keep no history. Copy earlier pairs elsewhere if needed. Assessment is prepared in a separate sibling directory; a scanning or adjudication failure preserves current reports and identifies the directory with retained diagnostics and available outputs. Current reports may therefore describe an earlier successful run. Successful replacement happens one file at a time rather than as a transaction; other output-directory files and skill inputs remain unchanged.
 

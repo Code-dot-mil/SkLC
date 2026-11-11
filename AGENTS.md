@@ -53,6 +53,7 @@ For the next three substantive contributions, record skills used, the initial ou
 ## Local Development
 
 - Use `just lint`, `just test`, and `just build` for local cross-stack workflows.
+- When Markdown changes, run both formatting and lint checks defined in `package.json` using the lockfile-installed tools before pushing. Both checks must pass.
 - Use `uv run --extra test pytest` for Python tests.
 - Use `npm --prefix products/deployment-kit/operator/site run test` for Node-based site tests.
 - Use `just generate` for upstream catalog generation with explicit source and evidence paths.

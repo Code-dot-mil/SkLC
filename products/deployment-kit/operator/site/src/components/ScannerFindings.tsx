@@ -128,6 +128,8 @@ export default function ScannerFindings({
             <li><strong>Human Review</strong><span>A person reads the AI judge's summary, reviews the evidence, and decides whether to use the skill.</span></li>
           </ol>
           <p>SkillSpector can run without AI, using only the first stage of static checks. We don't recommend this. Static-only results are difficult for a person to review on their own.</p>
+          <p><strong>Scanner risk</strong> is SkillSpector's overall rating across all findings. A finding's <strong>risk tag</strong> rates that warning alone, so it can differ from the overall rating.</p>
+          <p>Both risks are calculated before adjudication and do not reflect the AI judge's decisions. The <strong>adjudicated recommendation</strong> is the final risk judgment.</p>
           <p>Adjudication adds an <strong>Adjudicated as False Positive</strong> tag to warnings it judges to be false alarms.</p>
           <p>Human review takes place during the code merge process, when a person approves adding the skill to the exchange.</p>
           <p>Learn more:</p>

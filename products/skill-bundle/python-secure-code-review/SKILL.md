@@ -6,7 +6,7 @@ metadata:
   ai4sdlc.updated: "2026-10-20T14:59:35-05:00"
   ai4sdlc.category: security
   ai4sdlc.tags: code-review,python,security
-  ai4sdlc.owner: slunsford
+  ai4sdlc.owner: ad4sdlc-skills-team
 ---
 
 # Python Secure Code Review

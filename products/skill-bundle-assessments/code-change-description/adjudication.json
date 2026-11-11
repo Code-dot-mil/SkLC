@@ -1,25 +1,25 @@
 {
   "safe_to_use": true,
-  "summary": "No security issues were reported, and the supplied SKILL.md is a benign writing aid for drafting PR/MR descriptions with no instructions for tool use, exfiltration, privilege escalation, or other unsafe behavior.",
+  "summary": "No security findings were reported. SKILL.md is non-executable documentation for drafting PR/MR descriptions; all static and semantic analyzers completed with no issues, and the risk assessment is LOW/NONE.",
   "coverage_sufficient": true,
-  "coverage_reason": "The only supplied content was SKILL.md, it was fully scanned, and the unresolved local references are quoted placeholder text within the markdown rather than missing executable or behavioral context material to adjudicate.",
+  "coverage_reason": "The single supplied component (SKILL.md) was fully inspected (100% coverage, fully_inspected_files: 1) with no executable scripts. The two non-fatal reference-resolution gaps concern documentation-style issue-link text, not material security-relevant content.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "azure_openai",
-    "model": "gpt-5.4",
-    "response_model": "gpt-5.4-2026-03-05",
-    "created_at": "2026-11-11T19:39:57.246584+00:00",
-    "duration_seconds": 2.356,
+    "provider": "openai_compatible",
+    "model": "nemotron-3.5-super-vl",
+    "response_model": "nemotron-3.5-super-vl",
+    "created_at": "2026-11-11T18:16:05.667262+00:00",
+    "duration_seconds": 4.314,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 4780,
-      "completion_tokens": 108,
-      "total_tokens": 4888
+      "prompt_tokens": 5208,
+      "completion_tokens": 567,
+      "total_tokens": 5775
     },
     "enforce_coverage": false
   },
-  "skill_sha256": "3a9fa8bdbbd1f82466a660ba77bbf3206c0c92b7eedfd0b6b6b575327c66b4d2"
+  "skill_sha256": "fd59854a91eb69ec1f815584ba4669bb781b683c593cab497f2ddc98ea8c19ea"
 }

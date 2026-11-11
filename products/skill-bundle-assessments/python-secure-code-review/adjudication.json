@@ -1,32 +1,32 @@
 {
   "safe_to_use": true,
-  "summary": "The supplied SKILL.md is a defensive code-review skill. The only flagged text is an example describing SQL injection risk in a review comment, not an instruction to bypass safeguards or jailbreak the agent.",
+  "summary": "The single AR3 anti-refusal flag matches \"bypass filters\" inside an illustrative SQL-injection example in SKILL.md; the surrounding text explicitly marks snippets as illustrative and describes an attacker scenario against a database query, not a jailbreak instructing the agent to ignore its own safety policies. No true-positive or uncertain findings remain, and the supplied skill content shows no other danger.",
   "coverage_sufficient": true,
-  "coverage_reason": "The full supplied SKILL.md text and the scanner evidence are sufficient to adjudicate the single finding. Reference-resolution gaps concern example path mentions, not hidden executable behavior in the reviewed file.",
+  "coverage_reason": "Full SKILL.md (334 lines, 100% scanned) was supplied and the flagged line is fully visible and adjudicable. Unresolved reference paths point to illustrative example files outside the MVP scope and do not create a material gap for this finding.",
   "findings": [
     {
       "index": 1,
       "rule_id": "AR3",
       "determination": "false_positive",
-      "reason": "The phrase 'bypass filters' appears inside an illustrative security-review example explaining an attack/failure mode for SQL injection. Surrounding text explicitly frames examples as illustrative review artifacts and says not to copy, execute, or apply them as implementation guidance."
+      "reason": "Line 278 occurs within an educational SQL injection example (preceded by \"Do not copy, execute, or apply them as implementation guidance\") describing how untrusted email input can bypass database filters; it is not an anti-refusal/jailbreak directive targeting the agent's own guardrails. Scanner tags also mark likely-benign-context and llm-unconfirmed."
     }
   ],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "azure_openai",
-    "model": "gpt-5.4",
-    "response_model": "gpt-5.4-2026-03-05",
-    "created_at": "2026-11-11T19:40:21.447387+00:00",
-    "duration_seconds": 3.772,
+    "provider": "openai_compatible",
+    "model": "nemotron-3.5-super-vl",
+    "response_model": "nemotron-3.5-super-vl",
+    "created_at": "2026-11-11T18:17:03.336238+00:00",
+    "duration_seconds": 8.47,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 8313,
-      "completion_tokens": 173,
-      "total_tokens": 8486
+      "prompt_tokens": 9305,
+      "completion_tokens": 1817,
+      "total_tokens": 11122
     },
     "enforce_coverage": false
   },
-  "skill_sha256": "01e185e9793823d8061e5cbe8e281ee9cdedf67bb4a0f79e2d344e650c3c0f99"
+  "skill_sha256": "24ee33adda29de97276f9cadf4894cebd981c523a8bc11bfc8935d31b3cf9a42"
 }

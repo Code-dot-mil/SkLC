@@ -1,25 +1,25 @@
 {
   "safe_to_use": true,
-  "summary": "The supplied SKILL.md is a non-executable testing guidance document focused on generating bounded unit tests and contains no identified malicious instructions or unsafe behaviors in the provided evidence.",
+  "summary": "The scan found no issues across SKILL.md; risk score is 0, severity LOW, recommendation SAFE, and execution completed with 100% coverage. The skill text describes unit-test generation only, with no executable scripts or dangerous behavior.",
   "coverage_sufficient": true,
-  "coverage_reason": "Only SKILL.md was in scope, it was fully scanned, and no issues were reported; this is sufficient to adjudicate the supplied content only.",
+  "coverage_reason": "The single component (SKILL.md) was fully scanned by all applicable analyzers; coverage is 100% and analysis status is complete with no uninspected files.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "azure_openai",
-    "model": "gpt-5.4",
-    "response_model": "gpt-5.4-2026-03-05",
-    "created_at": "2026-11-11T19:40:32.615036+00:00",
-    "duration_seconds": 1.583,
+    "provider": "openai_compatible",
+    "model": "nemotron-3.5-super-vl",
+    "response_model": "nemotron-3.5-super-vl",
+    "created_at": "2026-11-11T18:17:24.179027+00:00",
+    "duration_seconds": 2.059,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 3522,
-      "completion_tokens": 91,
-      "total_tokens": 3613
+      "prompt_tokens": 3761,
+      "completion_tokens": 349,
+      "total_tokens": 4110
     },
     "enforce_coverage": false
   },
-  "skill_sha256": "ef6ed63a04ac4e471f7b3956b50d9630a7a8594656c20f4f012d3e0c2ba8eddb"
+  "skill_sha256": "c56fa4ea256a64fdc98603e5de9bf87da8a386e3d9128b6834c06cff13a229b3"
 }

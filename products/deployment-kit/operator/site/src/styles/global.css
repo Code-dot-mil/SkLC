@@ -718,26 +718,46 @@ abbr[title] {
 .review-workflow {
   display: grid;
   gap: 24px;
-  padding-left: 24px;
+  padding: 0;
+  list-style: none;
+  counter-reset: review-stage;
 }
 
 .review-workflow li {
   position: relative;
-  padding: 8px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  counter-increment: review-stage;
 }
 
-.review-workflow li + li::before {
+.review-workflow li::before {
+  content: counter(review-stage);
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.review-workflow li:not(:last-child)::after {
   content: "↓";
   position: absolute;
-  top: -24px;
-  left: 8px;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  line-height: 24px;
   color: var(--quiet);
 }
 
+.review-workflow strong,
 .review-workflow span {
-  display: block;
+  grid-column: 2;
 }
 
 .row-select {

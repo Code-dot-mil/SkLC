@@ -125,7 +125,7 @@ export default function ScannerFindings({
             <li><strong>Static Checks</strong><span>Pattern matchers look for warning signs.</span></li>
             <li><strong>AI-assisted Checks</strong><span>AI flags warnings it can't confirm are true positives.</span></li>
             <li><strong>Adjudication</strong><span>AI judges findings to be true positives, false positives, or inconclusive.</span></li>
-            <li><strong>Human Review</strong><span>A person reads the AI judge's summary, reviews the evidence, and decides whether to use the skill.</span></li>
+            <li><strong>Human Review</strong><span>A person reads the AI judge's summary, reviews the evidence, and decides whether to approve the skill as Safe to Use.</span></li>
           </ol>
           <p>SkillSpector can run without AI, using only the first stage of static checks. We don't recommend this. Static-only results are difficult for a person to review on their own.</p>
           <p><strong>Scanner risk</strong> is SkillSpector's overall rating across all findings. A finding's <strong>risk tag</strong> rates that warning alone, so it can differ from the overall rating.</p>

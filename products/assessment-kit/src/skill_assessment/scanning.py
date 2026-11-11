@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from .adjudication import DEFAULT_ENFORCE_COVERAGE, SCOPE, adjudicate_report
+from .adjudication import SCOPE, adjudicate_report
 from .commands.validate import validate_skill
 from .errors import IncompleteScanError, OutputDirectoryError, ScanError, ScanTimeoutError
 from .reports import load_scanner_report, validate_assessment_report, validate_scan_execution
@@ -52,7 +52,6 @@ def run_scanner(command: list[str], report_dir: Path, *, timeout: int = 300) -> 
 
 def scan_skill(
     skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = 300, base_dir: Path | None = None,
-    enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE,
 ) -> Path:
     """Validate and scan one skill, retaining native output even on failure."""
     require_scanner()
@@ -87,15 +86,13 @@ def scan_skill(
         adjudicate_report(
             report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, static_only=static_only,
             unavailable_reason="Scanner did not produce a usable report; findings were not adjudicated.",
-            enforce_coverage=enforce_coverage,
         )
         if isinstance(exc, ScanError):
             raise exc
         raise ScanError("Cannot read the scanner report", report_dir) from exc
-    # Always adjudicate available findings; the requested policy controls the coverage verdict.
+    # Partial coverage remains visible, but must not prevent contextual adjudication.
     adjudication = adjudicate_report(
         report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, timeout=timeout, static_only=static_only,
-        enforce_coverage=enforce_coverage,
     )
     validate_assessment_report(report, report_dir, static_only=static_only)
     if not static_only and adjudication["status"] != "completed":

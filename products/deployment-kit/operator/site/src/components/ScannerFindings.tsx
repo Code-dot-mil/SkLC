@@ -98,7 +98,7 @@ export default function ScannerFindings({
   if (!selectedRun) {
     return (
       <section className="card">
-        <h2>Scanner Runs</h2>
+        <h2>Scanner Run</h2>
         <p>No scanner runs are available.</p>
       </section>
     );
@@ -109,8 +109,8 @@ export default function ScannerFindings({
       <section className="card">
         <div className="section-title-row">
           <div className="title-cluster">
-            <h2>Scanner Runs</h2>
-            <button className="icon-button" type="button" onClick={() => dialogRef.current?.showModal()} aria-label="About scanner runs">
+            <h2>Scanner Run</h2>
+            <button className="icon-button" type="button" onClick={() => dialogRef.current?.showModal()} aria-label="About the scanner run">
               i
             </button>
           </div>
@@ -119,33 +119,32 @@ export default function ScannerFindings({
           <form method="dialog">
             <button className="dialog-close" type="submit" aria-label="Close">Close</button>
           </form>
-          <h2>Scanner Runs</h2>
-          <p>This table shows results from SkillSpector, a security scanner from NVIDIA.</p>
-          <p>It has two modes:</p>
+          <h2>Scanner Run</h2>
+          <p>The skill review process has four stages.</p>
+          <ol className="review-workflow" aria-label="Review progression">
+            <li><strong>Static Checks</strong><span>Pattern matchers look for warning signs.</span></li>
+            <li><strong>AI-assisted Checks</strong><span>AI flags warnings it can't confirm are true positives.</span></li>
+            <li><strong>Adjudication</strong><span>AI judges findings to be true positives, false positives, or inconclusive.</span></li>
+            <li><strong>Human Review</strong><span>A person reads the AI judge's summary, reviews the evidence, and decides whether to approve the skill as Safe to Use.</span></li>
+          </ol>
+          <p>SkillSpector can run without AI, using only the first stage of static checks. We don't recommend this. Static-only results are difficult for a person to review on their own.</p>
+          <p><strong>Scanner risk</strong> is SkillSpector's overall rating across all findings. A finding's <strong>risk tag</strong> rates that warning alone, so it can differ from the overall rating.</p>
+          <p>Both risks are calculated before adjudication and do not reflect the AI judge's decisions. The <strong>adjudicated recommendation</strong> is the final risk judgment.</p>
+          <p>Adjudication adds an <strong>Adjudicated as False Positive</strong> tag to warnings it judges to be false alarms.</p>
+          <p>Human review takes place during the code merge process, when a person approves adding the skill to the exchange.</p>
+          <p>Learn more:</p>
           <ul>
-            <li><strong>Static-only:</strong> A faster scan that skips the scanner’s AI checks.</li>
-            <li><strong>LLM-assisted:</strong> Uses AI to help understand what the skill does and look for problems.</li>
+            <li><a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">SkillSpector on GitHub <span aria-hidden="true">↗</span></a></li>
+            <li><a className="external-link" href="https://docs.nvidia.com/skills/scanning-agent-skills" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">How skill scanning works <span aria-hidden="true">↗</span></a></li>
+            <li><a className="external-link" href="https://github.com/NVIDIA/SkillSpector/blob/v2.12.0/README.md#risk-scoring" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">How risk scores are calculated <span aria-hidden="true">↗</span></a></li>
           </ul>
-          <p>
-            SkillSpector uses tags to describe its findings, but those tags don’t clearly identify false positives:
-            warnings that aren’t real problems. We use a second AI assistant to review the findings.
-            When it decides a warning is a false alarm, we add an <strong>Adjudicated as False Positive</strong> tag beside it.
-          </p>
-          <p>
-            Learn more on the{" "}
-            <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">
-              NVIDIA SkillSpector GitHub page <span aria-hidden="true">↗</span>
-            </a>.
-          </p>
         </dialog>
         <table>
           <thead>
             <tr>
               <th>Scanner</th>
-              <th>Date</th>
-              <th>Mode</th>
+              <th>Last Scanned Date</th>
               <th>Content Hash</th>
-              <th>Severity</th>
               <th>Score</th>
               <th>Risk</th>
               <th>Findings</th>
@@ -158,24 +157,21 @@ export default function ScannerFindings({
                 (artifact) => artifact.scanner_run_id === run.id && artifact.artifact_kind === "native_report"
               );
               const findingCount = scannerFindings.filter((finding) => finding.scanner_run_id === run.id).length;
-              const selected = run.id === selectedRun.id;
               return (
-                <tr className={selected ? "selected-row" : ""} key={run.id}>
+                <tr key={run.id}>
                   <td>
-                    <button
-                      className="row-select"
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => {
-                        updateFilters({ run: run.id, severity: "all" });
-                      }}
-                    >
-                      {selected ? "Selected" : "Select"}
-                    </button>{" "}
-                    {run.scanner_name} {run.scanner_version}
+                    {olderRunCount > 0 ? (
+                      <button
+                        className="row-select"
+                        type="button"
+                        aria-label={`View findings for ${run.scanner_name} ${run.scanner_version}, ${run.last_scanned || "date unknown"}`}
+                        onClick={() => updateFilters({ run: run.id, severity: "all" })}
+                      >
+                        {run.scanner_name} {run.scanner_version}
+                      </button>
+                    ) : <>{run.scanner_name} {run.scanner_version}</>}
                   </td>
                   <td><LocalDate value={run.last_scanned} /></td>
-                  <td><ModePill run={run} /></td>
                   <td>
                     <span className="hash-cell">
                       <abbr title={run.content_hash}><code>{run.content_hash?.slice(0, 12)}</code></abbr>
@@ -200,7 +196,6 @@ export default function ScannerFindings({
                       )}
                     </span>
                   </td>
-                  <td>{run.native_severity || "Unknown"}</td>
                   <td>{run.native_score ?? "n/a"}</td>
                   <td>{run.display_risk || "Unknown"}</td>
                   <td>{findingCount}</td>
@@ -237,7 +232,6 @@ export default function ScannerFindings({
       <section className="card">
         <div className="section-title-row">
           <h2>Findings</h2>
-          <ModePill run={selectedRun} />
         </div>
         <p>
           <strong>Scanner risk:</strong>{" "}
@@ -285,18 +279,6 @@ export default function ScannerFindings({
         )}
       </section>
     </>
-  );
-}
-
-function ModePill({ run }: { run: ScannerRun }) {
-  const details =
-    run.scan_mode === "llm-assisted"
-      ? `LLM-assisted scan. Provider: ${run.llm_provider || "unknown"}. Model: ${run.llm_model || "unknown"}.`
-      : "Static-only scan. LLM review was not requested for this run.";
-  return (
-    <span className="risk flag" title={details}>
-      {run.scan_mode}
-    </span>
   );
 }
 

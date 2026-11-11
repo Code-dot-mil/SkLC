@@ -4,7 +4,6 @@ import os
 import sys
 from pathlib import Path
 
-from ..adjudication import DEFAULT_ENFORCE_COVERAGE
 from ..errors import OutputDirectoryError, ScanError
 from ..hashing import skill_digest
 from ..reports import is_current_assessment
@@ -15,6 +14,9 @@ from ..scanning import (
     strip_source_base,
 )
 from .validate import validate_skill
+
+# Coverage is informational by default; arbitrary multi-file coverage is deferred.
+DEFAULT_ENFORCE_COVERAGE = False
 
 
 def assess_skill(
@@ -35,10 +37,13 @@ def assess_skill(
                 strip_source_base(output_dir / "skillspector.json", base_dir)
             return output_dir
     # Scanning creates a unique sibling directory, keeping failed scans out of current output.
-    report = scan_skill(skill, output_dir.parent, static_only=static_only, timeout=timeout, base_dir=base_dir,
-                        enforce_coverage=enforce_coverage)
+    report = scan_skill(skill, output_dir.parent, static_only=static_only, timeout=timeout, base_dir=base_dir)
     adjudication_path = report.with_name("adjudication.json")
     adjudication = json.loads(adjudication_path.read_text(encoding="utf-8"))
+    if not static_only:
+        adjudication["metadata"]["enforce_coverage"] = enforce_coverage
+        if enforce_coverage and not adjudication["coverage_sufficient"]:
+            adjudication["safe_to_use"] = False
     adjudication["skill_sha256"] = digest
     adjudication_path.write_text(json.dumps(adjudication, indent=2) + "\n", encoding="utf-8")
     output_dir.mkdir(parents=True, exist_ok=True)

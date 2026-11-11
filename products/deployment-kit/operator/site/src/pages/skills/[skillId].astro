@@ -27,8 +27,6 @@ const scannerRuns = scannerRunsTable.rows
 const scannerRunIds = new Set(scannerRuns.map((run) => run.id));
 const scannerFindings = scannerFindingsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
 const scannerArtifacts = scannerArtifactsTable.rows.filter((row) => scannerRunIds.has(row.scanner_run_id));
-const recommendationLabel = skill.recommendation_label || formatRecommendation(skill.recommendation);
-const risk = skill.risk || "Unknown";
 const scannerProvenance = skill.scanner_provenance || {
   name: "skillspector",
   version: undefined,
@@ -43,20 +41,6 @@ const parsedSkillMarkdown = parseFrontmatter(skill.skill_md_content);
 const skillFrontmatterRows = flattenFrontmatterRows(parsedSkillMarkdown.frontmatter);
 const renderedSkillMarkdown = await markdownProcessor.render(parsedSkillMarkdown.content);
 const sanitizedSkillMarkdown = sanitizeSkillHtml(renderedSkillMarkdown.code);
-
-function formatRecommendation(value: string) {
-  if (value === "DO_NOT_INSTALL" || value === "BLOCK") {
-    return "Avoid installing";
-  }
-  if (value === "CAUTION") {
-    return "Human Review Advised";
-  }
-  if (value === "SAFE") {
-    return "Safe to use";
-  }
-  return "Unknown";
-}
-
 
 function formatFrontmatterValue(value: unknown) {
   if (Array.isArray(value)) {
@@ -102,26 +86,14 @@ function flattenFrontmatterRows(value: unknown, prefix = ""): [string, unknown][
         <p class="eyebrow">Trust snapshot</p>
         <dl class="trust-list">
           <div>
-            <dt>Use guidance</dt>
-            <dd>{recommendationLabel}</dd>
-          </div>
-          <div>
-            <dt>Scanner risk</dt>
-            <dd>{risk}</dd>
-          </div>
-          <div>
             <dt>Scanner</dt>
             <dd>{scannerProvenance.name || "skillspector"} {scannerProvenance.version || ""}</dd>
-          </div>
-          <div>
-            <dt>Scan mode</dt>
-            <dd>{scannerProvenance.scan_mode || skill.scan_mode}</dd>
           </div>
           <div>
             <dt>Last scanned</dt>
             <dd><LocalDate value={skill.last_scanned} client:load /></dd>
           </div>
-          <div>
+          <div class="trust-owner">
             <dt>Owner</dt>
             <dd>{skill.owner || "Not declared"}</dd>
           </div>

@@ -225,3 +225,23 @@ def test_workflow_retains_summary_when_assessment_tooling_cannot_start(repositor
     assert result.returncode == 7
     retained = (root / "pr-assessments/summary.md").read_bytes()
     assert b"could not run" in retained and (root / "actions-summary.md").read_bytes() == retained
+
+
+@pytest.mark.parametrize("skills,expected", [
+    ([{"recommendation": "SAFE"}], 0),
+    ([{"recommendation": "SAFE"}, {"recommendation": "CAUTION"}], 1),
+    ([{"recommendation": "Unknown"}], 1),
+    ([{}], 1),
+    ([], 1),
+])
+def test_catalog_safety_gate_requires_safe_skills(tmp_path, monkeypatch, capsys, skills, expected):
+    from sklc_maintainer.assessments import main
+
+    for index, skill in enumerate(skills):
+        skill["skill_id"] = f"skill-{index}"
+    index = tmp_path / "index.json"
+    index.write_text(json.dumps({"skills": skills}))
+    monkeypatch.setattr(sys, "argv", ["assessments", "require-safe", "--index", str(index)])
+    assert main() == expected
+    if skills and expected:
+        assert skills[-1]["skill_id"] in capsys.readouterr().err

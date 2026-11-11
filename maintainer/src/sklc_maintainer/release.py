@@ -203,6 +203,9 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     validate = commands.add_parser("validate-version", help="validate a SemVer release version without a leading v")
     validate.add_argument("--version", required=True)
+    site = commands.add_parser("validate-site-version", help="require a plain matching generated release version")
+    site.add_argument("--version", required=True)
+    site.add_argument("--index", type=Path, required=True)
     notes = commands.add_parser("release-notes", help="extract one accepted version section")
     notes.add_argument("--version", required=True)
     notes.add_argument("--notes-file", type=Path, default=Path("RELEASE_NOTES.md"))
@@ -215,6 +218,11 @@ def main() -> None:
         check.add_argument("--version", required=True)
         check.add_argument("--expected-commit", required=True)
     args = parser.parse_args()
+    if args.command == "validate-site-version":
+        version = json.loads(args.index.read_text(encoding="utf-8"))["version"]
+        if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) or version != args.version:
+            parser.exit(1, f"Release requires plain {args.version}; generated site version is {version}\n")
+        return
     if args.command in {"check-ready", "check-draft"}:
         try:
             check = check_ready if args.command == "check-ready" else check_draft

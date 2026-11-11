@@ -13,10 +13,6 @@ from urllib.parse import quote, urlencode, urlsplit
 
 from .errors import ConfigurationUnavailable, OutputDirectoryError
 
-# Current catalog skills contain only SKILL.md; default coverage to informational.
-# Arbitrary multi-file coverage is deferred; see docs/decisions.md, decision 7.
-DEFAULT_ENFORCE_COVERAGE = False
-
 SCOPE = "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed."
 
 
@@ -212,8 +208,7 @@ def record_static_adjudication(report: dict, output: Path) -> dict:
 
 
 def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: int = 300, static_only: bool = False,
-                      unavailable_reason: str | None = None,
-                      enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE) -> dict:
+                      unavailable_reason: str | None = None) -> dict:
     """Save a verdict or explicit non-adjudication, leaving the raw report unchanged."""
     if static_only:
         return record_static_adjudication(report, output)
@@ -223,7 +218,6 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
         provider=os.environ.get("SKILLSPECTOR_PROVIDER", "").strip().lower() or None,
         model=os.environ.get("SKILLSPECTOR_MODEL", "").strip() or None,
     )
-    metadata["enforce_coverage"] = enforce_coverage
     reason = unavailable_reason or "Adjudication did not complete."
     status = "unavailable"
     result = not_adjudicated(issues, reason)
@@ -236,8 +230,6 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
             metadata.update(response_model=completion.response_model, token_usage=completion.token_usage)
             verdict = completion.verdict()
             validate_verdict(verdict, issues)
-            if enforce_coverage and not verdict["coverage_sufficient"]:
-                verdict["safe_to_use"] = False
             result = verdict
             status = "completed"
         except ConfigurationUnavailable as exc:

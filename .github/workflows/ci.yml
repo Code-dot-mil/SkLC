@@ -378,7 +378,7 @@ jobs:
           --evidence "$RUNNER_TEMP/current-assessments"
       - name: Require Safe to use determinations for every catalog skill
         run: >-
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.safety_gate
+          PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments require-safe
           --index products/deployment-kit/operator/.exchange/generated/index.json
       - name: Verify exchange data
         run: |

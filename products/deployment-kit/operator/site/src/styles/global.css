@@ -349,6 +349,10 @@ a:focus-visible {
   background: rgb(255 255 255 / 0.035);
 }
 
+.trust-list .trust-owner {
+  grid-column: 1 / -1;
+}
+
 .trust-list dt {
   color: var(--quiet);
   font-size: 0.7rem;
@@ -711,10 +715,49 @@ abbr[title] {
   text-underline-offset: 3px;
 }
 
-tr.selected-row {
-  background: rgb(0 213 255 / 0.07);
-  outline: 1px solid rgb(0 213 255 / 0.28);
-  outline-offset: -1px;
+.review-workflow {
+  display: grid;
+  gap: 24px;
+  padding: 0;
+  list-style: none;
+  counter-reset: review-stage;
+}
+
+.review-workflow li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  counter-increment: review-stage;
+}
+
+.review-workflow li::before {
+  content: counter(review-stage);
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.review-workflow li:not(:last-child)::after {
+  content: "↓";
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  line-height: 24px;
+  color: var(--quiet);
+}
+
+.review-workflow strong,
+.review-workflow span {
+  grid-column: 2;
 }
 
 .row-select {

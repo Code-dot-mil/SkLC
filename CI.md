@@ -246,3 +246,7 @@ The command creates the ZIP at the given output path. Uncommitted edits are not 
 A **dependency** is an external software package SkLC uses. GitHub Security holds the backlog of alerts about known vulnerabilities in those packages. Dependabot, GitHub's dependency-update service, monitors the root Python project and its locked package versions, plus the Operator website's npm package files. See [dependabot.yml](.github/dependabot.yml).
 
 Version checks run weekly on Monday. Minor and patch updates are grouped by package ecosystem; major updates receive separate PRs. `Fnorgh2` reviews high/critical alerts when received and the remaining backlog weekly. Unresolved alerts are escalated to repository administrator `scotluns`. Keep Dependabot alerts and security updates enabled and manage remediation there, rather than creating a second scheduled CI job for the same backlog.
+
+## Catalog safety gate
+
+PR, main, and release CI require every generated catalog recommendation to be `SAFE` after validating assessments against exact skill content. Missing, unknown, or unfavorable determinations block packaging and draft release creation. Coverage diagnostics remain informational. This upstream policy does not prevent Operator sites from displaying unfavorable assessments.

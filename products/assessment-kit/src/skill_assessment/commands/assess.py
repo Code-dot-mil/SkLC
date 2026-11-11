@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import sys
@@ -14,10 +15,13 @@ from ..scanning import (
 )
 from .validate import validate_skill
 
+# Coverage is informational by default; arbitrary multi-file coverage is deferred.
+DEFAULT_ENFORCE_COVERAGE = False
+
 
 def assess_skill(
     skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = 300, if_changed: bool = False,
-    base_dir: Path | None = None,
+    base_dir: Path | None = None, enforce_coverage: bool = DEFAULT_ENFORCE_COVERAGE,
 ) -> Path:
     """Replace the current reports only after a successful staged assessment."""
     require_scanner()
@@ -27,13 +31,19 @@ def assess_skill(
         raise OutputDirectoryError("choose an output directory outside the skill")
     digest = skill_digest(skill)
     if if_changed and is_current_assessment(output_dir, digest, static_only=static_only):
-        if base_dir is not None:
-            strip_source_base(output_dir / "skillspector.json", base_dir)
-        return output_dir
+        prior = json.loads((output_dir / "adjudication.json").read_text(encoding="utf-8"))
+        if static_only or prior["metadata"].get("enforce_coverage") is enforce_coverage:
+            if base_dir is not None:
+                strip_source_base(output_dir / "skillspector.json", base_dir)
+            return output_dir
     # Scanning creates a unique sibling directory, keeping failed scans out of current output.
     report = scan_skill(skill, output_dir.parent, static_only=static_only, timeout=timeout, base_dir=base_dir)
     adjudication_path = report.with_name("adjudication.json")
     adjudication = json.loads(adjudication_path.read_text(encoding="utf-8"))
+    if not static_only:
+        adjudication["metadata"]["enforce_coverage"] = enforce_coverage
+        if enforce_coverage and not adjudication["coverage_sufficient"]:
+            adjudication["safe_to_use"] = False
     adjudication["skill_sha256"] = digest
     adjudication_path.write_text(json.dumps(adjudication, indent=2) + "\n", encoding="utf-8")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -50,6 +60,9 @@ def register(subparsers) -> None:
     parser.add_argument("--base-dir", type=Path, default=os.environ.get("SKILL_ASSESSMENT_BASE_DIR"),
                         help="Strip the native source prefix (default: SKILL_ASSESSMENT_BASE_DIR).")
     parser.add_argument("--scan-mode", choices=("llm-assisted", "static-only"), default="llm-assisted")
+    parser.add_argument("--enforce-coverage", action=argparse.BooleanOptionalAction,
+                        default=DEFAULT_ENFORCE_COVERAGE,
+                        help="Require sufficient adjudication coverage for a safe verdict (default: %(default)s).")
     parser.add_argument("--if-changed", action="store_true", help="Skip matching successful reports in this scan mode.")
     parser.add_argument("--timeout", type=int, default=300, metavar="SECONDS",
                         help="Timeout for each scanner or adjudication request (positive integer; default: 300).")
@@ -64,7 +77,8 @@ def run(args) -> int:
     try:
         assessment = assess_skill(args.skill[0], args.output_dir,
                                   static_only=args.scan_mode == "static-only", timeout=args.timeout,
-                                  if_changed=args.if_changed, base_dir=args.base_dir)
+                                  if_changed=args.if_changed, base_dir=args.base_dir,
+                                  enforce_coverage=args.enforce_coverage)
     except ScanError as exc:
         print(str(exc), file=sys.stderr)
         if exc.report_dir is not None:

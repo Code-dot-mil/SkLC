@@ -2,7 +2,7 @@
   "skill": {
     "name": "code-change-description",
     "source": "products/skill-bundle/code-change-description",
-    "scanned_at": "2026-11-06T18:46:57.276770+00:00"
+    "scanned_at": "2026-11-10T17:32:48.630694+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -36,41 +36,38 @@
       {
         "node": "semantic_developer_intent",
         "request_kind": "structured_output",
-        "provider": "azureopenaiprovider",
-        "model": "gpt-5.4-2026-03-05",
-        "model_source": "provider_response",
+        "provider": "openaicompatibleprovider",
+        "model": "nemotron-3.5-super-vl",
+        "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 3187,
-        "completion_tokens": 14,
-        "cached_tokens": 3072,
-        "reasoning_tokens": 0,
-        "total_tokens": 3201
+        "prompt_tokens": 3271,
+        "completion_tokens": 541,
+        "reasoning_tokens": 531,
+        "total_tokens": 3812
       },
       {
         "node": "semantic_quality_policy",
         "request_kind": "structured_output",
-        "provider": "azureopenaiprovider",
-        "model": "gpt-5.4-2026-03-05",
-        "model_source": "provider_response",
+        "provider": "openaicompatibleprovider",
+        "model": "nemotron-3.5-super-vl",
+        "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 3253,
-        "completion_tokens": 14,
-        "cached_tokens": 1152,
-        "reasoning_tokens": 0,
-        "total_tokens": 3267
+        "prompt_tokens": 3335,
+        "completion_tokens": 784,
+        "reasoning_tokens": 775,
+        "total_tokens": 4119
       },
       {
         "node": "semantic_security_discovery",
         "request_kind": "structured_output",
-        "provider": "azureopenaiprovider",
-        "model": "gpt-5.4-2026-03-05",
-        "model_source": "provider_response",
+        "provider": "openaicompatibleprovider",
+        "model": "nemotron-3.5-super-vl",
+        "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 2785,
-        "completion_tokens": 14,
-        "cached_tokens": 0,
-        "reasoning_tokens": 0,
-        "total_tokens": 2799
+        "prompt_tokens": 2876,
+        "completion_tokens": 852,
+        "reasoning_tokens": 842,
+        "total_tokens": 3728
       }
     ],
     "filtering_mode": "heuristic",

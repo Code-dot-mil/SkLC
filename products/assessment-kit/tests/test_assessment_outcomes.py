@@ -57,3 +57,34 @@ def test_developer_addresses_confirmed_finding_and_checks_revised_skill(skill, s
     summary = capsys.readouterr().out
     assert "0 confirmed findings require remediation" in summary
     assert "Parse data without eval" not in summary
+
+
+@pytest.mark.parametrize("flags,enforced", [([], False), (["--enforce-coverage"], True)])
+def test_coverage_policy_determines_safety_verdict(
+    skill, scanner, gateway, tmp_path, flags, enforced,
+):
+    gateway["overrides"] = {"coverage_sufficient": False}
+    output = tmp_path / "reports"
+    code = main(["assess", "--skill", str(skill), "--output-dir", str(output), *flags])
+    assert code == 0
+    path = next(tmp_path.glob("*/adjudication.json"))
+    verdict = json.loads(path.read_text())
+    assert verdict["metadata"]["enforce_coverage"] is enforced
+    assert verdict["status"] == "completed"
+    assert verdict["safe_to_use"] is (not enforced)
+
+
+def test_changed_or_unrecorded_coverage_policy_requires_fresh_assessment(skill, scanner, gateway, tmp_path):
+    gateway["overrides"] = {"coverage_sufficient": False}
+    output = tmp_path / "reports"
+    args = ["assess", "--skill", str(skill), "--output-dir", str(output), "--if-changed"]
+    for flags, calls in [([], 1), (["--enforce-coverage"], 2), (["--enforce-coverage"], 2),
+                         (["--no-enforce-coverage"], 3)]:
+        assert main([*args, *flags]) == 0
+        assert len(scanner["calls"]) == calls
+    path = output / "adjudication.json"
+    verdict = json.loads(path.read_text())
+    del verdict["metadata"]["enforce_coverage"]
+    path.write_text(json.dumps(verdict))
+    assert main(args) == 0
+    assert len(scanner["calls"]) == 4

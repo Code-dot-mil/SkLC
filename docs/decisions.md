@@ -13,7 +13,7 @@ The environment that maintainers must use as source of truth and produce release
 The team shall deliver 4 standalone products:
 
 - Skill lifecycle (SkLC) guidance and documentation
-- Initial skill catalog for a developer persona with 4 skills
+- Initial skill bundle for a developer persona with 4 skills
 - Assessment kit
 - Deployment kit
 
@@ -32,3 +32,19 @@ Define all assessment-kit exception types in `skill_assessment/errors.py`. Comma
 ## 6. Assessment distribution
 
 Publish the assessment-kit wheel independently on authorized SkLC releases alongside the ZIP downloads listed in [CI](../CI.md#prepare-a-draft), using GitHub asset digests for download integrity. All artifacts share one release version; components are not independently versioned. The wheel's package version must correspond to that release version under Python packaging normalization. Use `uv build` to build the wheel and rely on the Python packaging tools for wheel validation.
+
+## 7. Coverage and current assessment scope
+
+The current catalog skills each contain only SKILL.md and no supporting files. Adjudication defaults to `enforce_coverage=False`: coverage diagnostics are informational, and safety is judged from SKILL.md content and adjudicated findings. Users can opt in with `--enforce-coverage`, which allows material coverage gaps to block a safe verdict; `--no-enforce-coverage` explicitly disables enforcement. The current single-file catalog uses the default. Preserve native coverage diagnostics as information. Reliable coverage assessment for arbitrary multi-file skill packages is deferred to future work.
+
+## 8. Catalog safety gate
+
+PR CI and release CI require every catalog skill to have a Safe to use determination after validating current assessments against exact skill content. Missing, unknown, or unfavorable determinations fail the gate before packaging and draft release creation. The gate checks the safety determination, not coverage diagnostics; adjudication may enforce coverage when explicitly requested. Operator sites may still display unfavorable assessments.
+
+## 9. SkillSpector and its reports
+
+We will not change SkillSpector or its reports.
+
+## 10. Skill bundle naming
+
+`skill-catalog` was renamed to `skill-bundle` to better describe a group of skills distributed together; “catalog” was too synonymous with the exchange.

@@ -2,6 +2,7 @@
 
 import argparse
 import html
+import json
 import os
 import subprocess
 import sys
@@ -129,6 +130,8 @@ def main() -> int:
     summary.add_argument("--reports", type=Path, required=True)
     summary.add_argument("--output-dir", type=Path, required=True)
     summary.add_argument("--scan-outcome", required=True)
+    gate = commands.add_parser("require-safe")
+    gate.add_argument("--index", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "select":
@@ -137,6 +140,11 @@ def main() -> int:
             return assess(args.selection, args.reports, args.before_sha, args.keep_going)
         elif args.command == "prune":
             prune(args.selection, args.reports)
+        elif args.command == "require-safe":
+            skills = json.loads(args.index.read_text(encoding="utf-8"))["skills"]
+            failures = [skill["skill_id"] for skill in skills if skill.get("recommendation") != "SAFE"]
+            if not skills or failures:
+                raise ValueError("Catalog safety gate failed: " + (", ".join(failures) or "empty catalog"))
         else:
             return summarize(args.reports, args.output_dir, args.scan_outcome)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:

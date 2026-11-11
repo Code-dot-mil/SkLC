@@ -329,7 +329,9 @@ def test_adjudication_failure_is_explicit_and_preserves_native_report(
     elif failure == 'missing-finding':
         gateway['overrides'] = {'findings': []}
     elif failure == 'contradiction':
-        gateway['overrides'] = {'coverage_sufficient': False}
+        gateway['overrides'] = {'findings': [
+            {'index': 1, 'rule_id': 'CE1', 'determination': 'true_positive', 'reason': 'Unsafe behavior.'},
+        ]}
     elif failure in ('uncertain', 'identity'):
         gateway['overrides'] = {'findings': [
             {'index': 1, 'rule_id': 'CE1' if failure == 'uncertain' else 'invented',

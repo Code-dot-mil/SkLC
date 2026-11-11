@@ -1,6 +1,6 @@
 # Deployment site
 
-This Operator Astro site serves skill instructions, adjudication, and original scanner evidence. Its catalog supports text search, categories, tags, recommendation filters, and sorting. Safety labels come only from completed adjudication.
+This Operator Astro site serves skill instructions, adjudication, and original scanner evidence. Its catalog supports text search across names, descriptions, and tags, category filtering, and sorting. Safety labels come only from completed adjudication.
 
 Run commands from this site directory after installing dependencies with `npm ci`. Generate data into `../.exchange/generated/` before running `npm run build` or `npm run dev`. The site always reads this location relative to its Astro root. Generation is a separate Operator CLI step; the Node build consumes its output. Run `npm run lint`, `npm run lint:code`, `npm run typecheck:astro`, and `npm test` to validate site changes. From the upstream checkout root, `just site-lint` runs all three static checks.
 

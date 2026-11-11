@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 
-import { RECOMMENDATION_OPTIONS, RECOMMENDATION_VALUES } from "../lib/recommendation-options.mjs";
 import LocalDate from "./LocalDate";
 import { readQueryValue, replaceQueryState } from "../lib/url-state.mjs";
 import { useQueryString } from "../lib/use-query-string";
@@ -68,22 +67,20 @@ export default function SkillBrowser({ skills }: { skills: Skill[] }) {
   const categoryValues = useMemo(() => ["all", ...categories], [categories]);
 
   const query = readQueryValue(search, "q", "");
-  const recommendation = readQueryValue(search, "recommendation", "all", RECOMMENDATION_VALUES);
   const category = readQueryValue(search, "category", "all", categoryValues);
   const sort = readQueryValue(search, "sort", "name", SORT_VALUES);
   const updateFilters = (updates: Record<string, string>) => replaceQueryState(
-    { q: query, recommendation, category, sort, ...updates },
-    { q: "", recommendation: "all", category: "all", sort: "name" }
+    { q: query, category, sort, ...updates },
+    { q: "", category: "all", sort: "name" }
   );
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const recommendationRank: Record<string, number> = { DO_NOT_INSTALL: 3, CAUTION: 2, SAFE: 1, Unknown: 0 };
     return skills.filter((skill) => {
-      const recommendationMatches = recommendation === "all" || skill.recommendation === recommendation;
       const categoryMatches = category === "all" || (skill.category || "uncategorized") === category;
       const text = [skill.skill_id, skill.name, skill.description, skill.category, ...skill.tags].join(" ").toLowerCase();
-      return recommendationMatches && categoryMatches && (!normalized || text.includes(normalized));
+      return categoryMatches && (!normalized || text.includes(normalized));
     }).sort((left, right) => {
       if (sort === "recommendation") {
         return (
@@ -101,7 +98,7 @@ export default function SkillBrowser({ skills }: { skills: Skill[] }) {
       }
       return left.skill_id.localeCompare(right.skill_id);
     });
-  }, [category, query, recommendation, skills, sort]);
+  }, [category, query, skills, sort]);
 
   return (
     <section className="catalog-shell">
@@ -117,14 +114,6 @@ export default function SkillBrowser({ skills }: { skills: Skill[] }) {
         <label>
           <span>Search</span>
           <input value={query} onChange={(event) => updateFilters({ q: event.target.value })} placeholder="Skill name, purpose, tag" />
-        </label>
-        <label>
-          <span>Recommendation</span>
-          <select value={recommendation} onChange={(event) => updateFilters({ recommendation: event.target.value })}>
-            {RECOMMENDATION_OPTIONS.map((option) => (
-              <option value={option.value} key={option.value}>{option.label}</option>
-            ))}
-          </select>
         </label>
         <label>
           <span>Category</span>
@@ -149,7 +138,7 @@ export default function SkillBrowser({ skills }: { skills: Skill[] }) {
       {filtered.length === 0 ? (
         <div className="empty-state">
           <h3>No skills match those filters.</h3>
-          <p>Clear the search or choose a broader recommendation/category filter.</p>
+          <p>Clear the search or choose a broader category.</p>
         </div>
       ) : (
         <div className="skill-grid">

@@ -130,12 +130,12 @@ export default function ScannerFindings({
           <p>SkillSpector can run without AI, using only the first stage of static checks. We don't recommend this. Static-only results are difficult for a person to review on their own.</p>
           <p>Adjudication adds an <strong>Adjudicated as False Positive</strong> tag to warnings it judges to be false alarms.</p>
           <p>Human review takes place during the code merge process, when a person approves adding the skill to the exchange.</p>
-          <p>
-            Learn more on the{" "}
-            <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">
-              NVIDIA SkillSpector GitHub page <span aria-hidden="true">↗</span>
-            </a>.
-          </p>
+          <p>Learn more:</p>
+          <ul>
+            <li><a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">SkillSpector on GitHub <span aria-hidden="true">↗</span></a></li>
+            <li><a className="external-link" href="https://docs.nvidia.com/skills/scanning-agent-skills" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">How skill scanning works <span aria-hidden="true">↗</span></a></li>
+            <li><a className="external-link" href="https://github.com/NVIDIA/SkillSpector/blob/v2.12.0/README.md#risk-scoring" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">How risk scores are calculated <span aria-hidden="true">↗</span></a></li>
+          </ul>
         </dialog>
         <table>
           <thead>

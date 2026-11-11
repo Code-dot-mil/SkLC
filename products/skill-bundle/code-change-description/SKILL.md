@@ -3,7 +3,7 @@ name: code-change-description
 description: Use when drafting or refining a pull request or merge request description from diffs, file-by-file notes, or an existing draft.
 metadata:
   ai4sdlc.created: "2026-06-19T19:49:27-05:00"
-  ai4sdlc.updated: "2026-10-20T14:59:35-05:00"
+  ai4sdlc.updated: "2026-11-11T17:15:06-06:00"
   ai4sdlc.category: collaboration
   ai4sdlc.tags: pull-requests,documentation,code-review
   ai4sdlc.owner: ad4sdlc-skills-team
@@ -56,8 +56,7 @@ Do not use this skill when:
   language.
 - `What Changed`: reviewer-relevant behavior, design, or risk-bearing changes,
   not a file-by-file dump.
-- `How To Verify`: the fastest credible path to confirm the change, including
-  tests actually run when known.
+- `How To Verify`: give the reviewer a concrete procedure to test the intended outcome: setup, action, and observable expected behavior. Exercise the change through its intended consumer. For agent instructions, use a fresh agent session with a representative task that does not prompt the required behavior, then inspect whether the agent follows the instructions. Cover materially different triggers. Separate checks already performed from reviewer instructions, and state which proposed checks remain untested. Lint results and rereading the diff do not substitute for verifying the intended behavior. Include the smallest set of checks that distinguishes working behavior from the relevant failure. Link established setup instructions. Expand only unfamiliar actions or failure fixtures; avoid repeating prerequisites and routine commands. Keep wording concise while preserving checks for every materially distinct trigger and consumer path affected by the change. Combine shared setup and related actions rather than dropping scenarios to shorten the section. For each, name the required setup or fixture, concrete commands or UI actions, and expected observable result. For failure or conditional behavior, explain how to trigger the condition deliberately and compare it with the normal case. Resolve commands and fixtures from supplied source; when a reproducible setup cannot be established, identify what is missing rather than inventing one or saying only “exercise a failure” or “follow the documented flow”.
 - `Known Gaps`: real, source-supported uncertainty, deferred work, or validation
   the provided material explicitly shows has not happened yet.
 
@@ -103,37 +102,10 @@ Use this when no stronger template has been resolved:
 | One clear reviewer outcome | Open `Why` with that outcome. |
 | Many files changed | Group by reviewer-relevant behaviors, not by path. |
 | Input is already path-by-path | Rewrite into behavior or design prose before drafting. |
-| Known tests ran | Put them in `How To Verify`. |
+| Known tests ran | Record completed checks separately from the reviewer’s verification procedure. |
 | A likely missing test or risk is unsupported by source material | Leave it out of `Known Gaps`; that belongs in review, not the MR description. |
 | Required fact is unknown | Ask one targeted question and stop. |
 | Optional field is weak or empty | Omit it or answer tersely if that is more honest. |
-
-## Example
-
-```md
-## Why
-This change makes request tracing easier during incident response by ensuring
-API requests consistently include a request ID in logs and related
-troubleshooting guidance stays in sync.
-
-## What Changed
-- Added request ID logging to the API middleware so request flows are easier to
-  trace in logs.
-- Renamed the related config flag for clearer intent.
-- Added middleware unit coverage and updated troubleshooting documentation to
-  match the new logging behavior.
-
-## How To Verify
-- Run `npm test`.
-- Confirm request logs now include the request ID field.
-- Verify the renamed config flag is reflected in the updated troubleshooting
-  docs.
-
-## Known Gaps
-- Staging verification for the renamed config flag has not been run yet.
-- Production log aggregation behavior is still unverified from the provided
-  material.
-```
 
 ## Common Mistakes
 

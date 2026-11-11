@@ -97,7 +97,29 @@ Open **Settings > CI/CD > Variables**. Set the following values for your environ
 
 Each tag variable contains one tag; the same tag can serve multiple jobs if its runner meets their requirements. See [runner tag matching](https://docs.gitlab.com/ci/runners/configure_runners/#how-the-runner-uses-tags).
 
-Configure the provider, model, and credentials using the [assessment provider guide](../../../assessment-kit/README.md#adjudication-gateways). Store credentials as masked variables, also hidden where supported, with expansion disabled. Protect them and ensure the default branch is [protected](https://docs.gitlab.com/user/project/repository/branches/protected/) so its pipeline receives them. Use environment scope `*`. Keep credentials out of source and the New pipeline form; see [project variables](https://docs.gitlab.com/ci/variables/#for-a-project).
+The Operator workflow trusts contributors with branches in the consuming project. Maintainers review their changes and run the manual MR assessment to obtain evidence before accepting a skill. Configure assessment resources once for the project so ordinary contribution branches can run that job.
+
+Configure the provider, model, and credentials using the [assessment provider guide](../../../assessment-kit/README.md#adjudication-gateways). Under **Settings > CI/CD > Variables**, apply these settings:
+
+| Variables | Type and visibility | Availability |
+| --- | --- | --- |
+| `SKILLSPECTOR_PROVIDER`, `SKILLSPECTOR_MODEL`, and the selected provider's endpoint settings | Variable; Visible. Set the exact provider model ID and API base URL. | Clear **Protect variable**, disable expansion, environment scope `*`. |
+| Selected provider credential: `OPENAI_API_KEY`, `SKILLSPECTOR_COMPAT_API_KEY`, or `AZURE_OPENAI_API_KEY` | Variable; Masked, also Hidden where supported. | Clear **Protect variable**, disable expansion, environment scope `*`. |
+| Image references and runner tags listed above; optional registry credentials such as `DOCKER_AUTH_CONFIG` when used | Variable; mask credentials. | Clear **Protect variable**, disable expansion, environment scope `*`. |
+| `ASSESSMENT_CA_CERTIFICATES`, when needed | File; Visible for public PEM CA certificates. | Clear **Protect variable**, disable expansion, environment scope `*`. |
+
+For the `openai` provider, set `OPENAI_BASE_URL` to the intended OpenAI-compatible gateway, `SKILLSPECTOR_MODEL` to its exact model ID, and `OPENAI_API_KEY` to its credential. An environment variable on a maintainer's workstation is not automatically a GitLab CI/CD variable. Keep credentials out of source and the New pipeline form; see [project variables](https://docs.gitlab.com/ci/variables/#for-a-project).
+
+The assessment runner must accept jobs from unprotected branches. Keep default-branch protection and human merge approval as appropriate for your acceptance process; contribution branches need no protection rule. GitLab's protected-resource MR checkbox does not make protected variables available to ordinary unprotected contribution branches.
+
+Fork pipelines run in the fork and use its variables; they do not inherit the parent project's variables. A parent-project member can separately request a fork MR pipeline in the parent, which uses parent resources. For this same-project contribution workflow, disable that option once using the [Projects API](https://docs.gitlab.com/api/projects/#edit-a-project):
+
+```sh
+glab api --method PUT "projects/<project-id>" \
+  --field ci_allow_fork_pipelines_to_run_in_parent_project=false --silent
+```
+
+This setting prevents new parent-project pipelines for fork MRs; it does not change existing pipeline contexts. See [fork pipeline behavior](https://docs.gitlab.com/ci/pipelines/merge_request_pipelines/#use-with-forked-projects).
 
 Optional settings:
 
@@ -123,9 +145,9 @@ git push -u origin "<default-branch>"
 
 Open **Build > Pipelines > New pipeline**, select that default branch, and start the run. Publication runs only through a manual web pipeline on the default branch; pushes, schedules, and API triggers do not start it. See [manual pipelines](https://docs.gitlab.com/ci/pipelines/#run-a-pipeline-manually).
 
-MR pipelines offer an optional manual **assess** job. Review the proposed changes before starting it, then download its evidence artifact for JSON reports and per-skill `assessment.md` summaries. It assesses the local catalog, reusing eligible reports, and never generates, builds, or deploys the site. Skipping or failing this job does not block merge; human acceptance follows your organization's process.
+MR pipelines offer an optional manual **assess** job. Review the proposed changes before starting it, then download its evidence artifact for JSON reports and per-skill `assessment.md` summaries. It assesses the local catalog, reusing eligible reports, and never generates, builds, or deploys the site. Skipping or failing this job does not block merge; human acceptance follows your organization's process. The command prints report paths for every skill, including reused reports; those lines do not indicate fresh scans or model calls. The artifact contains the complete `evidence/` directory, including unchanged committed reports.
 
-The MR job needs the same assessment image, runner, and provider access. Protected credentials and runners require eligible same-project MRs with both branches protected and GitLab's MR protected-resource access enabled; see [MR resource access](https://docs.gitlab.com/ci/pipelines/merge_request_pipelines/#control-access-to-protected-variables-and-runners). A manual job does not grant that access. Keep credentials protected; use local assessment when an MR is ineligible.
+Verify MR access during setup: open a same-project MR from an ordinary unprotected branch with a new or changed skill, start its manual **assess** job, and confirm it produces a current `skillspector.json` and completed `adjudication.json` for that skill. Download the artifact and review `assessment.md` before accepting the change. This verifies fresh provider access; merely reusing unchanged reports does not. No branch-specific configuration is needed after the project settings above are applied.
 
 | Stage | What a successful job produces |
 | --- | --- |
@@ -213,10 +235,10 @@ Root `.gitlab-ci.yml` and `pyproject.toml` are overwritten during extraction unl
 
 | Symptom | First check |
 | --- | --- |
-| Pipeline absent after pushing | Start a manual web pipeline on the default branch. |
-| Job pending | Runner availability and matching tags. |
+| Publication pipeline absent after pushing | Start a manual web pipeline on the default branch; same-project MR pipelines offer a separate manual assess job. |
+| Job pending | Runner availability, matching tags, and whether the assessment runner accepts unprotected branches. |
 | Job image cannot be pulled | Runner registry access and credentials before job startup. |
-| Provider credentials missing | Variable protection, environment scope, and default-branch protection. |
+| Provider credentials missing in an MR | Clear **Protect variable** on the selected provider credential and assessment settings; disable expansion and use scope `*`. Start a fresh MR pipeline. |
 | Certificate error | Runtime trust inside the job image; workstation or build-time trust is insufficient. |
 | Inference or adjudication failure | Provider configuration/access and retained diagnostics; do not substitute static-only reports for publication. |
 | Evidence mismatch | Exact skill contents and the corresponding report pair under `evidence/<skill>/`. |

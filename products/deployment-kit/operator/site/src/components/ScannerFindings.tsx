@@ -120,16 +120,16 @@ export default function ScannerFindings({
             <button className="dialog-close" type="submit" aria-label="Close">Close</button>
           </form>
           <h2>Scanner Run</h2>
-          <p>Review follows four stages. SkillSpector handles the first two:</p>
+          <p>The skill review process has four stages.</p>
           <ol className="review-workflow" aria-label="Review progression">
-            <li><strong>Static checks</strong><span>Look for known warning signs.</span></li>
-            <li><strong>AI-assisted checks</strong><span>Read the skill and look for problems.</span></li>
-            <li><strong>Adjudication</strong><span>A separate AI reviews the findings and flags false alarms.</span></li>
-            <li><strong>Human review</strong><span>A person checks the evidence and decides whether to use the skill.</span></li>
+            <li><strong>Static Checks</strong><span>Pattern matchers look for warning signs.</span></li>
+            <li><strong>AI-assisted Checks</strong><span>AI flags warnings it can't confirm are true positives.</span></li>
+            <li><strong>Adjudication</strong><span>AI judges findings to be true positives, false positives, or inconclusive.</span></li>
+            <li><strong>Human Review</strong><span>A person reads the AI judge's summary, reviews the evidence, and decides whether to use the skill.</span></li>
           </ol>
-          <p>The scan mode shows whether SkillSpector ran just static checks or both scanner stages.</p>
-          <p>We recommend using both stages. Static-only results are difficult for a person to review on their own.</p>
-          <p>Adjudication adds an <strong>Adjudicated as False Positive</strong> tag to warnings it judges to be false alarms. Human review is a separate step; this report does not record it.</p>
+          <p>SkillSpector can run without AI, using only the first stage of static checks. We don't recommend this. Static-only results are difficult for a person to review on their own.</p>
+          <p>Adjudication adds an <strong>Adjudicated as False Positive</strong> tag to warnings it judges to be false alarms.</p>
+          <p>Human review takes place during the code merge process, when a person approves adding the skill to the exchange.</p>
           <p>
             Learn more on the{" "}
             <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">
@@ -142,9 +142,7 @@ export default function ScannerFindings({
             <tr>
               <th>Scanner</th>
               <th>Last Scanned Date</th>
-              <th>Mode</th>
               <th>Content Hash</th>
-              <th>Severity</th>
               <th>Score</th>
               <th>Risk</th>
               <th>Findings</th>
@@ -172,7 +170,6 @@ export default function ScannerFindings({
                     ) : <>{run.scanner_name} {run.scanner_version}</>}
                   </td>
                   <td><LocalDate value={run.last_scanned} /></td>
-                  <td><ModePill run={run} /></td>
                   <td>
                     <span className="hash-cell">
                       <abbr title={run.content_hash}><code>{run.content_hash?.slice(0, 12)}</code></abbr>
@@ -197,7 +194,6 @@ export default function ScannerFindings({
                       )}
                     </span>
                   </td>
-                  <td>{run.native_severity || "Unknown"}</td>
                   <td>{run.native_score ?? "n/a"}</td>
                   <td>{run.display_risk || "Unknown"}</td>
                   <td>{findingCount}</td>
@@ -234,7 +230,6 @@ export default function ScannerFindings({
       <section className="card">
         <div className="section-title-row">
           <h2>Findings</h2>
-          <ModePill run={selectedRun} />
         </div>
         <p>
           <strong>Scanner risk:</strong>{" "}
@@ -282,18 +277,6 @@ export default function ScannerFindings({
         )}
       </section>
     </>
-  );
-}
-
-function ModePill({ run }: { run: ScannerRun }) {
-  const details =
-    run.scan_mode === "llm-assisted"
-      ? `LLM-assisted scan. Provider: ${run.llm_provider || "unknown"}. Model: ${run.llm_model || "unknown"}.`
-      : "Static-only scan. LLM review was not requested for this run.";
-  return (
-    <span className="risk flag" title={details}>
-      {run.scan_mode}
-    </span>
   );
 }
 

@@ -38,10 +38,12 @@ def gateway(monkeypatch):
             "coverage_sufficient": True, "coverage_reason": "Supplied context is sufficient.",
             "findings": [{"index": index, "rule_id": issue["id"], "determination": "false_positive",
                           "reason": "Illustrative example."}
-                         for index, issue in enumerate(evidence["report"]["issues"], 1)],
+                         for index, issue in zip(evidence["issue_indices"], evidence["report"]["issues"], strict=True)],
         }
         result.update(state["overrides"])
         content = state.get("content", json.dumps(result))
+        if state.get("responses"):
+            content = json.dumps(state["responses"].pop(0))
         response = {"model": "served-model", "choices": [{"finish_reason": state["finish_reason"],
                                                           "message": {"content": content}}]}
         if "usage" in state:
@@ -64,9 +66,12 @@ def scanner(monkeypatch, gateway):
     }
     state = {"report": report, "status": 1, "calls": [], "timeouts": []}
 
-    def scan(command, *, stdout, **kwargs):
+    def scan(command, *, stdout=None, **kwargs):
+        if command[-1] == "--version":
+            return subprocess.CompletedProcess(command, 0, stdout=state.get("version", "SkillSpector v2.11.2"))
         state["calls"].append(command)
         state["timeouts"].append(kwargs["timeout"])
+        state["environment"] = kwargs["env"]
         stdout.write("scanner diagnostics\n")
         path = Path(command[command.index("--output") + 1])
         if state["report"] is not None:

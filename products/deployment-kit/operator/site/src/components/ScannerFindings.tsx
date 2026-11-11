@@ -98,7 +98,7 @@ export default function ScannerFindings({
   if (!selectedRun) {
     return (
       <section className="card">
-        <h2>Scanner Runs</h2>
+        <h2>Scanner Run</h2>
         <p>No scanner runs are available.</p>
       </section>
     );
@@ -109,8 +109,8 @@ export default function ScannerFindings({
       <section className="card">
         <div className="section-title-row">
           <div className="title-cluster">
-            <h2>Scanner Runs</h2>
-            <button className="icon-button" type="button" onClick={() => dialogRef.current?.showModal()} aria-label="About scanner runs">
+            <h2>Scanner Run</h2>
+            <button className="icon-button" type="button" onClick={() => dialogRef.current?.showModal()} aria-label="About the scanner run">
               i
             </button>
           </div>
@@ -119,18 +119,17 @@ export default function ScannerFindings({
           <form method="dialog">
             <button className="dialog-close" type="submit" aria-label="Close">Close</button>
           </form>
-          <h2>Scanner Runs</h2>
-          <p>This table shows results from SkillSpector, a security scanner from NVIDIA.</p>
-          <p>It has two modes:</p>
-          <ul>
-            <li><strong>Static-only:</strong> A faster scan that skips the scanner’s AI checks.</li>
-            <li><strong>LLM-assisted:</strong> Uses AI to help understand what the skill does and look for problems.</li>
-          </ul>
-          <p>
-            SkillSpector uses tags to describe its findings, but those tags don’t clearly identify false positives:
-            warnings that aren’t real problems. We use a second AI assistant to review the findings.
-            When it decides a warning is a false alarm, we add an <strong>Adjudicated as False Positive</strong> tag beside it.
-          </p>
+          <h2>Scanner Run</h2>
+          <p>Review follows four stages. SkillSpector handles the first two:</p>
+          <ol className="review-workflow" aria-label="Review progression">
+            <li><strong>Static checks</strong><span>Look for known warning signs.</span></li>
+            <li><strong>AI-assisted checks</strong><span>Read the skill and look for problems.</span></li>
+            <li><strong>Adjudication</strong><span>A separate AI reviews the findings and flags false alarms.</span></li>
+            <li><strong>Human review</strong><span>A person checks the evidence and decides whether to use the skill.</span></li>
+          </ol>
+          <p>The scan mode shows whether SkillSpector ran just static checks or both scanner stages.</p>
+          <p>We recommend using both stages. Static-only results are difficult for a person to review on their own.</p>
+          <p>Adjudication adds an <strong>Adjudicated as False Positive</strong> tag to warnings it judges to be false alarms. Human review is a separate step; this report does not record it.</p>
           <p>
             Learn more on the{" "}
             <a className="external-link" href="https://github.com/NVIDIA/SkillSpector" target="_blank" rel="noreferrer" referrerPolicy="no-referrer">
@@ -142,7 +141,7 @@ export default function ScannerFindings({
           <thead>
             <tr>
               <th>Scanner</th>
-              <th>Date</th>
+              <th>Last Scanned Date</th>
               <th>Mode</th>
               <th>Content Hash</th>
               <th>Severity</th>
@@ -158,21 +157,19 @@ export default function ScannerFindings({
                 (artifact) => artifact.scanner_run_id === run.id && artifact.artifact_kind === "native_report"
               );
               const findingCount = scannerFindings.filter((finding) => finding.scanner_run_id === run.id).length;
-              const selected = run.id === selectedRun.id;
               return (
-                <tr className={selected ? "selected-row" : ""} key={run.id}>
+                <tr key={run.id}>
                   <td>
-                    <button
-                      className="row-select"
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => {
-                        updateFilters({ run: run.id, severity: "all" });
-                      }}
-                    >
-                      {selected ? "Selected" : "Select"}
-                    </button>{" "}
-                    {run.scanner_name} {run.scanner_version}
+                    {olderRunCount > 0 ? (
+                      <button
+                        className="row-select"
+                        type="button"
+                        aria-label={`View findings for ${run.scanner_name} ${run.scanner_version}, ${run.last_scanned || "date unknown"}`}
+                        onClick={() => updateFilters({ run: run.id, severity: "all" })}
+                      >
+                        {run.scanner_name} {run.scanner_version}
+                      </button>
+                    ) : <>{run.scanner_name} {run.scanner_version}</>}
                   </td>
                   <td><LocalDate value={run.last_scanned} /></td>
                   <td><ModePill run={run} /></td>

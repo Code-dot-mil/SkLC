@@ -1,23 +1,23 @@
 {
   "safe_to_use": true,
-  "summary": "No security findings were reported; the supplied SKILL.md is a benign unit-test-generation skill with no executable scripts and no dangerous behavior.",
+  "summary": "The supplied SKILL.md is a non-executable testing guidance document focused on generating bounded unit tests and contains no identified malicious instructions or unsafe behaviors in the provided evidence.",
   "coverage_sufficient": true,
-  "coverage_reason": "The only supplied component (SKILL.md) was fully inspected; analysis is complete at 100% coverage with no uninspected files.",
+  "coverage_reason": "Only SKILL.md was in scope, it was fully scanned, and no issues were reported; this is sufficient to adjudicate the supplied content only.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "openai_compatible",
-    "model": "nemotron-3.5-super-vl",
-    "response_model": "nemotron-3.5-super-vl",
-    "created_at": "2026-11-10T17:35:44.755503+00:00",
-    "duration_seconds": 4.747,
+    "provider": "azure_openai",
+    "model": "gpt-5.4",
+    "response_model": "gpt-5.4-2026-03-05",
+    "created_at": "2026-11-11T19:40:32.615036+00:00",
+    "duration_seconds": 1.583,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 3769,
-      "completion_tokens": 343,
-      "total_tokens": 4112
+      "prompt_tokens": 3522,
+      "completion_tokens": 91,
+      "total_tokens": 3613
     },
     "enforce_coverage": false
   },

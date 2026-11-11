@@ -2,7 +2,7 @@
   "skill": {
     "name": "python-secure-code-review",
     "source": "products/skill-bundle/python-secure-code-review",
-    "scanned_at": "2026-11-10T17:34:34.536476+00:00"
+    "scanned_at": "2026-11-11T19:40:20.975807+00:00"
   },
   "risk_assessment": {
     "score": 22,
@@ -26,7 +26,7 @@
   "issues": [
     {
       "id": "AR3",
-      "finding_id": "finding-be6f1125e0ba44ea93c23bc1e1ed7da0",
+      "finding_id": "finding-f3d4eec7e2fa4c6fb82127325fbe820c",
       "category": "Anti-Refusal",
       "pattern": "Anti-Refusal Statement",
       "severity": "HIGH",
@@ -70,50 +70,54 @@
       {
         "node": "semantic_developer_intent",
         "request_kind": "structured_output",
-        "provider": "openaicompatibleprovider",
-        "model": "nemotron-3.5-super-vl",
-        "model_source": "requested_model",
+        "provider": "azureopenaiprovider",
+        "model": "gpt-5.4-2026-03-05",
+        "model_source": "provider_response",
         "usage_source": "provider_response",
-        "prompt_tokens": 5865,
-        "completion_tokens": 2106,
-        "reasoning_tokens": 2097,
-        "total_tokens": 7971
+        "prompt_tokens": 5302,
+        "completion_tokens": 14,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 5316
       },
       {
         "node": "semantic_quality_policy",
         "request_kind": "structured_output",
-        "provider": "openaicompatibleprovider",
-        "model": "nemotron-3.5-super-vl",
-        "model_source": "requested_model",
+        "provider": "azureopenaiprovider",
+        "model": "gpt-5.4-2026-03-05",
+        "model_source": "provider_response",
         "usage_source": "provider_response",
-        "prompt_tokens": 5928,
-        "completion_tokens": 1925,
-        "reasoning_tokens": 1915,
-        "total_tokens": 7853
+        "prompt_tokens": 5368,
+        "completion_tokens": 14,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 5382
       },
       {
         "node": "semantic_security_discovery",
         "request_kind": "structured_output",
-        "provider": "openaicompatibleprovider",
-        "model": "nemotron-3.5-super-vl",
-        "model_source": "requested_model",
+        "provider": "azureopenaiprovider",
+        "model": "gpt-5.4-2026-03-05",
+        "model_source": "provider_response",
         "usage_source": "provider_response",
-        "prompt_tokens": 5469,
-        "completion_tokens": 1136,
-        "reasoning_tokens": 1126,
-        "total_tokens": 6605
+        "prompt_tokens": 4900,
+        "completion_tokens": 14,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 4914
       },
       {
         "node": "meta_analyzer",
         "request_kind": "structured_output",
-        "provider": "openaicompatibleprovider",
-        "model": "nemotron-3.5-super-vl",
-        "model_source": "requested_model",
+        "provider": "azureopenaiprovider",
+        "model": "gpt-5.4-2026-03-05",
+        "model_source": "provider_response",
         "usage_source": "provider_response",
-        "prompt_tokens": 3536,
-        "completion_tokens": 1003,
-        "reasoning_tokens": 651,
-        "total_tokens": 4539
+        "prompt_tokens": 3895,
+        "completion_tokens": 232,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 4127
       }
     ],
     "llm_calls_attempted": 4,

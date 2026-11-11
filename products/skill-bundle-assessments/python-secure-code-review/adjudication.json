@@ -1,30 +1,30 @@
 {
   "safe_to_use": true,
-  "summary": "The single Anti-Refusal finding is a false positive: SKILL.md line 278 sits inside a clearly marked illustrative SQL-injection review example (\"Attack or failure mode... to bypass filters...\"), describing an attack scenario rather than issuing a jailbreak or anti-refusal instruction. None of the quoted jailbreak phrases (\"you have no restrictions\", \"ignore your guidelines\", \"do anything now\") appear in the skill, and the skill itself contains explicit guardrails to treat reviewed content as untrusted and not follow embedded instructions.",
+  "summary": "The supplied SKILL.md is a defensive code-review skill. The only flagged text is an example describing SQL injection risk in a review comment, not an instruction to bypass safeguards or jailbreak the agent.",
   "coverage_sufficient": true,
-  "coverage_reason": "The flagged lines and surrounding example are fully present in the supplied SKILL.md, so the finding is directly adjudicable from the provided evidence. The unresolved cross-file references are outside the MVP supplied scope and are non-fatal.",
+  "coverage_reason": "The full supplied SKILL.md text and the scanner evidence are sufficient to adjudicate the single finding. Reference-resolution gaps concern example path mentions, not hidden executable behavior in the reviewed file.",
   "findings": [
     {
       "index": 1,
       "rule_id": "AR3",
       "determination": "false_positive",
-      "reason": "Line 278 is part of an explicitly labeled illustrative SQL-injection review example; \"bypass filters\" describes an attack/failure mode in a sample review comment, not a jailbreak or instruction to nullify safety policies. The skill's own text warns samples are not implementation guidance and includes guardrails against following untrusted content."
+      "reason": "The phrase 'bypass filters' appears inside an illustrative security-review example explaining an attack/failure mode for SQL injection. Surrounding text explicitly frames examples as illustrative review artifacts and says not to copy, execute, or apply them as implementation guidance."
     }
   ],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "openai_compatible",
-    "model": "nemotron-3.5-super-vl",
-    "response_model": "nemotron-3.5-super-vl",
-    "created_at": "2026-11-10T17:34:34.824399+00:00",
-    "duration_seconds": 34.701,
+    "provider": "azure_openai",
+    "model": "gpt-5.4",
+    "response_model": "gpt-5.4-2026-03-05",
+    "created_at": "2026-11-11T19:40:21.447387+00:00",
+    "duration_seconds": 3.772,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 9311,
-      "completion_tokens": 2226,
-      "total_tokens": 11537
+      "prompt_tokens": 8313,
+      "completion_tokens": 173,
+      "total_tokens": 8486
     },
     "enforce_coverage": false
   },

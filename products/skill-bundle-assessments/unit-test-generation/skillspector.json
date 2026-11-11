@@ -2,7 +2,7 @@
   "skill": {
     "name": "unit-test-generation",
     "source": "products/skill-bundle/unit-test-generation",
-    "scanned_at": "2026-11-10T17:35:44.490076+00:00"
+    "scanned_at": "2026-11-11T19:40:32.039139+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -36,38 +36,41 @@
       {
         "node": "semantic_developer_intent",
         "request_kind": "structured_output",
-        "provider": "openaicompatibleprovider",
-        "model": "nemotron-3.5-super-vl",
-        "model_source": "requested_model",
+        "provider": "azureopenaiprovider",
+        "model": "gpt-5.4-2026-03-05",
+        "model_source": "provider_response",
         "usage_source": "provider_response",
-        "prompt_tokens": 1954,
-        "completion_tokens": 678,
-        "reasoning_tokens": 668,
-        "total_tokens": 2632
+        "prompt_tokens": 2147,
+        "completion_tokens": 14,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 2161
       },
       {
         "node": "semantic_quality_policy",
         "request_kind": "structured_output",
-        "provider": "openaicompatibleprovider",
-        "model": "nemotron-3.5-super-vl",
-        "model_source": "requested_model",
+        "provider": "azureopenaiprovider",
+        "model": "gpt-5.4-2026-03-05",
+        "model_source": "provider_response",
         "usage_source": "provider_response",
-        "prompt_tokens": 2024,
-        "completion_tokens": 2035,
-        "reasoning_tokens": 2026,
-        "total_tokens": 4059
+        "prompt_tokens": 2219,
+        "completion_tokens": 14,
+        "cached_tokens": 1152,
+        "reasoning_tokens": 0,
+        "total_tokens": 2233
       },
       {
         "node": "semantic_security_discovery",
         "request_kind": "structured_output",
-        "provider": "openaicompatibleprovider",
-        "model": "nemotron-3.5-super-vl",
-        "model_source": "requested_model",
+        "provider": "azureopenaiprovider",
+        "model": "gpt-5.4-2026-03-05",
+        "model_source": "provider_response",
         "usage_source": "provider_response",
-        "prompt_tokens": 1565,
-        "completion_tokens": 732,
-        "reasoning_tokens": 722,
-        "total_tokens": 2297
+        "prompt_tokens": 1751,
+        "completion_tokens": 14,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 1765
       }
     ],
     "filtering_mode": "heuristic",

@@ -11,9 +11,11 @@ from importlib.resources import files
 from pathlib import Path
 from urllib.parse import quote, urlencode, urlsplit
 
-from .errors import ConfigurationUnavailable, OutputDirectoryError
+from .defaults import DEFAULT_MAX_COMPLETION_TOKENS, DEFAULT_TIMEOUT_SECONDS
+from .errors import AdjudicationError, ConfigurationUnavailable, OutputDirectoryError
 
-SCOPE = "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed."
+SCOPE = ("Reviews SKILL.md, scanner evidence, and requested skill files; "
+         "unrequested files are not independently reviewed.")
 
 
 @dataclass(frozen=True)
@@ -86,7 +88,7 @@ def validate_finding(verdict: object, issue: dict, index: int) -> None:
         raise ValueError("Missing finding rationale")
 
 
-def validate_verdict(result: object, issues: list[dict]) -> None:
+def validate_verdict(result: object, issues: list[dict], *, start_index: int = 1) -> None:
     """Reject omitted findings, invented identities, and contradictory approvals."""
     keys = {"safe_to_use", "summary", "coverage_sufficient", "coverage_reason", "findings"}
     if not isinstance(result, dict) or set(result) != keys:
@@ -100,7 +102,7 @@ def validate_verdict(result: object, issues: list[dict]) -> None:
     verdicts = result["findings"]
     if not isinstance(verdicts, list) or len(verdicts) != len(issues):
         raise ValueError("Every issue must be adjudicated")
-    for index, (verdict, issue) in enumerate(zip(verdicts, issues, strict=True), 1):
+    for index, (verdict, issue) in enumerate(zip(verdicts, issues, strict=True), start_index):
         validate_finding(verdict, issue, index)
     if result["safe_to_use"] and (not result["coverage_sufficient"] or any(
         verdict["determination"] != "false_positive" for verdict in verdicts
@@ -131,8 +133,11 @@ def build_evidence(report: dict, skill_file: Path) -> dict:
     """Strip the source path without mutating native evidence."""
     evidence_report = dict(report)
     evidence_report["skill"] = {k: v for k, v in report.get("skill", {}).items() if k != "source"}
+    evidence_report["metadata"] = {k: v for k, v in report.get("metadata", {}).items() if k != "inference_usage"}
     content = skill_file.read_text(encoding="utf-8")
     return {
+        "file_inventory": sorted(p.relative_to(skill_file.parent).as_posix()
+                                 for p in skill_file.parent.rglob("*") if p.is_file() and not p.is_symlink()),
         "report": evidence_report, "issue_indices": list(range(1, len(report.get("issues", [])) + 1)),
         "skill_text_with_line_numbers": "\n".join(
             f"{index}: {line}" for index, line in enumerate(content.splitlines(), 1)
@@ -150,24 +155,32 @@ class GatewayResponse:
 
     def verdict(self) -> dict:
         choice = self.completion["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise AdjudicationError("Model output token limit reached.")
         if choice.get("finish_reason") != "stop":
-            raise ValueError("Incomplete response")
-        return json.loads(choice["message"]["content"])
+            raise AdjudicationError("Model response did not finish normally.")
+        try:
+            return json.loads(choice["message"]["content"])
+        except json.JSONDecodeError as exc:
+            raise AdjudicationError("Model returned invalid JSON.") from exc
 
 
-def request_completion(config: GatewayConfig, evidence: dict, metadata: dict, *, timeout: int) -> GatewayResponse:
+def request_completion(config: GatewayConfig, messages: list[dict], metadata: dict, *, timeout: int,
+                       max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS) -> GatewayResponse:
     """Request a completion while tracking attempts even when the gateway fails."""
-    prompt = files("skill_assessment").joinpath("prompts/adjudicate.md").read_text(encoding="utf-8")
     payload = {
-        "model": config.model, "messages": [{"role": "system", "content": prompt},
-                                           {"role": "user", "content": json.dumps(evidence)}],
-        "response_format": {"type": "json_object"}, "max_completion_tokens": 6000,
+        "model": config.model, "messages": messages,
+        "response_format": {"type": "json_object"}, "max_completion_tokens": max_completion_tokens,
     }
+    effort = os.environ.get("SKILLSPECTOR_REASONING_EFFORT", "").strip()
+    if effort:
+        payload["reasoning_effort"] = effort
+    metadata.update(max_completion_tokens=max_completion_tokens, reasoning_effort=effort or None)
     request = urllib.request.Request(config.url, data=json.dumps(payload).encode(), headers=config.headers)
-    metadata["calls_attempted"] = 1
+    metadata["calls_attempted"] += 1
     with urllib.request.build_opener(NoRedirect()).open(request, timeout=timeout) as response:
         completion = json.load(response)
-    metadata["calls_succeeded"] = 1
+    metadata["calls_succeeded"] += 1
     model = completion.get("model")
     usage = completion.get("usage")
     token_usage = None
@@ -207,8 +220,61 @@ def record_static_adjudication(report: dict, output: Path) -> dict:
     return save_adjudication(result, output)
 
 
-def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: int = 300, static_only: bool = False,
-                      unavailable_reason: str | None = None) -> dict:
+def review_batch(config: GatewayConfig, evidence: dict, metadata: dict, skill_file: Path,
+                 supplied: dict, *, timeout: int, max_completion_tokens: int) -> dict:
+    """Review up to twenty findings, sharing requested files with later batches."""
+    prompt = files("skill_assessment").joinpath("prompts/adjudicate.md").read_text(encoding="utf-8")
+    evidence = dict(evidence, additional_files_with_line_numbers=dict(supplied))
+    messages = [{"role": "system", "content": prompt},
+                {"role": "user", "content": json.dumps(evidence)}]
+    for turn in range(2):
+        completion = request_completion(config, messages, metadata, timeout=timeout,
+                                        max_completion_tokens=max_completion_tokens)
+        previous, usage = metadata["token_usage"], completion.token_usage
+        if metadata["calls_succeeded"] == 1:
+            metadata["token_usage"] = usage
+        else:
+            metadata["token_usage"] = ({k: previous[k] + usage[k] for k in previous.keys() & usage.keys()}
+                                       if previous is not None and usage is not None else None)
+        metadata["response_model"] = completion.response_model
+        verdict = completion.verdict()
+        if isinstance(verdict, dict) and "request_files" in verdict:
+            if turn:
+                raise AdjudicationError("Only one additional-file request is allowed.")
+            requested = verdict["request_files"]
+            if (set(verdict) != {"request_files"} or not isinstance(requested, list) or not requested
+                    or any(not isinstance(name, str) or name not in evidence["file_inventory"]
+                           for name in requested)):
+                raise AdjudicationError("Model requested files outside the skill inventory.")
+            contents = {}
+            for name in requested:
+                path = skill_file.parent / name
+                if path.is_symlink() or not path.resolve().is_relative_to(skill_file.parent):
+                    raise AdjudicationError("Requested file is outside the skill directory.")
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except (OSError, UnicodeError) as exc:
+                    raise AdjudicationError(f"Cannot read requested UTF-8 skill file: {name}") from exc
+                contents[name] = "\n".join(f"{i}: {line}" for i, line in enumerate(text.splitlines(), 1))
+            supplied.update(contents)
+            metadata["supplied_files"] = sorted({"SKILL.md"} | supplied.keys())
+            messages.extend([{"role": "assistant", "content": json.dumps(verdict)},
+                             {"role": "user", "content": json.dumps({"files": contents,
+                              "instruction": "Return the final adjudication; no further file requests."})}])
+            continue
+        try:
+            validate_verdict(verdict, evidence["report"]["issues"],
+                             start_index=evidence["issue_indices"][0] if evidence["issue_indices"] else 1)
+        except ValueError as exc:
+            raise AdjudicationError(str(exc)) from exc
+        return verdict
+
+
+def adjudicate_report(
+    report: dict, skill_file: Path, output: Path, *, timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    static_only: bool = False, unavailable_reason: str | None = None,
+    max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
+) -> dict:
     """Save a verdict or explicit non-adjudication, leaving the raw report unchanged."""
     if static_only:
         return record_static_adjudication(report, output)
@@ -221,25 +287,57 @@ def adjudicate_report(report: dict, skill_file: Path, output: Path, *, timeout: 
     reason = unavailable_reason or "Adjudication did not complete."
     status = "unavailable"
     result = not_adjudicated(issues, reason)
+    verdicts = []
     if unavailable_reason is None:
         try:
             config = gateway_config()
             metadata.update(provider=config.provider, model=config.model)
+            skill_file = skill_file.parent.resolve() / skill_file.name
+            if skill_file.is_symlink():
+                raise AdjudicationError("SKILL.md must be a regular file in the skill directory.")
             evidence = build_evidence(report, skill_file)
-            completion = request_completion(config, evidence, metadata, timeout=timeout)
-            metadata.update(response_model=completion.response_model, token_usage=completion.token_usage)
-            verdict = completion.verdict()
-            validate_verdict(verdict, issues)
-            result = verdict
+            metadata.update(supplied_files=["SKILL.md"], batch_size=20,
+                            batches_total=max(1, (len(issues) + 19) // 20), batches_completed=0)
+            supplied = {}
+            for start in range(0, max(1, len(issues)), 20):
+                selected = issues[start:start + 20]
+                batch = dict(evidence, report=dict(evidence["report"], issues=selected),
+                             issue_indices=list(range(start + 1, start + len(selected) + 1)))
+                verdicts.append(review_batch(config, batch, metadata, skill_file, supplied,
+                                             timeout=timeout, max_completion_tokens=max_completion_tokens))
+                metadata["batches_completed"] = len(verdicts)
+            result = {
+                "safe_to_use": all(v["safe_to_use"] for v in verdicts),
+                "summary": "\n".join(dict.fromkeys(v["summary"] for v in verdicts)),
+                "coverage_sufficient": all(v["coverage_sufficient"] for v in verdicts),
+                "coverage_reason": "\n".join(dict.fromkeys(v["coverage_reason"] for v in verdicts)),
+                "findings": [finding for verdict in verdicts for finding in verdict["findings"]],
+            }
+            validate_verdict(result, issues)
             status = "completed"
         except ConfigurationUnavailable as exc:
             result = not_adjudicated(issues, str(exc))
         except urllib.error.HTTPError as exc:
             status = "failed"
             result = not_adjudicated(issues, f"Gateway returned HTTP {exc.code}; response body omitted.")
+        except AdjudicationError as exc:
+            status = "failed"
+            result = not_adjudicated(issues, str(exc))
+        except TimeoutError:
+            status = "failed"
+            result = not_adjudicated(issues, "Adjudication request timed out.")
+        except urllib.error.URLError as exc:
+            status = "failed"
+            reason = ("Adjudication request timed out." if isinstance(exc.reason, TimeoutError)
+                      else "Adjudication request failed; connection details omitted.")
+            result = not_adjudicated(issues, reason)
         except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
             status = "failed"
             result = not_adjudicated(issues, "Adjudication request, input, or response validation failed.")
+    if status != "completed":
+        for verdict in verdicts:
+            for finding in verdict["findings"]:
+                result["findings"][finding["index"] - 1] = finding
     metadata["duration_seconds"] = round(time.monotonic() - started, 3)
     result.update(status=status, scope=SCOPE, metadata=metadata)
     return save_adjudication(result, output)

@@ -1,4 +1,6 @@
 import json
+import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -6,9 +8,11 @@ from pathlib import Path
 
 from .adjudication import SCOPE, adjudicate_report
 from .commands.validate import validate_skill
+from .defaults import DEFAULT_MAX_COMPLETION_TOKENS, DEFAULT_TIMEOUT_SECONDS
 from .errors import IncompleteScanError, OutputDirectoryError, ScanError, ScanTimeoutError
 from .reports import load_scanner_report, validate_assessment_report, validate_scan_execution
 
+WORKFLOW_TIMEOUT_ENV = "SKILLSPECTOR_MAX_WORKFLOW_SECONDS"
 ADJUDICATION_FILENAME = "adjudication.json"
 SCANNER_REQUIRED = "SkillSpector is required: install it separately and ensure 'skillspector' is on PATH."
 
@@ -17,6 +21,13 @@ def require_scanner() -> None:
     """Check the external prerequisite before creating or reusing reports."""
     if shutil.which("skillspector") is None:
         raise ScanError(SCANNER_REQUIRED)
+    try:
+        result = subprocess.run(["skillspector", "--version"], capture_output=True, text=True, timeout=30)
+        version = re.search(r"SkillSpector v(\d+)\.(\d+)\.(\d+)", result.stdout)
+        if result.returncode or version is None or not ((2, 11, 2) <= tuple(map(int, version.groups())) < (3, 0, 0)):
+            raise ScanError("SkillSpector >=2.11.2,<3 is required for configurable workflow deadlines.")
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ScanError("Cannot determine the installed SkillSpector version.") from exc
 
 
 def strip_source_base(report_path: Path, base_dir: Path) -> None:
@@ -34,12 +45,22 @@ def strip_source_base(report_path: Path, base_dir: Path) -> None:
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
 
-def run_scanner(command: list[str], report_dir: Path, *, timeout: int = 300) -> subprocess.CompletedProcess:
+def workflow_timeout(timeout: int) -> str:
+    """Return the scanner limit used for this process, preserving an explicit override."""
+    return os.environ.get(WORKFLOW_TIMEOUT_ENV, f"{timeout * 0.9:g}")
+
+
+def run_scanner(
+    command: list[str], report_dir: Path, *, timeout: int = DEFAULT_TIMEOUT_SECONDS,
+) -> subprocess.CompletedProcess:
     """Distinguish scanner failures from failures writing retained diagnostics."""
     try:
         with (report_dir / "scanner.log").open("w", encoding="utf-8") as log:
             try:
-                return subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=timeout, check=False)
+                env = os.environ.copy()
+                env[WORKFLOW_TIMEOUT_ENV] = workflow_timeout(timeout)
+                return subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
+                                      timeout=timeout, check=False, env=env)
             except subprocess.TimeoutExpired as exc:
                 raise ScanTimeoutError(str(exc), report_dir) from exc
             except FileNotFoundError as exc:
@@ -51,7 +72,9 @@ def run_scanner(command: list[str], report_dir: Path, *, timeout: int = 300) -> 
 
 
 def scan_skill(
-    skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = 300, base_dir: Path | None = None,
+    skill: Path, output_dir: Path, *, static_only: bool = False, timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    base_dir: Path | None = None,
+    max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
 ) -> Path:
     """Validate and scan one skill, retaining native output even on failure."""
     require_scanner()
@@ -93,10 +116,11 @@ def scan_skill(
     # Partial coverage remains visible, but must not prevent contextual adjudication.
     adjudication = adjudicate_report(
         report, skill / "SKILL.md", report_dir / ADJUDICATION_FILENAME, timeout=timeout, static_only=static_only,
+        max_completion_tokens=max_completion_tokens,
     )
     validate_assessment_report(report, report_dir, static_only=static_only)
     if not static_only and adjudication["status"] != "completed":
-        raise IncompleteScanError(f"Adjudication {adjudication['status']}", report_dir)
+        raise IncompleteScanError(f"Adjudication {adjudication['status']}: {adjudication['summary']}", report_dir)
     return report_path
 
 

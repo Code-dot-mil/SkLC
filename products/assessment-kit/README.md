@@ -16,15 +16,15 @@ Choose your path:
 
 ## Review scope
 
-Adjudication examines `SKILL.md` and scanner evidence. Supporting files are not independently reviewed by adjudication. Even `safe_to_use: true` applies only to that scope and does not certify the package. A command can finish successfully while reporting confirmed problems, unresolved findings, or incomplete coverage.
+Adjudication starts with `SKILL.md`, scanner evidence, and a listing of skill files. Findings are reviewed in batches of at most 20. For each batch the model can request additional UTF-8 files from that listing once, then must return its final review of that batch. Supplied files are retained as context for later batches. Unrequested supporting files are not independently reviewed. Even `safe_to_use: true` applies only to that scope and does not certify the package. A command can finish successfully while reporting confirmed problems, unresolved findings, or incomplete coverage.
 
-Default assessment sends skill contents to the configured model provider for scanning, followed by a separate adjudication request containing the full `SKILL.md` and scanner evidence. The kit does not execute the skill, follow its links, redact secrets, split the instructions into chunks, or truncate them. Review what you will send before assessing. Input that exceeds the gateway's context limit fails adjudication.
+Default assessment sends skill contents to the configured model provider for scanning, followed by a separate adjudication request containing the full `SKILL.md`, scanner evidence, and file listing. An optional follow-up per batch supplies all requested file contents together. The kit does not execute the skill, follow its links, redact secrets, split the instructions into chunks, or truncate them. Review what you will send before assessing. Input that exceeds the gateway's context limit fails adjudication.
 
 ## Prerequisites
 
 Install [Python 3.12 or later](https://www.python.org/downloads/) and [uv](https://docs.astral.sh/uv/getting-started/installation/), which the commands below use to manage the environment.
 
-For a new assessment, also install [SkillSpector](https://github.com/NVIDIA/SkillSpector#installation) separately. The wheel does not install it. The compatibility target is `>=2.10,<3` through its public CLI and JSON format; 2.10.0 and 2.12.0 have been exercised, while other v2 releases are expected to remain compatible.
+For a new assessment, also install [SkillSpector](https://github.com/NVIDIA/SkillSpector#installation) separately. The wheel does not install it. The compatibility target is `>=2.11.2,<3` through its public CLI and JSON format; 2.11.2 provides the configurable workflow deadline required by the kit.
 
 The scanner must be available as `skillspector` on `PATH` in the shell that runs assessment:
 
@@ -34,7 +34,7 @@ skillspector --version
 
 If installed with `uv tool install`, ensure uv's tool executable directory is on `PATH`. If uv reports it missing, use `uv tool update-shell` and restart the shell. Other installation methods require their environment's executable directory on `PATH`; see [uv tool executables](https://docs.astral.sh/uv/concepts/tools/#tool-executables).
 
-Default scanning uses a model. Configure SkillSpector's [provider environment](https://github.com/NVIDIA/SkillSpector/tree/v2.10.0#configuration) and the kit's [adjudication gateway settings](#adjudication-gateways) before running `assess`.
+Default scanning uses a model. Configure SkillSpector's [provider environment](https://github.com/NVIDIA/SkillSpector/tree/v2.11.2#configuration) and the kit's [adjudication gateway settings](#adjudication-gateways) before running `assess`.
 
 ## Installation
 
@@ -76,6 +76,10 @@ Fix validation errors before assessing. A successful assessment writes three fil
 | `scanner.log` | Diagnostics for troubleshooting the scanner. |
 
 Keep the two JSON reports together. The log is diagnostic output; it is excluded from assessment-evidence downloads and should not be committed with the report pair. Open `assessment.md` to decide what to address next.
+
+The default `--timeout 600` allows ten minutes for the scanner and for each adjudication request. The scanner's internal workflow deadline defaults to 90% of this timeout (540 seconds). An explicit `SKILLSPECTOR_MAX_WORKFLOW_SECONDS` is preserved; keep it below the process timeout.
+
+Adjudication allows 32,768 completion tokens, including reasoning. Use `--max-completion-tokens` to select another allowance supported by your provider. `SKILLSPECTOR_REASONING_EFFORT`, when set, applies to both scanner and adjudicator. These settings do not change the model's advertised limits. Output exhaustion, request timeouts, and gateway HTTP errors remain failed assessments with a brief cause in the saved report and command output.
 
 ## Summarize
 
@@ -131,7 +135,7 @@ Successful runs replace the three output files and keep no history. Copy earlier
 
 `--scan-mode llm-assisted` is the default. `--scan-mode static-only` runs the scanner without model analysis or adjudication; findings remain unresolved and the adjudication report has `status: not_performed` with unknown safety and coverage judgments. Static-only results are useful for diagnostics but do not qualify for exchange-site generation. A failed LLM-assisted run never switches modes automatically.
 
-The scanner and adjudication request each have a five-minute timeout. Set `--timeout SECONDS` to a positive whole number; `--timeout 600` permits up to ten minutes per stage.
+Set `--timeout SECONDS` to change the ten-minute limit for each scanner or adjudication request. The scanner workflow deadline remains shorter unless explicitly overridden.
 
 ### Shorten the source path
 
@@ -149,7 +153,7 @@ Rewriting happens after scanning and before adjudication, including usable retai
 
 The packaged [system prompt](https://github.com/Code-dot-mil/SkLC/blob/main/products/assessment-kit/src/skill_assessment/prompts/adjudicate.md) instructs the model to treat skill text and scanner output as evidence. Each finding receives a true-positive, false-positive, or uncertain determination with a reason. Confidence scores, scanner tags, and coverage diagnostics inform the review without establishing safety by themselves.
 
-The kit validates finding order and identity and checks that the safety judgment agrees with the findings and coverage judgment. Reports include scope, status, provider/model, creation time, duration, call counts, and token usage when available. Unknown token usage is null; credentials and endpoint URLs are excluded.
+The kit validates finding order and identity and checks that the safety judgment agrees with the findings and coverage judgment. Each request contains only its batch of findings, with original finding indices and shared scanner coverage facts. The kit assembles one adjudication in original order and combines safety and coverage judgments conservatively, without another model call. A failed batch preserves earlier validated determinations in the artifact but leaves the overall adjudication incomplete. Reports include scope, status, supplied file paths, provider/model, creation time, duration, call counts, and combined token usage when available. Unknown token usage is null; credentials and endpoint URLs are excluded.
 
 Partial scanner coverage can still produce current reports when execution succeeds in the requested mode and adjudication completes. Missing configuration yields `status: unavailable`; a failed request or invalid response yields `status: failed`. Both leave safety and coverage unknown and findings `not_adjudicated`. Readable scanner failure reports are retained when available. Static-only failures retain `status: not_performed`; readable findings are kept, otherwise the list is empty. Static-only provider/model/usage fields are null, and call counts and duration are zero.
 
@@ -198,7 +202,37 @@ The OpenAI base URL defaults to its API. An OpenAI-compatible base URL includes 
 
 Gateways must use HTTPS and accept chat completions with JSON-object output and `max_completion_tokens`. Unsupported providers or missing settings produce unavailable adjudication; the kit does not substitute another provider or model.
 
-## Development and Python consumers
+## Python consumers
+
+Installed consumers can use the same assessment workflow as the CLI:
+
+```python
+from pathlib import Path
+from skill_assessment import assess
+
+reports = assess(
+    Path("my-skill"), Path("reports"),
+    timeout=600, max_completion_tokens=32768, if_changed=True,
+)
+```
+
+The result is the report directory. `ScanError` from `skill_assessment.errors` identifies failed scans or adjudication and carries the retained `report_dir`. `assess` also accepts `static_only` and `base_dir`, matching the CLI behavior. It does not modify skill files. File requests are limited to the selected skill; plugin discovery and report reuse across installations belong to the caller. Existing SKILL.md-only reports retain their scope and remain readable. An `assess(..., if_changed=True)` call refreshes them once for the expanded review. Identical skill copies can use the same report pair without rewriting provenance.
+
+For a new adjudication of an existing scanner report, without rescanning:
+
+```python
+import json
+from skill_assessment import adjudicate
+
+adjudicate(
+    json.loads(Path("reports/skillspector.json").read_text()),
+    Path("my-skill/SKILL.md"), Path("reports/new-adjudication.json"),
+)
+```
+
+This leaves the scanner report unchanged, including any native failures. It does not establish that an older scan matches current skill bytes. Keep source identity and the original report when interpreting a new adjudication. Batch counts, supplied files and combined usage are recorded in metadata. Model validation failures retain a concise cause such as a finding identity mismatch.
+
+## Development
 
 To build the wheel from repository source, run at the repository root:
 

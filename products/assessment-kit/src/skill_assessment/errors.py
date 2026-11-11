@@ -47,12 +47,20 @@ class IncompleteScanError(ScanError):
     """The requested analysis did not complete without degradation."""
 
 
+class WorkflowTimeoutError(IncompleteScanError):
+    """The scanner exhausted its internal workflow deadline."""
+
+
 class ScanTimeoutError(ScanError):
     """The scanner exceeded its allowed execution time."""
 
 
 class OutputDirectoryError(RuntimeError):
     """The output location is unsafe or its artifacts cannot be created or written."""
+
+
+class AdjudicationError(ValueError):
+    """A credential-free explanation of an incomplete model review."""
 
 
 class ConfigurationUnavailable(ValueError):

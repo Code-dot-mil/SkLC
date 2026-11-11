@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .adjudication import validate_verdict
-from .errors import IncompleteScanError, ScanError
+from .errors import IncompleteScanError, ScanError, WorkflowTimeoutError
 
 
 def load_scanner_report(report_path: Path) -> dict:
@@ -39,6 +39,9 @@ def validate_requested_mode(report: dict, report_dir: Path, *, static_only: bool
         or metadata.get("llm_error")
         or metadata.get("llm_calls_attempted", 0) != metadata.get("llm_calls_succeeded", 0)
     ):
+        exceptions = report.get("analysis_completeness", {}).get("ledger_exceptions", [])
+        if any(event.get("reason_code") == "runtime_limit" for event in exceptions):
+            raise WorkflowTimeoutError("Scanner workflow deadline exceeded", report_dir)
         raise IncompleteScanError("requested analysis was incomplete or degraded", report_dir)
 
 

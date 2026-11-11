@@ -19,7 +19,7 @@ from skill_assessment.errors import (
 from skill_assessment.scanning import scan_skill
 
 
-@pytest.mark.parametrize(("options", "timeout"), [([], 300), (["--timeout", "600"], 600)])
+@pytest.mark.parametrize(("options", "timeout"), [([], 600), (["--timeout", "120"], 120)])
 def test_cli_applies_scanner_timeout(skill, scanner, tmp_path, options, timeout):
     code = main(["assess", "--skill", str(skill), "--output-dir", str(tmp_path / "reports"), *options])
 
@@ -223,6 +223,7 @@ def test_assessment_uses_external_scanner_on_path(skill, tmp_path, monkeypatch):
         f"#!{sys.executable}\n"
         "import json, sys\n"
         "from pathlib import Path\n"
+        "if sys.argv[1] == '--version': print('SkillSpector v2.11.2'); sys.exit(0)\n"
         "assert sys.argv[1] == 'scan' and '--no-llm' in sys.argv\n"
         "report = {'execution_successful': True, 'analysis_completeness': {'is_complete': True}, "
         "'metadata': {'llm_requested': False}, 'issues': []}\n"
@@ -307,8 +308,8 @@ def test_gateway_protocol_and_usage_are_retained(skill, scanner, gateway, tmp_pa
     assert 'secret' not in report.with_name('adjudication.json').read_text()
 
 
-@pytest.mark.parametrize('failure', ['credentials', 'model', 'unsupported', 'http', 'timeout', 'json',
-                                    'missing-finding', 'contradiction', 'uncertain', 'identity', 'truncated'])
+@pytest.mark.parametrize('failure', ['credentials', 'model', 'unsupported', 'http', 'timeout', 'url-timeout', 'url',
+                                    'json', 'missing-finding', 'contradiction', 'uncertain', 'identity', 'truncated'])
 def test_adjudication_failure_is_explicit_and_preserves_native_report(
     skill, scanner, gateway, tmp_path, monkeypatch, failure,
 ):
@@ -324,6 +325,10 @@ def test_adjudication_failure_is_explicit_and_preserves_native_report(
         gateway['error'] = urllib.error.HTTPError('https://gateway.example', 401, 'test-secret', {}, None)
     elif failure == 'timeout':
         gateway['error'] = TimeoutError('test-secret')
+    elif failure == 'url-timeout':
+        gateway['error'] = urllib.error.URLError(TimeoutError('test-secret'))
+    elif failure == 'url':
+        gateway['error'] = urllib.error.URLError('test-secret')
     elif failure == 'json':
         gateway['content'] = 'not JSON test-secret'
     elif failure == 'missing-finding':
@@ -352,6 +357,10 @@ def test_adjudication_failure_is_explicit_and_preserves_native_report(
     assert result['metadata']['calls_attempted'] == (0 if unavailable else 1)
     assert len(gateway['calls']) == (0 if unavailable else 1)  # No retry or provider fallback.
     assert 'test-secret' not in path.read_text()
+    if failure == 'truncated':
+        assert 'output token limit' in result['summary']
+    elif failure in ('timeout', 'url-timeout'):
+        assert 'timed out' in result['summary']
 
 
 def test_true_positive_is_advice_not_execution_failure(skill, scanner, gateway, tmp_path):
@@ -437,3 +446,56 @@ def test_adjudication_storage_failure_preserves_native_report(skill, scanner, tm
     assert main(['assess', '--skill', str(skill), '--output-dir', str(output / "current"), *options]) == 1
 
     assert json.loads(next(output.glob('*/skillspector.json')).read_text()) == scanner['report']
+
+
+@pytest.mark.parametrize('version', ['2.10.0', '2.11.1', '3.0.0', 'unknown'])
+def test_unsupported_scanner_does_not_create_reports(skill, scanner, tmp_path, version):
+    scanner['version'] = f'SkillSpector v{version}'
+    output = tmp_path / 'reports'
+    assert main(['assess', '--skill', str(skill), '--output-dir', str(output)]) == 3
+    assert not scanner['calls']
+    assert not output.exists()
+
+
+@pytest.mark.parametrize('override', [False, True])
+def test_execution_settings_reach_scanner_and_adjudicator(skill, scanner, gateway, tmp_path, monkeypatch, override):
+    monkeypatch.delenv('SKILLSPECTOR_MAX_WORKFLOW_SECONDS', raising=False)
+    monkeypatch.setenv('SKILLSPECTOR_REASONING_EFFORT', 'medium')
+    args = ['assess', '--skill', str(skill), '--output-dir', str(tmp_path / 'reports')]
+    if override:
+        args += ['--timeout', '120', '--max-completion-tokens', '65536']
+        monkeypatch.setenv('SKILLSPECTOR_MAX_WORKFLOW_SECONDS', '100')
+    assert main(args) == 0
+    assert scanner['timeouts'] == [120 if override else 600]
+    assert float(scanner['environment']['SKILLSPECTOR_MAX_WORKFLOW_SECONDS']) == (100 if override else 540)
+    payload = json.loads(gateway['calls'][0].data)
+    assert payload['max_completion_tokens'] == (65536 if override else 32768)
+    assert payload['reasoning_effort'] == 'medium'
+
+
+@pytest.mark.parametrize(('timeout', 'override', 'configured'), [
+    (600, None, '540'), (1200, None, '1080'), (600, '300', '300'),
+])
+def test_workflow_deadline_guidance_uses_configured_limit_and_preserves_reports(
+    skill, scanner, tmp_path, monkeypatch, capsys, timeout, override, configured,
+):
+    monkeypatch.delenv('SKILLSPECTOR_MAX_WORKFLOW_SECONDS', raising=False)
+    if override is not None:
+        monkeypatch.setenv('SKILLSPECTOR_MAX_WORKFLOW_SECONDS', override)
+    output = tmp_path / 'reports'
+    args = ['assess', '--skill', str(skill), '--output-dir', str(output), '--timeout', str(timeout)]
+    assert main(args) == 0
+    before = {p.name: p.read_bytes() for p in output.iterdir()}
+    scanner['report']['metadata']['llm_degraded'] = True
+    scanner['report']['analysis_completeness']['ledger_exceptions'] = [{'reason_code': 'runtime_limit'}]
+    capsys.readouterr()
+
+    assert main(args) == 3
+
+    error = capsys.readouterr().err
+    assert f'workflow limit: {configured} seconds' in error
+    assert f'--timeout {timeout * 2}' in error
+    assert 'SKILLSPECTOR_MAX_WORKFLOW_SECONDS' in error
+    assert scanner['environment']['SKILLSPECTOR_MAX_WORKFLOW_SECONDS'] == configured
+    assert {p.name: p.read_bytes() for p in output.iterdir()} == before
+    assert str(next(tmp_path.glob('my-skill-*'))) in error

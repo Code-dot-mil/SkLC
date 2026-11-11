@@ -23,6 +23,8 @@ def validate_skill(skill: Path) -> None:
     skill = skill.resolve()
     if not skill.is_dir():
         raise InvalidSkillDirectoryError("select a skill directory")
+    if (skill / "SKILL.md").is_symlink():
+        raise InvalidSkillDirectoryError("SKILL.md must be a regular file in the skill directory.")
     lines = (skill / "SKILL.md").read_text(encoding="utf-8").splitlines()
     if not lines or lines[0] != "---":
         raise MissingFrontmatterError("SKILL.md must start with YAML frontmatter")

@@ -32,7 +32,6 @@ def assess_skill(
     """Replace the current reports only after a successful staged assessment."""
     if timeout <= 0 or max_completion_tokens <= 0:
         raise ValueError("Timeout and max completion tokens must be positive.")
-    require_scanner()
     skill, output_dir = skill.resolve(), output_dir.resolve()
     validate_skill(skill)
     if output_dir.is_relative_to(skill):
@@ -42,6 +41,7 @@ def assess_skill(
     if current and not static_only:
         current = json.loads((output_dir / "adjudication.json").read_text())["scope"] == SCOPE
     if current:
+        require_scanner()
         if base_dir is not None:
             strip_source_base(output_dir / "skillspector.json", base_dir)
         return output_dir

@@ -326,6 +326,11 @@ def adjudicate_report(
         except TimeoutError:
             status = "failed"
             result = not_adjudicated(issues, "Adjudication request timed out.")
+        except urllib.error.URLError as exc:
+            status = "failed"
+            reason = ("Adjudication request timed out." if isinstance(exc.reason, TimeoutError)
+                      else "Adjudication request failed; connection details omitted.")
+            result = not_adjudicated(issues, reason)
         except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
             status = "failed"
             result = not_adjudicated(issues, "Adjudication request, input, or response validation failed.")

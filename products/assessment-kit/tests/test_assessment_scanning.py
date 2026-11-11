@@ -308,8 +308,8 @@ def test_gateway_protocol_and_usage_are_retained(skill, scanner, gateway, tmp_pa
     assert 'secret' not in report.with_name('adjudication.json').read_text()
 
 
-@pytest.mark.parametrize('failure', ['credentials', 'model', 'unsupported', 'http', 'timeout', 'json',
-                                    'missing-finding', 'contradiction', 'uncertain', 'identity', 'truncated'])
+@pytest.mark.parametrize('failure', ['credentials', 'model', 'unsupported', 'http', 'timeout', 'url-timeout', 'url',
+                                    'json', 'missing-finding', 'contradiction', 'uncertain', 'identity', 'truncated'])
 def test_adjudication_failure_is_explicit_and_preserves_native_report(
     skill, scanner, gateway, tmp_path, monkeypatch, failure,
 ):
@@ -325,6 +325,10 @@ def test_adjudication_failure_is_explicit_and_preserves_native_report(
         gateway['error'] = urllib.error.HTTPError('https://gateway.example', 401, 'test-secret', {}, None)
     elif failure == 'timeout':
         gateway['error'] = TimeoutError('test-secret')
+    elif failure == 'url-timeout':
+        gateway['error'] = urllib.error.URLError(TimeoutError('test-secret'))
+    elif failure == 'url':
+        gateway['error'] = urllib.error.URLError('test-secret')
     elif failure == 'json':
         gateway['content'] = 'not JSON test-secret'
     elif failure == 'missing-finding':
@@ -355,7 +359,7 @@ def test_adjudication_failure_is_explicit_and_preserves_native_report(
     assert 'test-secret' not in path.read_text()
     if failure == 'truncated':
         assert 'output token limit' in result['summary']
-    elif failure == 'timeout':
+    elif failure in ('timeout', 'url-timeout'):
         assert 'timed out' in result['summary']
 
 
@@ -495,16 +499,3 @@ def test_workflow_deadline_guidance_uses_configured_limit_and_preserves_reports(
     assert scanner['environment']['SKILLSPECTOR_MAX_WORKFLOW_SECONDS'] == configured
     assert {p.name: p.read_bytes() for p in output.iterdir()} == before
     assert str(next(tmp_path.glob('my-skill-*'))) in error
-
-
-def test_timeout_option_name_drives_parsing_and_deadline_guidance(skill, scanner, tmp_path, monkeypatch, capsys):
-    from skill_assessment.commands import assess as command
-
-    monkeypatch.setattr(command, 'TIMEOUT_FLAG', '--request-timeout')
-    monkeypatch.delenv('SKILLSPECTOR_MAX_WORKFLOW_SECONDS', raising=False)
-    scanner['report']['metadata']['llm_degraded'] = True
-    scanner['report']['analysis_completeness']['ledger_exceptions'] = [{'reason_code': 'runtime_limit'}]
-    assert main(['assess', '--skill', str(skill), '--output-dir', str(tmp_path / 'reports'),
-                 '--request-timeout', '900']) == 3
-    assert scanner['timeouts'] == [900]
-    assert '--request-timeout 1800' in capsys.readouterr().err

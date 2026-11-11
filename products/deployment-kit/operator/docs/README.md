@@ -74,6 +74,8 @@ cp -R upstream/evidence/python-secure-code-review evidence/
 
 Select all, some, or none of the supplied skills. Review same-named local packages before copying again. Your new or changed skills can be assessed by the pipeline; they do not need pre-existing reports. Existing reports are reused only when eligible for the exact contents and requested scan mode.
 
+For ongoing skill additions and changes, we recommend human MR approval before merging into your local catalog as the acceptance gate. Assessment results inform that decision; a successful pipeline does not constitute acceptance. Your organization may choose another acceptance process. Configure GitLab branch protection and approval rules to support your chosen process; the kit does not configure them.
+
 ## 3. Prepare the assessment image
 
 Follow the [assessment image guide](../containers/assessment/README.md) to build for the runner's architecture, check `skillspector --version`, publish the image, and record its digest. The image must provide Python 3.12+, pip, Git, and SkillSpector `>=2.10,<3` on `PATH` (2.10.0 is tested with the supplied image).
@@ -119,7 +121,11 @@ git branch -M "<default-branch>"
 git push -u origin "<default-branch>"
 ```
 
-Open **Build > Pipelines > New pipeline**, select that default branch, and start the run. This workflow accepts only a manual web run on the default branch; pushes, schedules, merge requests, and API triggers do not start it. See [manual pipelines](https://docs.gitlab.com/ci/pipelines/#run-a-pipeline-manually).
+Open **Build > Pipelines > New pipeline**, select that default branch, and start the run. Publication runs only through a manual web pipeline on the default branch; pushes, schedules, and API triggers do not start it. See [manual pipelines](https://docs.gitlab.com/ci/pipelines/#run-a-pipeline-manually).
+
+MR pipelines offer an optional manual **assess** job. Review the proposed changes before starting it, then download its evidence artifact for JSON reports and per-skill `assessment.md` summaries. It assesses the local catalog, reusing eligible reports, and never generates, builds, or deploys the site. Skipping or failing this job does not block merge; human acceptance follows your organization's process.
+
+The MR job needs the same assessment image, runner, and provider access. Protected credentials and runners require eligible same-project MRs with both branches protected and GitLab's MR protected-resource access enabled; see [MR resource access](https://docs.gitlab.com/ci/pipelines/merge_request_pipelines/#control-access-to-protected-variables-and-runners). A manual job does not grant that access. Keep credentials protected; use local assessment when an MR is ineligible.
 
 | Stage | What a successful job produces |
 | --- | --- |

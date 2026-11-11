@@ -1,23 +1,23 @@
 {
   "safe_to_use": true,
-  "summary": "The scan found no issues across SKILL.md; risk score is 0, severity LOW, recommendation SAFE, and execution completed with 100% coverage. The skill text describes unit-test generation only, with no executable scripts or dangerous behavior.",
+  "summary": "Only SKILL.md was supplied and it contains narrowly scoped guidance for creating unit tests, with no instructions indicating exfiltration, privilege misuse, prompt injection, or unsafe autonomous behavior. No issues were reported.",
   "coverage_sufficient": true,
-  "coverage_reason": "The single component (SKILL.md) was fully scanned by all applicable analyzers; coverage is 100% and analysis status is complete with no uninspected files.",
+  "coverage_reason": "The supplied review scope was limited to SKILL.md, and that file was fully scanned with no findings. This is sufficient to adjudicate the provided evidence, though it does not cover any files outside the supplied scope.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "openai_compatible",
-    "model": "nemotron-3.5-super-vl",
-    "response_model": "nemotron-3.5-super-vl",
-    "created_at": "2026-11-11T18:17:24.179027+00:00",
-    "duration_seconds": 2.059,
+    "provider": "azure_openai",
+    "model": "gpt-5.4",
+    "response_model": "gpt-5.4-2026-03-05",
+    "created_at": "2026-11-11T19:48:00.700717+00:00",
+    "duration_seconds": 2.402,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 3761,
-      "completion_tokens": 349,
-      "total_tokens": 4110
+      "prompt_tokens": 3526,
+      "completion_tokens": 112,
+      "total_tokens": 3638
     },
     "enforce_coverage": false
   },

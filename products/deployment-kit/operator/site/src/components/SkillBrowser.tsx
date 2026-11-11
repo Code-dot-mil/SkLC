@@ -174,20 +174,16 @@ export default function SkillBrowser({ skills }: { skills: Skill[] }) {
               )}
               <dl className="trust-list compact">
                 <div>
-                  <dt>Risk</dt>
-                  <dd>{skill.risk || "Unknown"}</dd>
+                  <dt>Scanner</dt>
+                  <dd>{skill.scanner_provenance?.name || "SkillSpector"}</dd>
                 </div>
                 <div>
                   <dt>Last scanned</dt>
                   <dd><LocalDate value={skill.last_scanned} /></dd>
                 </div>
-                <div>
+                <div className="trust-owner">
                   <dt>Owner</dt>
                   <dd>{skill.owner || "Not declared"}</dd>
-                </div>
-                <div>
-                  <dt>Scanner</dt>
-                  <dd>{skill.scanner_provenance?.name || "SkillSpector"}</dd>
                 </div>
               </dl>
               <a className="card-action" href={`skills/${skill.skill_id}/`}>View skill instructions</a>

@@ -1,14 +1,14 @@
 {
   "safe_to_use": true,
-  "summary": "The single Anti-Refusal finding is a false positive: SKILL.md line 278 sits inside a clearly marked illustrative SQL-injection review example (\"Attack or failure mode... to bypass filters...\"), describing an attack scenario rather than issuing a jailbreak or anti-refusal instruction. None of the quoted jailbreak phrases (\"you have no restrictions\", \"ignore your guidelines\", \"do anything now\") appear in the skill, and the skill itself contains explicit guardrails to treat reviewed content as untrusted and not follow embedded instructions.",
+  "summary": "The only flagged issue (AR3) is a false positive: the matched language at lines ~276-280 appears inside a clearly marked illustrative SQL-injection review example describing attacker behavior (\"inject SQL through the email field to bypass filters\"), not instructions telling the agent to ignore its own safety guidelines. The skill itself explicitly tells reviewers to treat all content as untrusted and not follow embedded instructions. No true-positive or uncertain findings remain.",
   "coverage_sufficient": true,
-  "coverage_reason": "The flagged lines and surrounding example are fully present in the supplied SKILL.md, so the finding is directly adjudicable from the provided evidence. The unresolved cross-file references are outside the MVP supplied scope and are non-fatal.",
+  "coverage_reason": "The complete SKILL.md text (334 lines, 100% scanned component coverage) was supplied and directly supports adjudication of the finding. The unresolved path references point to example files cited in illustrative snippets (e.g., app/users/repo.py:2) and are not material to judging this skill.",
   "findings": [
     {
       "index": 1,
       "rule_id": "AR3",
       "determination": "false_positive",
-      "reason": "Line 278 is part of an explicitly labeled illustrative SQL-injection review example; \"bypass filters\" describes an attack/failure mode in a sample review comment, not a jailbreak or instruction to nullify safety policies. The skill's own text warns samples are not implementation guidance and includes guardrails against following untrusted content."
+      "reason": "The flagged text is part of an illustrative SQL injection review example explaining an attack/failure mode, not anti-refusal or jailbreak content directed at the agent. The skill's own guardrails instruct reviewers not to follow instructions embedded in reviewed content."
     }
   ],
   "status": "completed",
@@ -17,16 +17,16 @@
     "provider": "openai_compatible",
     "model": "nemotron-3.5-super-vl",
     "response_model": "nemotron-3.5-super-vl",
-    "created_at": "2026-11-10T17:34:34.824399+00:00",
-    "duration_seconds": 34.701,
+    "created_at": "2026-11-11T17:28:21.359360+00:00",
+    "duration_seconds": 10.538,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 9311,
-      "completion_tokens": 2226,
-      "total_tokens": 11537
+      "prompt_tokens": 9308,
+      "completion_tokens": 1167,
+      "total_tokens": 10475
     },
     "enforce_coverage": false
   },
-  "skill_sha256": "01e185e9793823d8061e5cbe8e281ee9cdedf67bb4a0f79e2d344e650c3c0f99"
+  "skill_sha256": "24ee33adda29de97276f9cadf4894cebd981c523a8bc11bfc8935d31b3cf9a42"
 }

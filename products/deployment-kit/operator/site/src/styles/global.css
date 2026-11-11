@@ -349,6 +349,10 @@ a:focus-visible {
   background: rgb(255 255 255 / 0.035);
 }
 
+.trust-list .trust-owner {
+  grid-column: 1 / -1;
+}
+
 .trust-list dt {
   color: var(--quiet);
   font-size: 0.7rem;

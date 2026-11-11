@@ -2,7 +2,7 @@
   "skill": {
     "name": "unit-test-generation",
     "source": "products/skill-bundle/unit-test-generation",
-    "scanned_at": "2026-11-10T17:35:44.490076+00:00"
+    "scanned_at": "2026-11-11T17:28:41.128945+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -16,7 +16,7 @@
       "type": "markdown",
       "lines": 73,
       "executable": false,
-      "size_bytes": 2828,
+      "size_bytes": 2838,
       "source_url": null,
       "source_identity": null,
       "source_digest": null
@@ -40,10 +40,10 @@
         "model": "nemotron-3.5-super-vl",
         "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 1954,
-        "completion_tokens": 678,
-        "reasoning_tokens": 668,
-        "total_tokens": 2632
+        "prompt_tokens": 1958,
+        "completion_tokens": 732,
+        "reasoning_tokens": 724,
+        "total_tokens": 2690
       },
       {
         "node": "semantic_quality_policy",
@@ -52,10 +52,10 @@
         "model": "nemotron-3.5-super-vl",
         "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 2024,
-        "completion_tokens": 2035,
-        "reasoning_tokens": 2026,
-        "total_tokens": 4059
+        "prompt_tokens": 2028,
+        "completion_tokens": 1311,
+        "reasoning_tokens": 1301,
+        "total_tokens": 3339
       },
       {
         "node": "semantic_security_discovery",
@@ -64,10 +64,10 @@
         "model": "nemotron-3.5-super-vl",
         "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 1565,
-        "completion_tokens": 732,
-        "reasoning_tokens": 722,
-        "total_tokens": 2297
+        "prompt_tokens": 1569,
+        "completion_tokens": 518,
+        "reasoning_tokens": 508,
+        "total_tokens": 2087
       }
     ],
     "filtering_mode": "heuristic",

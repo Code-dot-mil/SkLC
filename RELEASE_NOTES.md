@@ -4,6 +4,14 @@ After the maintainer accepts a version and its notes, append a section headed `#
 
 The workflow uses only that version's nonempty section as the GitHub Release description. Release notes are not uploaded as a separate asset. No release version or release notes have been accepted by adding this document.
 
+## 1.3.0
+
+- Add an optional manual assessment job for Operator merge requests, with guidance for configuring assessment access.
+- Show release ancestry and localized build information on the site.
+- Clarify scanner findings, risk ratings, and the role of human safety approval.
+- Make assessment coverage enforcement an explicit option.
+- Refresh the bundled skills’ assessment evidence.
+
 ## 1.2.0
 
 - Include a readable assessment summary in each skill download and in the assessment bundle.

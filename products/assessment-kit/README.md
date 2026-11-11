@@ -77,17 +77,9 @@ Fix validation errors before assessing. A successful assessment writes three fil
 
 Keep the two JSON reports together. The log is diagnostic output; it is excluded from assessment-evidence downloads and should not be committed with the report pair. Open `assessment.md` to decide what to address next.
 
-The default `--timeout 600` allows ten minutes for the scanner and for each
-adjudication request. The scanner's internal workflow deadline defaults to 90%
-of this timeout (540 seconds). An explicit `SKILLSPECTOR_MAX_WORKFLOW_SECONDS`
-is preserved; keep it below the process timeout.
+The default `--timeout 600` allows ten minutes for the scanner and for each adjudication request. The scanner's internal workflow deadline defaults to 90% of this timeout (540 seconds). An explicit `SKILLSPECTOR_MAX_WORKFLOW_SECONDS` is preserved; keep it below the process timeout.
 
-Adjudication allows 32,768 completion tokens, including reasoning. Use
-`--max-completion-tokens` to select another allowance supported by your provider.
-`SKILLSPECTOR_REASONING_EFFORT`, when set, applies to both scanner and adjudicator.
-These settings do not change the model's advertised limits. Output exhaustion,
-request timeouts, and gateway HTTP errors remain failed assessments with a brief
-cause in the saved report and command output.
+Adjudication allows 32,768 completion tokens, including reasoning. Use `--max-completion-tokens` to select another allowance supported by your provider. `SKILLSPECTOR_REASONING_EFFORT`, when set, applies to both scanner and adjudicator. These settings do not change the model's advertised limits. Output exhaustion, request timeouts, and gateway HTTP errors remain failed assessments with a brief cause in the saved report and command output.
 
 ## Summarize
 
@@ -224,14 +216,7 @@ reports = assess(
 )
 ```
 
-The result is the report directory. `ScanError` from `skill_assessment.errors`
-identifies failed scans or adjudication and carries the retained `report_dir`.
-`assess` also accepts `static_only` and `base_dir`, matching the CLI behavior.
-It does not modify skill files. File requests are limited to the selected skill;
-plugin discovery and report reuse across installations belong to the caller.
-Existing SKILL.md-only reports retain their scope and remain readable. An
-`assess(..., if_changed=True)` call refreshes them once for the expanded review.
-Identical skill copies can use the same report pair without rewriting provenance.
+The result is the report directory. `ScanError` from `skill_assessment.errors` identifies failed scans or adjudication and carries the retained `report_dir`. `assess` also accepts `static_only` and `base_dir`, matching the CLI behavior. It does not modify skill files. File requests are limited to the selected skill; plugin discovery and report reuse across installations belong to the caller. Existing SKILL.md-only reports retain their scope and remain readable. An `assess(..., if_changed=True)` call refreshes them once for the expanded review. Identical skill copies can use the same report pair without rewriting provenance.
 
 For a new adjudication of an existing scanner report, without rescanning:
 
@@ -245,11 +230,7 @@ adjudicate(
 )
 ```
 
-This leaves the scanner report unchanged, including any native failures. It does
-not establish that an older scan matches current skill bytes. Keep source identity
-and the original report when interpreting a new adjudication. Batch counts,
-supplied files and combined usage are recorded in metadata. Model validation
-failures retain a concise cause such as a finding identity mismatch.
+This leaves the scanner report unchanged, including any native failures. It does not establish that an older scan matches current skill bytes. Keep source identity and the original report when interpreting a new adjudication. Batch counts, supplied files and combined usage are recorded in metadata. Model validation failures retain a concise cause such as a finding identity mismatch.
 
 ## Development
 

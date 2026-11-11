@@ -2,7 +2,7 @@
   "skill": {
     "name": "code-change-description",
     "source": "products/skill-bundle/code-change-description",
-    "scanned_at": "2026-11-11T17:27:54.603580+00:00"
+    "scanned_at": "2026-11-11T18:16:05.375958+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -41,9 +41,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 3275,
-        "completion_tokens": 623,
-        "reasoning_tokens": 613,
-        "total_tokens": 3898
+        "completion_tokens": 834,
+        "reasoning_tokens": 824,
+        "total_tokens": 4109
       },
       {
         "node": "semantic_quality_policy",
@@ -53,9 +53,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 3339,
-        "completion_tokens": 1688,
-        "reasoning_tokens": 1678,
-        "total_tokens": 5027
+        "completion_tokens": 2042,
+        "reasoning_tokens": 2033,
+        "total_tokens": 5381
       },
       {
         "node": "semantic_security_discovery",
@@ -65,9 +65,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 2880,
-        "completion_tokens": 592,
-        "reasoning_tokens": 582,
-        "total_tokens": 3472
+        "completion_tokens": 711,
+        "reasoning_tokens": 701,
+        "total_tokens": 3591
       }
     ],
     "filtering_mode": "heuristic",

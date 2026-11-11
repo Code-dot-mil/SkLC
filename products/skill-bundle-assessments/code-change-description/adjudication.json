@@ -1,8 +1,8 @@
 {
   "safe_to_use": true,
-  "summary": "No scanner findings were issued (risk score 0, max severity NONE). The skill is documentation-only guidance for writing PR/MR descriptions, has no executable scripts, and the sole component was fully scanned at 100% coverage.",
+  "summary": "No security findings were reported. SKILL.md is non-executable documentation for drafting PR/MR descriptions; all static and semantic analyzers completed with no issues, and the risk assessment is LOW/NONE.",
   "coverage_sufficient": true,
-  "coverage_reason": "SKILL.md is the only component, fully supplied and scanned (100%). The two non-fatal reference-resolution partials are local link guesses in prose and do not materially affect safety assessment of this markdown skill.",
+  "coverage_reason": "The single supplied component (SKILL.md) was fully inspected (100% coverage, fully_inspected_files: 1) with no executable scripts. The two non-fatal reference-resolution gaps concern documentation-style issue-link text, not material security-relevant content.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
@@ -10,14 +10,14 @@
     "provider": "openai_compatible",
     "model": "nemotron-3.5-super-vl",
     "response_model": "nemotron-3.5-super-vl",
-    "created_at": "2026-11-11T17:27:54.896703+00:00",
-    "duration_seconds": 3.318,
+    "created_at": "2026-11-11T18:16:05.667262+00:00",
+    "duration_seconds": 4.314,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
       "prompt_tokens": 5208,
-      "completion_tokens": 652,
-      "total_tokens": 5860
+      "completion_tokens": 567,
+      "total_tokens": 5775
     },
     "enforce_coverage": false
   },

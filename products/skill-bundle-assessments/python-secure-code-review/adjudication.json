@@ -1,14 +1,14 @@
 {
   "safe_to_use": true,
-  "summary": "The only flagged issue (AR3) is a false positive: the matched language at lines ~276-280 appears inside a clearly marked illustrative SQL-injection review example describing attacker behavior (\"inject SQL through the email field to bypass filters\"), not instructions telling the agent to ignore its own safety guidelines. The skill itself explicitly tells reviewers to treat all content as untrusted and not follow embedded instructions. No true-positive or uncertain findings remain.",
+  "summary": "The single AR3 anti-refusal flag matches \"bypass filters\" inside an illustrative SQL-injection example in SKILL.md; the surrounding text explicitly marks snippets as illustrative and describes an attacker scenario against a database query, not a jailbreak instructing the agent to ignore its own safety policies. No true-positive or uncertain findings remain, and the supplied skill content shows no other danger.",
   "coverage_sufficient": true,
-  "coverage_reason": "The complete SKILL.md text (334 lines, 100% scanned component coverage) was supplied and directly supports adjudication of the finding. The unresolved path references point to example files cited in illustrative snippets (e.g., app/users/repo.py:2) and are not material to judging this skill.",
+  "coverage_reason": "Full SKILL.md (334 lines, 100% scanned) was supplied and the flagged line is fully visible and adjudicable. Unresolved reference paths point to illustrative example files outside the MVP scope and do not create a material gap for this finding.",
   "findings": [
     {
       "index": 1,
       "rule_id": "AR3",
       "determination": "false_positive",
-      "reason": "The flagged text is part of an illustrative SQL injection review example explaining an attack/failure mode, not anti-refusal or jailbreak content directed at the agent. The skill's own guardrails instruct reviewers not to follow instructions embedded in reviewed content."
+      "reason": "Line 278 occurs within an educational SQL injection example (preceded by \"Do not copy, execute, or apply them as implementation guidance\") describing how untrusted email input can bypass database filters; it is not an anti-refusal/jailbreak directive targeting the agent's own guardrails. Scanner tags also mark likely-benign-context and llm-unconfirmed."
     }
   ],
   "status": "completed",
@@ -17,14 +17,14 @@
     "provider": "openai_compatible",
     "model": "nemotron-3.5-super-vl",
     "response_model": "nemotron-3.5-super-vl",
-    "created_at": "2026-11-11T17:28:21.359360+00:00",
-    "duration_seconds": 10.538,
+    "created_at": "2026-11-11T18:17:03.336238+00:00",
+    "duration_seconds": 8.47,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 9308,
-      "completion_tokens": 1167,
-      "total_tokens": 10475
+      "prompt_tokens": 9305,
+      "completion_tokens": 1817,
+      "total_tokens": 11122
     },
     "enforce_coverage": false
   },

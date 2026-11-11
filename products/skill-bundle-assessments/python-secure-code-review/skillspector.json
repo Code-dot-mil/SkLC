@@ -2,7 +2,7 @@
   "skill": {
     "name": "python-secure-code-review",
     "source": "products/skill-bundle/python-secure-code-review",
-    "scanned_at": "2026-11-11T17:28:21.070017+00:00"
+    "scanned_at": "2026-11-11T18:17:03.050280+00:00"
   },
   "risk_assessment": {
     "score": 22,
@@ -26,7 +26,7 @@
   "issues": [
     {
       "id": "AR3",
-      "finding_id": "finding-ede77e7f08f94f48aaf5378b9092246f",
+      "finding_id": "finding-9c203bdc4255423ab5c36fd393dd0efa",
       "category": "Anti-Refusal",
       "pattern": "Anti-Refusal Statement",
       "severity": "HIGH",
@@ -75,9 +75,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 5869,
-        "completion_tokens": 1510,
-        "reasoning_tokens": 1500,
-        "total_tokens": 7379
+        "completion_tokens": 2651,
+        "reasoning_tokens": 2641,
+        "total_tokens": 8520
       },
       {
         "node": "semantic_quality_policy",
@@ -87,9 +87,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 5932,
-        "completion_tokens": 1934,
-        "reasoning_tokens": 1924,
-        "total_tokens": 7866
+        "completion_tokens": 1424,
+        "reasoning_tokens": 1414,
+        "total_tokens": 7356
       },
       {
         "node": "semantic_security_discovery",
@@ -99,9 +99,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 5473,
-        "completion_tokens": 1269,
-        "reasoning_tokens": 1261,
-        "total_tokens": 6742
+        "completion_tokens": 1980,
+        "reasoning_tokens": 1970,
+        "total_tokens": 7453
       },
       {
         "node": "meta_analyzer",
@@ -111,9 +111,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 3540,
-        "completion_tokens": 1718,
-        "reasoning_tokens": 1212,
-        "total_tokens": 5258
+        "completion_tokens": 1493,
+        "reasoning_tokens": 1133,
+        "total_tokens": 5033
       }
     ],
     "llm_calls_attempted": 4,

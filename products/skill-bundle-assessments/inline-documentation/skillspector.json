@@ -2,7 +2,7 @@
   "skill": {
     "name": "inline-documentation",
     "source": "products/skill-bundle/inline-documentation",
-    "scanned_at": "2026-11-10T17:33:27.995566+00:00"
+    "scanned_at": "2026-11-11T18:16:27.579138+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -41,9 +41,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 2698,
-        "completion_tokens": 481,
-        "reasoning_tokens": 471,
-        "total_tokens": 3179
+        "completion_tokens": 575,
+        "reasoning_tokens": 565,
+        "total_tokens": 3273
       },
       {
         "node": "semantic_quality_policy",
@@ -53,9 +53,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 2760,
-        "completion_tokens": 981,
-        "reasoning_tokens": 971,
-        "total_tokens": 3741
+        "completion_tokens": 1532,
+        "reasoning_tokens": 1522,
+        "total_tokens": 4292
       },
       {
         "node": "semantic_security_discovery",
@@ -65,9 +65,9 @@
         "model_source": "requested_model",
         "usage_source": "provider_response",
         "prompt_tokens": 2301,
-        "completion_tokens": 852,
-        "reasoning_tokens": 842,
-        "total_tokens": 3153
+        "completion_tokens": 711,
+        "reasoning_tokens": 701,
+        "total_tokens": 3012
       }
     ],
     "filtering_mode": "heuristic",

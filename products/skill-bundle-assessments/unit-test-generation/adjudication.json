@@ -1,8 +1,8 @@
 {
   "safe_to_use": true,
-  "summary": "No scanner findings were reported; SKILL.md is a non-executable skill definition describing safe unit-test generation practices with no dangerous behavior.",
+  "summary": "The scan found no issues across SKILL.md; risk score is 0, severity LOW, recommendation SAFE, and execution completed with 100% coverage. The skill text describes unit-test generation only, with no executable scripts or dangerous behavior.",
   "coverage_sufficient": true,
-  "coverage_reason": "The single supplied component (SKILL.md) was fully inspected and scanner coverage is 100%; no uninspected files remain in scope.",
+  "coverage_reason": "The single component (SKILL.md) was fully scanned by all applicable analyzers; coverage is 100% and analysis status is complete with no uninspected files.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
@@ -10,14 +10,14 @@
     "provider": "openai_compatible",
     "model": "nemotron-3.5-super-vl",
     "response_model": "nemotron-3.5-super-vl",
-    "created_at": "2026-11-11T17:28:41.404770+00:00",
-    "duration_seconds": 2.98,
+    "created_at": "2026-11-11T18:17:24.179027+00:00",
+    "duration_seconds": 2.059,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
       "prompt_tokens": 3761,
-      "completion_tokens": 578,
-      "total_tokens": 4339
+      "completion_tokens": 349,
+      "total_tokens": 4110
     },
     "enforce_coverage": false
   },

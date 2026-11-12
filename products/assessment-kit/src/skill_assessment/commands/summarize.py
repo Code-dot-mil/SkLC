@@ -40,7 +40,7 @@ def summarize(directory: Path) -> str:
     groups = {name: [] for name in ("true_positive", "unresolved", "false_positive")}
     for index, (issue, finding) in enumerate(zip(issues, findings, strict=True), 1):
         determination = finding["determination"]
-        group = determination if status == "completed" and determination != "uncertain" else "unresolved"
+        group = determination if determination in {"true_positive", "false_positive"} else "unresolved"
         groups[group].append((index, issue, finding))
     coverage = {True: "sufficient", False: "insufficient", None: "not assessed"}[verdict["coverage_sufficient"]]
     try:

@@ -62,10 +62,14 @@ def test_each_batch_can_request_files_once_and_later_batches_receive_previous_fi
 
 
 def test_bad_later_batch_preserves_validated_findings_without_completing_assessment(
-    skill, scanner, gateway, tmp_path,
+    skill, scanner, gateway, tmp_path, capsys,
 ):
     scanner['report']['issues'] = findings(45)
-    gateway['responses'] = [verdict(1, 20), verdict(1, 20)]  # Second batch incorrectly resets indices.
+    first = verdict(1, 20)
+    first['safe_to_use'] = False
+    first['findings'][0]['determination'] = 'true_positive'
+    first['findings'][1]['determination'] = 'uncertain'
+    gateway['responses'] = [first, verdict(1, 20)]  # Second batch incorrectly resets indices.
     output = tmp_path / 'reports'
     try:
         assess(skill, output)
@@ -80,6 +84,14 @@ def test_bad_later_batch_preserves_validated_findings_without_completing_assessm
     assert saved['status'] == 'failed'
     assert saved['safe_to_use'] is saved['coverage_sufficient'] is None
     assert saved['metadata']['batches_completed'] == 1
-    assert [f['determination'] for f in saved['findings'][:20]] == ['false_positive'] * 20
+    assert [f['determination'] for f in saved['findings'][:20]] == [
+        'true_positive', 'uncertain', *(['false_positive'] * 18),
+    ]
     assert all(f['determination'] == 'not_adjudicated' for f in saved['findings'][20:])
     assert main(['summarize', '--assessment-dir', str(retained)]) == 0
+    summary = capsys.readouterr().out
+    assert "1 confirmed finding requires remediation" in summary
+    assert "| False positives | 18 |" in summary
+    assert "| Unresolved findings | 26 |" in summary
+    assert "## Requires remediation" in summary
+    assert "Safety is not established" in summary

@@ -70,3 +70,87 @@ def test_invalid_report_pair_prevents_publishing_an_assessment_download(tmp_path
     with pytest.raises(ScanError):
         package_assessments(tmp_path, output, None)
     assert not output.exists()
+
+
+@pytest.fixture
+def product_checkout(tmp_path):
+    """Use authentic tracked product inputs, isolated from upstream working files."""
+    import io
+    import tarfile
+
+    repository = Path(__file__).resolve().parents[2]
+    source = tmp_path / "source"
+    source.mkdir()
+    snapshot = subprocess.check_output(["git", "-C", str(repository), "archive", "HEAD", "products"])
+    with tarfile.open(fileobj=io.BytesIO(snapshot)) as archive:
+        archive.extractall(source, filter="data")
+    def git(*args):
+        return subprocess.check_output(["git", "-C", str(source), *args], text=True).strip()
+    git("init", "-q")
+    git("add", ".")
+    git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "Product inputs")
+    git("tag", "v1.2.3")
+    def package(*args, success=True):
+        result = subprocess.run([
+            sys.executable, "-m", "sklc_maintainer.packaging", args[0], "--repo-root", str(source), *args[1:],
+        ], cwd=tmp_path, capture_output=True, text=True)
+        assert (result.returncode == 0) == success, result.stderr
+        return result
+    return source, package
+
+
+def test_product_downloads_compose_committed_inputs(product_checkout, tmp_path):
+    source, package = product_checkout
+    name = "code-change-description"
+    skill_file = source / f"products/skill-bundle/{name}/SKILL.md"
+    committed_skill = skill_file.read_bytes()
+    skill_file.write_text("Uncommitted replacement must not ship")
+    bundle = tmp_path / "bundle.zip"
+    evidence = tmp_path / "evidence.zip"
+    package("bundle", "--output", str(bundle))
+    package("assessments", "--output", str(evidence))
+    # Packaging treats the wheel as an opaque supplied artifact; installation is a separate workflow.
+    wheel = tmp_path / "skill_assessment-1.2.3-py3-none-any.whl"
+    wheel.write_bytes(b"supplied wheel fixture")
+    package("operator", "--bundle", str(bundle), "--assessments", str(evidence),
+            "--wheel", str(wheel), "--version", "1.2.3", "--output-dir", str(tmp_path))
+    with ZipFile(bundle) as archive:
+        assert archive.read(f"skills/{name}/SKILL.md") == committed_skill
+    with ZipFile(tmp_path / "deployment-kit-operator-1.2.3.zip") as archive:
+        assert archive.read(f"upstream/skills/{name}/SKILL.md") == committed_skill
+        assert archive.read(f"assessment/{wheel.name}") == wheel.read_bytes()
+        assert archive.read("assessment/requirements.txt").decode().strip() == f"./assessment/{wheel.name}"
+        for path in (".gitlab-ci.yml", "ci/assessment.yml", "src/skill_exchange/cli.py", "site/package.json"):
+            assert archive.read(path)
+        with ZipFile(evidence) as reports:
+            for report in ("skillspector.json", "adjudication.json"):
+                assert archive.read(f"upstream/evidence/{name}/{report}") == reports.read(f"{name}/{report}")
+    site = tmp_path / "built-site"
+    site.mkdir()
+    (site / "index.html").write_text("Finished site")
+    (site / ".gitkeep").touch()
+    for mode in (("--stage",), ("--version", "1.2.3")):
+        package("prebuilt", *mode, "--site-dir", str(site), "--output-dir", str(tmp_path / "prebuilt"))
+    with ZipFile(tmp_path / "prebuilt/deployment-kit-prebuilt-1.2.3.zip") as archive:
+        assert archive.read("public/index.html") == b"Finished site"
+        assert "public/.gitkeep" not in archive.namelist()
+        for path in (".gitlab-ci.yml", "README.md", "docs/install.md", "docs/deploy-gitlab-pages.md"):
+            assert archive.read(path)
+
+
+@pytest.mark.parametrize("problem", ["stale-evidence", "unsafe-path"])
+def test_operator_rejects_invalid_bundle_without_publishing(product_checkout, tmp_path, problem):
+    _, package = product_checkout
+    bundle = tmp_path / "bundle.zip"
+    evidence = tmp_path / "evidence.zip"
+    package("bundle", "--output", str(bundle))
+    package("assessments", "--output", str(evidence))
+    with ZipFile(bundle, "a") as archive:
+        path = "../escaped.txt" if problem == "unsafe-path" else "skills/code-change-description/added.md"
+        archive.writestr(path, "Unassessed content")
+    wheel = tmp_path / "assessment.whl"
+    wheel.write_bytes(b"opaque supplied wheel")
+    package("operator", "--bundle", str(bundle), "--assessments", str(evidence), "--wheel", str(wheel),
+            "--version", "1.2.3", "--output-dir", str(tmp_path), success=False)
+    assert not (tmp_path / "deployment-kit-operator-1.2.3.zip").exists()
+    assert not (tmp_path / "escaped.txt").exists()

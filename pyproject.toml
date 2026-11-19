@@ -10,6 +10,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
+  "coverage>=7.17.3",
   "pytest>=9.2.0",
   "ruff>=0.17.5",
 ]
@@ -40,3 +41,21 @@ release = [
     "pygit2>=1.21.0",
     "pygithub>=2.10.0",
 ]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+patch = ["subprocess"]
+source = ["skill_assessment", "skill_exchange", "sklc_maintainer"]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.coverage.html]
+directory = "coverage/python/html"
+
+[tool.coverage.xml]
+output = "coverage/python/coverage.xml"
+
+[tool.coverage.json]
+output = "coverage/python/coverage.json"

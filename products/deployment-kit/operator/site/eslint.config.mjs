@@ -6,7 +6,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  globalIgnores(["dist/**", ".astro/**", "public/downloads/**"]),
+  globalIgnores(["coverage/**", "dist/**", ".astro/**", "public/downloads/**"]),
   {
     files: ["**/*.{mjs,mts,ts,tsx}"],
     extends: [js.configs.recommended],

@@ -174,6 +174,9 @@ jobs:
           include-hidden-files: true
 
   python:
+    env:
+      COVERAGE_RCFILE: ${{ github.workspace }}/pyproject.toml
+      COVERAGE_FILE: ${{ github.workspace }}/coverage/python/.coverage
     name: "${{ matrix.check }}"
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -184,7 +187,7 @@ jobs:
           - check: Python lint
             command: uv run --extra test ruff check maintainer products
           - check: Python test
-            command: uv run --extra test pytest
+            command: uv run --extra test coverage run -m pytest
           - check: GitLab scripts
             command: |
               staging=$(mktemp -d)
@@ -215,6 +218,28 @@ jobs:
         run: python -m pip install --no-cache-dir uv
       - name: Run check
         run: ${{ matrix.command }}
+
+      - name: Report Python coverage
+        if: always() && matrix.check == 'Python test'
+        run: |
+          uv run --extra test coverage combine
+          uv run --extra test coverage html
+          uv run --extra test coverage xml
+          uv run --extra test coverage json
+          {
+            echo '## Python source coverage'
+            uv run --extra test coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Python coverage
+        if: always() && matrix.check == 'Python test'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python-coverage
+          path: |
+            coverage/python/html/
+            coverage/python/coverage.xml
+            coverage/python/coverage.json
+          if-no-files-found: warn
 
   skill-bundle:
     name: Skill bundle
@@ -253,7 +278,7 @@ jobs:
           - check: astro
             command: npm --prefix products/deployment-kit/operator/site run typecheck:astro
           - check: test
-            command: npm --prefix products/deployment-kit/operator/site run test
+            command: npm --prefix products/deployment-kit/operator/site run test:coverage
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -267,6 +292,27 @@ jobs:
         run: npm ci --prefix products/deployment-kit/operator/site
       - name: Run check
         run: ${{ matrix.command }}
+
+      - name: Summarize Node coverage
+        if: always() && matrix.check == 'test'
+        working-directory: products/deployment-kit/operator/site
+        run: |
+          {
+            echo '## Node utilities and build scripts'
+            echo 'Browser-executed React and Astro UI coverage is not measured.'
+            echo '```text'
+            npm run --silent coverage:summary
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Node coverage
+        if: always() && matrix.check == 'test'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-coverage
+          path: |
+            products/deployment-kit/operator/site/coverage/
+            !products/deployment-kit/operator/site/coverage/tmp/
+          if-no-files-found: warn
 
   markdown:
     name: "Markdown ${{ matrix.check }}"

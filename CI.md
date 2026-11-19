@@ -54,6 +54,26 @@ Tests exercise program behavior and compare the results with expectations. **Lin
 
 The GitLab script checks inspect the templates in the arrangement customers receive. They do not submit them to GitLab's validation service or prove that a customer's project can start a pipeline. A **pipeline** is GitLab's term for an automated run of jobs. See [local lint checks](docs/linting.md) for exact commands and limitations, and [Contributing](CONTRIBUTING.md#local-checks) to run checks before submitting changes.
 
+### Test coverage reports
+
+The Python and site test jobs publish separate coverage summaries and downloadable `python-coverage` and `node-coverage` artifacts, including reports when tests fail after collecting data. Download and extract an artifact, then open its HTML report to inspect uncovered code. Python also provides XML and JSON; Node provides LCOV and summary JSON. Reports are informational and do not enforce a minimum percentage.
+
+Python measures all assessment, Operator, and maintainer source modules, including Python subprocesses. Node measures `.mjs` utilities under `site/src/lib/` and build scripts under `site/scripts/`, including files never loaded by a test. It does not measure browser-executed React components or Astro pages. Tests that execute copied scripts in temporary fixtures do not credit those copies to the original source path, so those scripts can appear uncovered. These scopes have separate totals.
+
+To reproduce Python coverage from the repository root:
+
+```sh
+export COVERAGE_RCFILE="$PWD/pyproject.toml"
+export COVERAGE_FILE="$PWD/coverage/python/.coverage"
+uv run --extra test coverage erase
+uv run --extra test coverage run -m pytest
+uv run --extra test coverage combine
+uv run --extra test coverage report
+uv run --extra test coverage html
+```
+
+For Node, run `npm --prefix products/deployment-kit/operator/site run test:coverage`. Open `products/deployment-kit/operator/site/coverage/index.html` for the report. Both commands use the normal test dependencies and require no reporting-service credentials.
+
 ### Why the website needs assessment reports
 
 A published exchange shows skills alongside their assessment evidence. The build must therefore avoid showing an old report as though it reviewed a changed skill.

@@ -226,6 +226,8 @@ jobs:
           uv run --extra test coverage html
           uv run --extra test coverage xml
           uv run --extra test coverage json
+          python -c 'import json; t=json.load(open("coverage/python/coverage.json"))["totals"]; print("Python coverage: {percent_statements_covered:.1f}% statements · {percent_branches_covered:.1f}% branches".format(**t))' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
           {
             echo '## Python source coverage'
             uv run --extra test coverage report --format=markdown
@@ -297,6 +299,8 @@ jobs:
         if: always() && matrix.check == 'test'
         working-directory: products/deployment-kit/operator/site
         run: |
+          node -e 'const {total:t}=require("./coverage/coverage-summary.json"); console.log("Node coverage: " + t.statements.pct.toFixed(1) + "% statements · " + t.branches.pct.toFixed(1) + "% branches")' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
           {
             echo '## Node utilities and build scripts'
             echo 'Browser-executed React and Astro UI coverage is not measured.'

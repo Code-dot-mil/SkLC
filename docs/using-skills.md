@@ -33,7 +33,7 @@ If you have downloaded SkLC's assessment results instead of reading them on an e
 
 ## Install and try a task
 
-Once you have chosen a suitable skill and compatible agent, follow the agent's installation instructions. Keep the complete skill folder together, including supporting files. For SkLC's supplied packages, the [bundle installation guide](../products/skill-bundle/README.md) explains the download and installation steps for agents that use `.agents/skills/` folders. If the guide's commands are unfamiliar, ask a technical colleague to help with setup.
+Once you have chosen a suitable skill and compatible agent, follow the agent's installation instructions. For SkLC's supplied packages, you can use the Skills command-line tool (`npx skills add`) or copy complete folders from a downloaded ZIP. Keep supporting files with each skill. The [bundle installation guide](../products/skill-bundle/README.md) explains both methods, the software you need, and how to choose a version. If the guide's commands are unfamiliar, ask a technical colleague to help with setup.
 
 Confirm that the agent recognizes the installed skill. Then try a small task whose result you can check. Name the skill in your request and explain the outcome you want. For the report-checking example, that might be: “Use the report-checking skill on this draft and list any checklist items it does not cover.”
 

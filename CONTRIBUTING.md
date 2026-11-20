@@ -120,3 +120,25 @@ Keep changes focused and reviewable. A typical platform change should include:
 - A conventional commit message.
 
 Before pushing, run the relevant local checks. For CI or release behavior, prefer running the full `just ci-local` gate.
+
+### AI-assisted commits
+
+For AI-assisted changes, briefly describe AI's contribution in the commit body and add the following trailers (metadata lines at the end of the message). This keeps the record with the change in Git history. For example:
+
+```text
+fix: preserve catalog filters when navigating back
+
+AI helped draft the implementation and tests.
+
+Assisted-by: Codex:unknown
+Skills-used: code-review, durable-behavior-tests
+```
+
+- `Assisted-by` records the coding tool and model label. Repeat it for each known contributing tool/model pair, including delegated work. Use session metadata, observed tool output, or information confirmed by the developer. Use `unknown` when the model is unavailable; identify configuration-only selections explicitly, for example `Cursor:unknown (selected: Auto)`.
+- `Skills-used` lists skills actually used for this contribution. Availability or installation alone does not establish use. Use `none` when no skills were used, or `unknown` when use cannot be established; retain known names alongside `unknown` when the record is incomplete. Tool versions and skill revisions are optional when readily known.
+
+The person finalizing the commit checks the attribution. When amending or squashing, carry all known contributions into the final message and check that the trailers remain. These entries are contributor-reported attribution, not proof of exact backend model identity or compliance with skill instructions.
+
+If your coding tool does not load `AGENTS.md`, give it this section when requesting a commit message, or add the note yourself. The same convention applies when committing work copied from a browser chat.
+
+The `Assisted-by` format follows [OpenSSL's contribution guidance](https://github.com/openssl/openssl/blob/5be87c4438d91d7f6f28265b1d79ad9565731da3/CONTRIBUTING.md#L145). The `Skills-used` trailer is a SkLC convention adapting [PostHog's PR disclosure of agents, models, and invoked skills](https://github.com/PostHog/posthog/blob/574679ee6bff2aa7a286e272b5b418fe49ebc5cd/.github/pull_request_template.md).

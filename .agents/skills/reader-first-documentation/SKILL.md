@@ -1,6 +1,8 @@
 ---
 name: reader-first-documentation
 description: Use when creating or substantially revising user-facing software documentation, including READMEs, onboarding, task guides, reference, architecture explanations, or documentation reading order. Not for code comments, agent instructions, or prose-only copyediting.
+metadata:
+  internal: "true"
 ---
 
 # Reader-first documentation

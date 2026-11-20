@@ -1,6 +1,8 @@
 ---
 name: sklc-evaluate-release
 description: Evaluate released SkLC products as a consumer, exercise catalog skills and the assessment CLI, and deploy Prebuilt and Operator kits to designated preview repositories.
+metadata:
+  internal: "true"
 ---
 
 # Evaluate released products

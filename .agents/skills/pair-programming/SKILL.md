@@ -2,6 +2,7 @@
 name: pair-programming
 description: Use when the user requests pair programming, a managing agent with implementation partners, or delegated coding with native subagents.
 metadata:
+  internal: "true"
   mitre.version: "0.1.0"
   mitre.category: Productivity
   mitre.tags: delegation,pair-programming,subagents

@@ -1,6 +1,8 @@
 ---
 name: scope-maintainable-contribution
 description: Use when turning a software request, roadmap milestone, or oversized change into maintainable, reviewable implementation tasks. Not for routine edits with settled scope or code review focused on defects.
+metadata:
+  internal: "true"
 ---
 
 # Scope Maintainable Contributions

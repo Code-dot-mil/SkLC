@@ -39,7 +39,7 @@ You can install skills, run assessments, or host an exchange independently. Star
 | Put the supplied example exchange online | **Prebuilt deployment kit** — a ready-to-host website | [Install the site](products/deployment-kit/prebuilt/docs/install.md), then deploy to [GitLab Pages](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md) or [another static host](products/deployment-kit/prebuilt/docs/deploy-static-hosting.md) |
 | Publish an exchange containing your team's skills | **Operator deployment kit** — assessment tooling, website source, and a GitLab pipeline | [Set up and maintain your exchange](products/deployment-kit/operator/docs/README.md) |
 
-Download the package for your chosen path from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases). Follow its installation guide to compare the download's SHA-256 checksum with the value displayed on the release page; matching checksums verify download integrity. The guides also cover required tools, package contents, and how to verify a successful installation or deployment.
+Skills can be installed with the Skills CLI as described below. For release archives, download the package for your chosen path from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases). Follow its installation guide to compare the download's SHA-256 checksum with the value displayed on the release page; matching checksums verify download integrity. The guides also cover required tools, package contents, and how to verify a successful installation or deployment.
 
 ## Use the supplied skills
 
@@ -50,11 +50,17 @@ The supplied bundle contains four skills for software tasks:
 - **Inline documentation:** explain code through comments, docstrings, and related notes.
 - **Change descriptions:** help reviewers understand the purpose, impact, and verification of a change.
 
-Use an AI agent that supports workspace skills in `.agents/skills/`. Install the complete skill folders there, start a fresh agent session, and confirm that the skills appear in its available-skills list. Then ask it to use a skill for a task, for example:
+With Node.js/npm, Git, and a compatible agent, run this from the workspace where you want to use the skill:
+
+```sh
+npx skills add Code-dot-mil/SkLC --skill python-secure-code-review
+```
+
+Follow the prompts to select your agent and project installation. Start a fresh agent session and confirm the skill appears in its available-skills list. Then ask it to use the skill for a task, for example:
 
 > Use the python-secure-code-review skill to review the Python changes in this branch.
 
-The [bundle installation guide](products/skill-bundle/README.md) explains the archive layout and installation steps. Using the bundle requires neither a hosted exchange nor assessment tooling.
+The [bundle installation guide](products/skill-bundle/README.md) covers prerequisites, choosing another skill, selecting a released version, reading assessment evidence, and installing from ZIP instead. The command above installs from the default branch. Using the bundle requires neither a hosted exchange nor assessment tooling.
 
 ## Understand what assessment tells you
 

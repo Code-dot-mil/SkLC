@@ -1,13 +1,35 @@
 # Skill Bundle
 
-This download contains these complete skill folders and their supporting files:
+The bundle contains these complete skill folders and their supporting files:
 
 - `python-secure-code-review`: secure Python code review.
 - `unit-test-generation`: unit test generation.
 - `inline-documentation`: inline documentation.
 - `code-change-description`: commit messages and pull request descriptions.
 
-New to skills? Read [Using a skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md) before following the installation steps below. These steps require an agent that supports workspace skills in `.agents/skills/` and familiarity with running commands; a technical colleague can help with setup.
+New to skills? Read [Using a skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md) before following the installation steps below. You need a compatible agent and familiarity with running commands; a technical colleague can help with setup.
+
+## Install with the Skills CLI
+
+Install Node.js 22.20.0 or newer with npm, and Git. Use Skills CLI 1.9.0 or newer. You also need network access to npm and the GitHub repository. From the workspace where you want to use the skill, list the available skills:
+
+```sh
+npx skills add Code-dot-mil/SkLC --list
+```
+
+The list should contain the four bundle skills named above. Install one by its name:
+
+```sh
+npx skills add Code-dot-mil/SkLC --skill python-secure-code-review
+```
+
+Replace `python-secure-code-review` with another name from the list to choose a different skill. If npm asks to download the Skills CLI, confirm to continue. Follow the CLI prompts to select your agent and project installation. To select Codex explicitly, append `--agent codex`. Review any existing same-named skill before replacing it. The [Skills CLI reference](https://github.com/vercel-labs/skills/blob/main/docs/commands.md) describes other agents and installation options.
+
+Start a fresh agent session in that workspace and confirm the installed skill appears in its available-skills list. Try a small task, for example: “Use python-secure-code-review to review the Python changes in this branch.” Review the result before relying on it.
+
+These commands install from the repository's default branch, which can differ from a published release and its assessment evidence. For a released version, use the ZIP instructions below, or pass a GitHub directory URL in place of `Code-dot-mil/SkLC`: `https://github.com/Code-dot-mil/SkLC/tree/<release-tag>/products/skill-bundle`. Replace `<release-tag>` with the exact tag shown on the release page. The directory URL also works for releases that predate root discovery configuration.
+
+Installation does not download assessment reports or run an assessment. Read [each skill's assessment](#read-each-skills-assessment) from the matching release when using released contents; evidence applies only to the exact assessed contents.
 
 ## Released product
 

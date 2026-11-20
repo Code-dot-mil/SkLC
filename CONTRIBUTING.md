@@ -19,6 +19,8 @@ Exchange-site developers maintain:
 
 Skill packages under `products/skill-bundle/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
 
+The root `skills.sh.json` declares `products/skill-bundle/` for Skills CLI discovery. Keep repository maintainer skills under `.agents/skills/` marked with `metadata.internal: "true"` so normal `npx skills add Code-dot-mil/SkLC` discovery exposes only the bundle. This metadata controls CLI discovery, not access to repository files or local agent invocation. To check discovery from this checkout without installing skills, run `npx skills add . --list`; expect only the four bundle skills. Consumer installation steps belong in the [bundle guide](products/skill-bundle/README.md#install-with-the-skills-cli).
+
 For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-review). Trusted same-repository PRs receive assessment; fork PRs receive no provider-backed assessment and need a maintainer to arrange matching evidence before their changed skills can build. Local generation also requires current evidence. Keep report pairs with their exact skill content; do not hand-edit evidence to make generation pass.
 
 ## First-Time Setup

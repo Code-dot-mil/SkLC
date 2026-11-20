@@ -12,6 +12,8 @@ dependencies = [
 test = [
   "pytest>=9.2.0",
   "ruff>=0.17.5",
+  "pygit2>=1.21.0",
+  "pygithub>=2.10.0",
 ]
 
 [tool.uv]

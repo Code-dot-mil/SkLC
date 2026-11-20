@@ -1,6 +1,8 @@
 ---
 name: sklc-release-process
 description: Use when asked whether SkLC is ready for a release, to prepare a release, create a draft, or publish. Read before release checks or a general project review. Implementing or reviewing release tooling alone does not authorize a release.
+metadata:
+  internal: "true"
 ---
 
 # SkLC release process

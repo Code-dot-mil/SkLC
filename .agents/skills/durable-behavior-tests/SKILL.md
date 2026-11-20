@@ -1,6 +1,8 @@
 ---
 name: durable-behavior-tests
 description: Use when adding, revising, or reviewing automated tests for a feature change, especially when a request adds or removes UI, API fields, routes, or other visible behavior.
+metadata:
+  internal: "true"
 ---
 
 # Durable Behavior Tests

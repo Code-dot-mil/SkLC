@@ -1,6 +1,8 @@
 ---
 name: code-review
 description: "Review a branch, PR, uncommitted work, or changes since a named revision against repository standards and the originating task. Scale review depth to the change and report both perspectives separately."
+metadata:
+  internal: "true"
 ---
 
 # Code review

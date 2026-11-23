@@ -21,6 +21,23 @@ Skill packages under `products/skill-bundle/` are exchange content. Treat change
 
 For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-review). Trusted same-repository PRs receive assessment; fork PRs receive no provider-backed assessment and need a maintainer to arrange matching evidence before their changed skills can build. Local generation also requires current evidence. Keep report pairs with their exact skill content; do not hand-edit evidence to make generation pass.
 
+## Maintainer skill changes
+
+When adding or changing a skill under `.agents/skills/`, including deleting supporting files:
+
+1. Follow the [assessment-kit setup guide](products/assessment-kit/README.md) to install the tools and configure your provider.
+2. Assess each affected skill and summarize its results:
+
+   ```sh
+   skill-assessment assess --skill .agents/skills/<skill-name> \
+     --output-dir .exchange/maintainer-assessments/<skill-name>
+   skill-assessment summarize \
+     --assessment-dir .exchange/maintainer-assessments/<skill-name>
+   ```
+
+3. Review the reports, address assessment failures, and remediate true positives.
+4. Rerun the assessment after changes and include the final results in your pull request’s validation notes.
+
 ## First-Time Setup
 
 Install [Python 3.12](https://www.python.org/downloads/), [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js 22 with npm](https://nodejs.org/en/download) (22.23.4 or a newer Node 22 patch), and [just](https://just.systems/man/en/packages.html). The [local lint guide](docs/linting.md) also covers the required `actionlint` and `shellcheck` tools.

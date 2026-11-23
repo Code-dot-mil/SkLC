@@ -11,6 +11,7 @@ These instructions apply to this repository.
 - When adding, revising, or reviewing tests, use [durable-behavior-tests](.agents/skills/durable-behavior-tests/SKILL.md).
 - For branch, PR, or local-change reviews, use [code-review](.agents/skills/code-review/SKILL.md) with the originating task and current accepted decisions.
 - When writing or editing skills or agent instructions, use [writing-for-agents](.agents/skills/writing-for-agents/SKILL.md).
+- Run assessment-kit’s `skill-assessment assess` on each added or changed skill under `.agents/skills/`, including supporting-file deletions. Review the resulting scanner and adjudication reports, and report failures and true positives.
 - When creating or substantially revising user-facing documentation or its reading order, use [reader-first-documentation](.agents/skills/reader-first-documentation/SKILL.md).
 - For requested pair programming or delegated coding, use [pair-programming](.agents/skills/pair-programming/SKILL.md).
 - For a requested session retrospective, use [retro](.agents/skills/retro/SKILL.md).

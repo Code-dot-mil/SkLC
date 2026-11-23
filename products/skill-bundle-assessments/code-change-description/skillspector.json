@@ -2,7 +2,7 @@
   "skill": {
     "name": "code-change-description",
     "source": "products/skill-bundle/code-change-description",
-    "scanned_at": "2026-11-11T19:47:27.713456+00:00"
+    "scanned_at": "2026-11-11T23:15:34.243262+00:00"
   },
   "risk_assessment": {
     "score": 0,
@@ -14,9 +14,9 @@
     {
       "path": "SKILL.md",
       "type": "markdown",
-      "lines": 162,
+      "lines": 134,
       "executable": false,
-      "size_bytes": 6169,
+      "size_bytes": 6790,
       "source_url": null,
       "source_identity": null,
       "source_digest": null
@@ -36,41 +36,38 @@
       {
         "node": "semantic_developer_intent",
         "request_kind": "structured_output",
-        "provider": "azureopenaiprovider",
-        "model": "gpt-5.4-2026-03-05",
-        "model_source": "provider_response",
+        "provider": "openai",
+        "model": "nemotron-3.5-super-vl",
+        "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 3192,
-        "completion_tokens": 14,
-        "cached_tokens": 0,
-        "reasoning_tokens": 0,
-        "total_tokens": 3206
+        "prompt_tokens": 3197,
+        "completion_tokens": 537,
+        "reasoning_tokens": 527,
+        "total_tokens": 3734
       },
       {
         "node": "semantic_quality_policy",
         "request_kind": "structured_output",
-        "provider": "azureopenaiprovider",
-        "model": "gpt-5.4-2026-03-05",
-        "model_source": "provider_response",
+        "provider": "openai",
+        "model": "nemotron-3.5-super-vl",
+        "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 3258,
-        "completion_tokens": 14,
-        "cached_tokens": 1280,
-        "reasoning_tokens": 0,
-        "total_tokens": 3272
+        "prompt_tokens": 3261,
+        "completion_tokens": 1137,
+        "reasoning_tokens": 1127,
+        "total_tokens": 4398
       },
       {
         "node": "semantic_security_discovery",
         "request_kind": "structured_output",
-        "provider": "azureopenaiprovider",
-        "model": "gpt-5.4-2026-03-05",
-        "model_source": "provider_response",
+        "provider": "openai",
+        "model": "nemotron-3.5-super-vl",
+        "model_source": "requested_model",
         "usage_source": "provider_response",
-        "prompt_tokens": 2790,
-        "completion_tokens": 14,
-        "cached_tokens": 0,
-        "reasoning_tokens": 0,
-        "total_tokens": 2804
+        "prompt_tokens": 2802,
+        "completion_tokens": 745,
+        "reasoning_tokens": 735,
+        "total_tokens": 3547
       }
     ],
     "filtering_mode": "heuristic",
@@ -95,8 +92,8 @@
         "reason_code": "reference_unresolved",
         "message": "A local path-like reference could not be resolved unambiguously.",
         "path": "SKILL.md",
-        "start_line": 96,
-        "end_line": 96,
+        "start_line": 95,
+        "end_line": 95,
         "fatal": false
       },
       {
@@ -105,8 +102,8 @@
         "reason_code": "reference_unresolved",
         "message": "A local path-like reference could not be resolved unambiguously.",
         "path": "SKILL.md",
-        "start_line": 145,
-        "end_line": 145,
+        "start_line": 117,
+        "end_line": 117,
         "fatal": false
       }
     ],
@@ -384,7 +381,7 @@
     "references": [
       {
         "source_path": "SKILL.md",
-        "line": 96,
+        "line": 95,
         "column": 4,
         "evidence": "`N/A`, or guessed issue links.",
         "target_path": null,
@@ -393,7 +390,7 @@
       },
       {
         "source_path": "SKILL.md",
-        "line": 145,
+        "line": 117,
         "column": 56,
         "evidence": "- Filling weak sections with guesses like `Low risk`, `N/A`, or `None",
         "target_path": null,

@@ -1,25 +1,25 @@
 {
   "safe_to_use": true,
-  "summary": "No security issues were reported in the supplied SKILL.md, and the content appears limited to guidance for drafting concise PR/MR descriptions without instructing tool use, exfiltration, or unsafe actions.",
-  "coverage_sufficient": false,
-  "coverage_reason": "The supplied evidence covers only SKILL.md and notes unresolved local references in that file, so adjudication is limited and not fully complete.",
+  "summary": "The scanner returned zero issues across all analyzers, and SKILL.md is a non-executable markdown skill whose content only guides writing pull/merge request descriptions. No true_positive or uncertain findings exist.",
+  "coverage_sufficient": true,
+  "coverage_reason": "SKILL.md (134 lines) was fully supplied and scanned at 100% coverage with one component; the two non-fatal unresolved references concern guidance against guessed issue links, not missing security-relevant content.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "azure_openai",
-    "model": "gpt-5.4",
-    "response_model": "gpt-5.4-2026-03-05",
-    "created_at": "2026-11-11T19:47:28.265860+00:00",
-    "duration_seconds": 2.332,
+    "provider": "openai",
+    "model": "nemotron-3.5-super-vl",
+    "response_model": "nemotron-3.5-super-vl",
+    "created_at": "2026-11-11T23:15:34.519551+00:00",
+    "duration_seconds": 4.044,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 4786,
-      "completion_tokens": 95,
-      "total_tokens": 4881
+      "prompt_tokens": 5161,
+      "completion_tokens": 525,
+      "total_tokens": 5686
     },
     "enforce_coverage": false
   },
-  "skill_sha256": "fd59854a91eb69ec1f815584ba4669bb781b683c593cab497f2ddc98ea8c19ea"
+  "skill_sha256": "f22ad978f63b21d9d6be14538796c34908d8b50b483f23fe39898f56d618e3c3"
 }

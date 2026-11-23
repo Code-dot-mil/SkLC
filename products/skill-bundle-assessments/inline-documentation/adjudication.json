@@ -1,23 +1,23 @@
 {
   "safe_to_use": true,
-  "summary": "No security findings were reported for the supplied SKILL.md, and the visible content is a documentation-writing skill focused on accurate inline comments/docstrings rather than tool use, external access, or privileged actions.",
+  "summary": "No scanner issues were raised; SKILL.md is non-executable documentation guidance for writing inline code comments/docstrings, with a LOW risk score and no dangerous behavior evident.",
   "coverage_sufficient": true,
-  "coverage_reason": "The only supplied artifact was SKILL.md and it was inspected. Coverage notes mention unresolved local path-like references in markdown text, but no additional files were provided for review and nothing in the supplied content indicates unsafe behavior.",
+  "coverage_reason": "SKILL.md (100% of components) was fully inspected and all applicable analyzers completed with zero findings; the two ledger exceptions are non-fatal reference-resolution notes, not material inspection gaps.",
   "findings": [],
   "status": "completed",
   "scope": "MVP: examines SKILL.md and scanner evidence only; additional skill files are not independently reviewed.",
   "metadata": {
-    "provider": "azure_openai",
-    "model": "gpt-5.4",
-    "response_model": "gpt-5.4-2026-03-05",
-    "created_at": "2026-11-11T19:47:37.152880+00:00",
-    "duration_seconds": 1.984,
+    "provider": "openai",
+    "model": "nemotron-3.5-super-vl",
+    "response_model": "nemotron-3.5-super-vl",
+    "created_at": "2026-11-11T23:15:37.397117+00:00",
+    "duration_seconds": 3.19,
     "calls_attempted": 1,
     "calls_succeeded": 1,
     "token_usage": {
-      "prompt_tokens": 4335,
-      "completion_tokens": 111,
-      "total_tokens": 4446
+      "prompt_tokens": 4649,
+      "completion_tokens": 602,
+      "total_tokens": 5251
     },
     "enforce_coverage": false
   },

@@ -1,8 +1,6 @@
 # SkLC architecture
 
-SkLC helps teams use agent skills, assess them, and share them through a static skill exchange. This repository develops and packages independently usable products. A team can install skills, assess its own skills, or host an exchange, depending on what it needs.
-
-Start here for the product relationships and delivery flow. For ownership rules, source layout, permitted dependencies, and independence checks, use the normative [product-boundary contract](product-boundaries.md).
+See the [README](../README.md#choose-a-starting-point) to choose a download. This page explains how those downloads relate and how skills and assessment reports become a site. For ownership rules, source layout, permitted dependencies, and independence checks, see [Product boundaries](product-boundaries.md).
 
 ## Products and independent use
 

@@ -2,8 +2,6 @@
 
 The Operator kit lets your team assess a catalog of agent skills and publish a website where people can read the instructions, inspect assessment results, and download packages. Use it when you want to maintain your own catalog. The Prebuilt kit is the simpler path when you only want to host the supplied example site.
 
-An assessment scans the skill and asks a configured model to review the findings in context. That second review is called adjudication. A completed review may still identify problems or limits to what was checked.
-
 This guide starts from the extracted `deployment-kit-operator-<version>.zip`. It takes you through **choose skills → configure assessment → run the pipeline → verify the site**, then explains evidence retention and updates.
 
 ## What you will maintain

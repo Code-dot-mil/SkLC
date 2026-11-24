@@ -31,7 +31,7 @@ Default assessment sends skill contents to the configured model provider. Public
 
 ## 1. Install into an empty GitLab project
 
-Download the Operator ZIP from [SkLC releases](https://github.com/Code-dot-mil/SkLC/releases). Calculate its SHA-256, compare it with GitHub's digest for that asset, and extract it into its own directory. A PR artifact is a development preview; retain its run, commit, and checksum if evaluating one.
+Download `deployment-kit-operator-<version>.zip` from [SkLC releases](https://github.com/Code-dot-mil/SkLC/releases). Follow the [checksum and extraction steps for your operating system](https://github.com/Code-dot-mil/SkLC/blob/main/products/deployment-kit/prebuilt/docs/install.md#check-the-download-and-unzip). In the commands, use your release version and replace `deployment-kit-prebuilt` with `deployment-kit-operator` in both the ZIP filename and the destination directory. A PR artifact is a development preview; retain its run, commit, and checksum if evaluating one.
 
 [Create a blank GitLab project](https://docs.gitlab.com/user/project/). Leave **Initialize repository with a README** unchecked. Use a new empty project so installation does not overwrite existing project files.
 

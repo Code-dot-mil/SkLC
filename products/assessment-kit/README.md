@@ -11,14 +11,14 @@ To browse skills and read their existing results before setting up assessment to
 Choose your path:
 
 - **Assess your own skill:** read the scope below, install the kit, configure the scanner and provider, then [run an assessment](#assess).
-- **Generate a summary from two JSON reports:** [install the kit](#installation), then [summarize the pair](#summarize). You need no scanner or provider configuration for this path. The matching `skill-bundle-assessments` ZIP already includes a readable summary for each supplied skill.
+- **Read existing reports:** [install the kit](#installation), then [summarize the pair](#summarize). You need no scanner or provider configuration for this path.
 - **Check package structure or identify its contents:** use [Validate](#validate) or [Hash](#hash), without a scanner or provider.
 
 ## Review scope
 
 Default assessment sends skill contents to the configured model provider for scanning, followed by a separate adjudication request containing the full `SKILL.md` and scanner evidence. The kit does not execute the skill, follow its links, redact secrets, split the instructions into chunks, or truncate them. Review what you will send before assessing. Input that exceeds the gateway's context limit fails adjudication.
 
-Adjudication examines `SKILL.md` and scanner evidence. Supporting files are not independently reviewed by adjudication. Even `safe_to_use: true` applies only to that scope and does not certify the package. A command can finish successfully while reporting confirmed problems, unresolved findings, or incomplete coverage. Before using or sharing a skill, check what the scanner covered, inspect relevant supporting files, and investigate unresolved findings that could affect your use.
+Adjudication examines `SKILL.md` and scanner evidence. Supporting files are not independently reviewed by adjudication. Even `safe_to_use: true` applies only to that scope and does not certify the package. A command can finish successfully while reporting confirmed problems, unresolved findings, or incomplete coverage.
 
 ## Prerequisites
 

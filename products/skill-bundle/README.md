@@ -45,6 +45,6 @@ On Windows (PowerShell), use:
 Expand-Archive -LiteralPath "skill-bundle-<version>.zip" -DestinationPath "skill-bundle"
 ```
 
-Copy the complete skill folders from `skill-bundle/skills/` to the location your agent uses. For example, some agents load skills from `.agents/skills/` at the top level of the project repository. If you use a project-level location, your team can review and version the installed skills with the project. Keep supporting files with each skill and compare any existing same-named folders before replacing them. Use your agent's skill picker or documented list command to verify that it recognizes the skills.
+Copy the complete skill folders from `skill-bundle/skills/` to the location your agent uses. For example, some agents load skills from `.agents/skills/` at the top level of the project repository. If you use a project-level location, your team can review and version the installed skills with the project. Keep supporting files with each skill and compare any existing same-named folders before replacing them. Start a fresh agent session and confirm the skills appear in its available-skills list.
 
 To read the assessment results for these skills, download the `skill-bundle-assessments` ZIP from the same release and follow the [assessment results guide](https://github.com/Code-dot-mil/SkLC/blob/main/products/skill-bundle-assessments/README.md).

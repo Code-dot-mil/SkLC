@@ -21,7 +21,7 @@ You can browse skills and read their instructions without installing software or
 
 The supplied skill bundle includes examples for Python code review, unit tests, inline documentation, and change descriptions. Choose a skill that fits the task you want help with.
 
-## Use assessment results when choosing a skill
+## Read a skill’s security assessment
 
 An assessment looks for potential problems in the skill's instructions. On an exchange, read the findings and the review's limitations alongside the skill. A confirmed finding is a problem the review supports; an unresolved finding still needs investigation. A false positive is an alert the contextual review dismissed. Missing or incomplete coverage means some questions remain unanswered.
 

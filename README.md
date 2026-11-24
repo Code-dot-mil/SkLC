@@ -37,7 +37,7 @@ You can install skills, run assessments, or host an exchange independently. Star
 | Put the supplied example exchange online | **Prebuilt deployment kit** — a ready-to-host website | [Install the site](products/deployment-kit/prebuilt/docs/install.md), then deploy to [GitLab Pages](products/deployment-kit/prebuilt/docs/deploy-gitlab-pages.md) or [another static host](products/deployment-kit/prebuilt/docs/deploy-static-hosting.md) |
 | Publish an exchange containing your team's skills | **Operator deployment kit** — assessment tooling, website source, and a GitLab pipeline | [Set up and maintain your exchange](products/deployment-kit/operator/docs/README.md) |
 
-Download the package for your chosen path from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases). Follow its installation guide to compare the download's SHA-256 checksum with the value displayed on the release page. The guides also cover required tools, package contents, and how to verify a successful installation or deployment. See [Architecture](docs/architecture.md) for how the downloads fit together.
+Download the package for your chosen path from [GitHub Releases](https://github.com/Code-dot-mil/SkLC/releases). To assess a skill yourself, download `skill_assessment-<version>-py3-none-any.whl`. To read the supplied skills’ existing reports and summaries, download `skill-bundle-assessments-<version>.zip`. Follow the package guide to compare the download's SHA-256 checksum with the value displayed on the release page. The guides also cover required tools, package contents, and how to verify a successful installation or deployment. See [Architecture](docs/architecture.md) for how the downloads fit together.
 
 ## Using the skill bundle
 
@@ -45,7 +45,7 @@ Use the bundle to install the supplied skills in a compatible agent. The [bundle
 
 ## Using the assessment kit
 
-The assessment kit helps an author investigate potential problems before using or sharing a skill. It runs the external **SkillSpector** scanner and, by default, asks a configured model to review the findings in context. The kit runs this follow-up review, called **adjudication**, after SkillSpector produces its findings. Skill contents are sent to the configured model provider.
+The assessment kit helps an author investigate potential problems before using or sharing a skill. It runs the external **SkillSpector** scanner and, by default, asks a configured model to review the findings in context. After SkillSpector reports its findings, the model judges whether each one is a real issue, a false positive, or needs more investigation. This step is called **adjudication**. Skill contents are sent to the configured model provider.
 
 The kit produces a scanner report and an adjudication report. Its `summarize` command turns that pair into a readable account of confirmed problems to address, findings that still need investigation, alerts dismissed after contextual review (judged to be false positives), and review limitations. After revising a skill, assess it again to check the new content. See the [assessment guide](products/assessment-kit/README.md) for prerequisites, commands, and result interpretation.
 
@@ -61,7 +61,7 @@ For a catalog you maintain, add existing skill packages, assess them, review the
 
 ```mermaid
 flowchart LR
-  add["Add skill packages"] --> assess["Run assessments"]
+  add["Add existing skill packages"] --> assess["Run assessments"]
   assess --> review["Review results"]
   review --> publish["Share skills and evidence on the Skill Exchange"]
 ```

@@ -442,12 +442,13 @@ jobs:
       - markdown
       - workflows
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Download exchange data
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -472,6 +473,23 @@ jobs:
           python -m sklc_maintainer.packaging prebuilt --stage
           --repo-root . --site-dir products/deployment-kit/operator/site/dist
           --output-dir "$RUNNER_TEMP/static-site"
+      - name: Install Chromium headless shell
+        working-directory: products/deployment-kit/operator/site
+        run: npm exec -- playwright install --with-deps --only-shell chromium
+      - name: Exercise the staged website in Chromium
+        id: browser-test
+        working-directory: products/deployment-kit/operator/site
+        env:
+          SKLC_SITE_DIR: ${{ runner.temp }}/static-site/public
+          SKLC_SITE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: npm run test:e2e
+      - name: Save browser failure traces
+        if: failure() && steps.browser-test.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-test-results
+          path: products/deployment-kit/operator/site/test-results/
+          retention-days: 7
       - name: Upload static site
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

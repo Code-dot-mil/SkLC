@@ -6,25 +6,11 @@ An **AI agent** is an AI application that can carry out tasks using instructions
 
 The **Skill Exchange** is a website where people can browse skills, read their instructions and assessment results, and download them for use with a compatible agent.
 
-**New to AI agents or skills?** Start with [Using a skill](docs/using-skills.md) to understand what you need, how to choose a skill, and what to check before relying on its results. You can read about skills without installing software.
+Start with [Choose and download a SkLC skill](docs/using-skills.md) to browse an exchange, read a skill’s assessment, or install its package.
 
 ## The skill lifecycle
 
-A skill needs more than useful instructions. Its authors need to understand who will use it, check that it behaves as intended, decide when it is ready to share, and revisit those decisions as the skill, model, or environment changes.
-
-The Skill Lifecycle organizes that work into five stages:
-
-| Stage | What it accomplishes |
-| --- | --- |
-| **Define** | Establish the problem, intended users, expected behavior, and who is responsible for the skill. |
-| **Build** | Write the instructions and add the examples, scripts, or other supporting material the task needs. |
-| **Validate** | Check when the skill activates, the quality of its results, and potential safety or security problems. Gather evidence for the release decision. |
-| **Release** | Decide whether a version is ready for its intended users and make it available with the relevant review evidence. |
-| **Operate** | Collect feedback, investigate failures, and reassess the skill as its dependencies, models, or operating conditions change. Update or retire it when needed. |
-
-These stages form a cycle. Feedback during use—or a problem found during validation—can send a skill back for further definition, changes, and testing.
-
-The tools in this repository support parts of that lifecycle. The assessment kit helps gather validation evidence, while the skill bundle and deployment kits help distribute skills and assessment reports. Teams remain responsible for task-specific testing, release decisions, and ongoing review.
+During validation, the assessment kit produces evidence for reviewers. At release, teams can share skills and that evidence through the exchange. For guidance on how teams use agents and review their work, see the [AI4SDLC playbook](https://code-dot-mil.github.io/AI4SDLC/).
 
 ## Choose a starting point
 

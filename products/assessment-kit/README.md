@@ -6,12 +6,12 @@ A skill is a directory containing `SKILL.md` and any supporting files. You can a
 
 The kit runs the external SkillSpector scanner and asks a configured model to review its findings in context. That second review is called **adjudication**. Together, the scanner report (`skillspector.json`) and contextual review (`adjudication.json`) form a **report pair** for the assessed skill contents. Keep these two files together; the `summarize` command reads the pair and produces a Markdown explanation of what needs action.
 
-If you want to understand or try a skill before setting up assessment tools, start with [Using a skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). The commands below are for readers comfortable installing Python tools and running commands.
+To browse skills and read their existing results before setting up assessment tools, see [Choose and download a SkLC skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). The commands below are for readers comfortable installing Python tools and running commands.
 
 Choose your path:
 
 - **Assess your own skill:** read the scope below, install the kit, configure the scanner and provider, then [run an assessment](#assess).
-- **Read existing reports:** [install the kit](#installation), then [summarize the pair](#summarize). You need no scanner or provider configuration for this path.
+- **Generate a summary from two JSON reports:** [install the kit](#installation), then [summarize the pair](#summarize). You need no scanner or provider configuration for this path. The matching `skill-bundle-assessments` ZIP already includes a readable summary for each supplied skill.
 - **Check package structure or identify its contents:** use [Validate](#validate) or [Hash](#hash), without a scanner or provider.
 
 ## Review scope

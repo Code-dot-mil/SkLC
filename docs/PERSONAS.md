@@ -16,7 +16,7 @@ The README serves both people exploring AI-assisted work and teams choosing amon
 
 **Success:** Explains what a skill does, distinguishes browsing from using it, identifies compatibility and task requirements, and chooses either a suitable next step or a concrete question for their team's support contact.
 
-**Reading path:** [Project introduction](../README.md) → [Using a skill](using-skills.md) → a skill's description and instructions on an exchange, or the [supplied bundle](../products/skill-bundle/README.md) when its software tasks fit their needs. Installation and assessment setup can be handed to a technical colleague.
+**Reading path:** [Project introduction](../README.md) → [Choose and download a SkLC skill](using-skills.md) → a skill's description and instructions on an exchange, or the [supplied bundle](../products/skill-bundle/README.md) when its software tasks fit their needs. Installation and assessment setup can be handed to a technical colleague.
 
 ## A team choosing a starting point
 

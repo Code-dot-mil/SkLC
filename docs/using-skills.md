@@ -1,40 +1,26 @@
-# Using a skill
+# Choose and download a SkLC skill
 
-An AI agent is an application that can follow instructions and use tools to carry out work. A skill gives an agent reusable instructions for a task. You supply your goal and the information it needs. The skill describes a process for the agent to follow, and you review the result.
+You can read a skill’s instructions and assessment on your organization’s Skill Exchange before installing anything. To use the skill, you need an agent approved for your work that supports the skill’s format.
 
-For example, a unit-test skill can tell an agent how to propose tests for a change. When you ask the agent to use the skill, you can refer it to the changed code without repeating the testing process in each request.
+## Choose a skill
 
-## What you need to use a skill
-
-You need an agent application that supports skills and is approved for your work. A skill package contains a text file named `SKILL.md` and may include scripts, examples, or other supporting files. The agent reads the skill instructions when you use it for a task.
-
-Before downloading or installing a skill, answer these questions:
+If your organization has an exchange, browse its catalog for your task. Open a skill’s detail page and read **Skill Instructions**. You can also find the supplied skills in the [bundle guide](../products/skill-bundle/README.md). Use these questions to decide whether to download a skill.
 
 - **Does it fit your task?** Read its purpose, expected inputs, and the result it is meant to produce.
 - **Can your application use it?** Check whether your agent supports this skill format and where it expects skill packages. Support and installation steps vary between applications; a chat application's ability to accept text does not establish skill support.
 - **What else does it need?** Check for required applications, accounts, files, and permissions. If these are unclear, ask the skill's author or your team's support contact before using it.
 - **Can you use it with your information?** Follow your organization's rules for the AI application and the information you provide. Check what the skill asks the agent to access or do.
 
-## Where to find skills
+## Read the assessment
 
-You can browse skills and read their instructions without installing software or running commands. If your organization has a **Skill Exchange**, open it to browse descriptions, read instructions and assessment results, and download skills. SkLC provides tools your organization can use to set up its own exchange.
+On the detail page, open **Assessment Evidence**. Read the findings and coverage limits behind the recommendation. A confirmed finding is a problem supported by the review. An alert judged to be a false positive was dismissed during review. If a finding is unresolved or coverage is incomplete, check how that affects your task before using the skill.
 
-The supplied skill bundle includes examples for Python code review, unit tests, inline documentation, and change descriptions. Choose a skill that fits the task you want help with.
+To get the supplied reports and open a skill’s summary, follow the [assessment results guide](../products/skill-bundle-assessments/README.md). To scan your own skill, follow the [assessment kit guide](../products/assessment-kit/README.md).
 
-## Read a skill’s security assessment
+## Install the skill
 
-An assessment looks for potential problems in the skill's instructions. On an exchange, read the findings and the review's limitations alongside the skill. A confirmed finding is a problem the review supports; an unresolved finding still needs investigation. A false positive is an alert the contextual review dismissed. Missing or incomplete coverage means some questions remain unanswered.
+On the exchange, select **Download skill package**. Extract the ZIP and install the complete folder containing `SKILL.md` in the location your agent documents. Keep any supporting files with it. Confirm the skill appears in your agent’s list of installed skills.
 
-An assessment helps you decide what needs attention. It does not guarantee that a skill is suitable for your task or that its results will be correct. SkLC's contextual review examines the main instruction file and scanner evidence; it does not independently review supporting files. Ask the author or your team's reviewer about concerns you cannot evaluate yourself.
+If you want the supplied skills together, the [bundle guide](../products/skill-bundle/README.md) lists the contents and explains how to verify and install that download.
 
-See the [assessment results guide](../products/skill-bundle-assessments/README.md) for help with downloaded reports. To assess a skill yourself, use the [assessment kit](../products/assessment-kit/README.md).
-
-## Install and try a task
-
-Open the skill's detail page on the exchange and download its ZIP. Extract it and follow your agent's instructions for installing a skill. Keep the complete skill folder together, including any supporting files. If you downloaded the supplied bundle, follow the [bundle installation guide](../products/skill-bundle/README.md).
-
-Confirm that the agent recognizes the installed skill. Then try a small task whose result you can check. Name the skill in your request and explain the outcome you want. For example, ask “Use the unit-test-generation skill to propose tests for this function.” Review the proposed tests and run them before relying on them.
-
-Review the result against the original information and your goal before relying on it. Check any proposed action before allowing the agent to carry it out. If the skill misses something or produces an incorrect result, record what you asked, what happened, and what you expected. Check the skill again when its instructions or the agent change.
-
-If your agent supports project-level skills, keep the complete skill folder in your project repository so the team can review and version changes together. The [skill lifecycle](../README.md#the-skill-lifecycle) explains how teams create, check, share, and maintain skills.
+For example, after installing `unit-test-generation`, ask your agent, “Use unit-test-generation to propose tests for this function.” AI4SDLC’s [Unit Testing with GenAI guide](https://code-dot-mil.github.io/AI4SDLC/plays/testing-types/unit-testing/) explains how to review those tests. Its [AI Workflow Design play](https://code-dot-mil.github.io/AI4SDLC/plays/ai_sdlc_workflows-play/) covers how to decide what an agent may do in your team’s workflow.

@@ -66,6 +66,10 @@ Python prepares the website's data and downloads under `products/deployment-kit/
 
 ### Find a result and decide what to do
 
+Before uploading the Prebuilt website, the **Static site artifact** job serves its staged files at the root of one local server and under `/public/` on another. Chromium searches the catalog, opens a skill, reads its assessment reports and downloads its ZIP at both addresses. A failed journey stops the upload. Open the failed step for the assertion and download `browser-test-results` from the run summary for the Playwright trace.
+
+To repeat the check locally, extract the `static-site` artifact into its own directory. From `products/deployment-kit/operator/site/`, run `npm ci` and `npm exec -- playwright install --only-shell chromium` (on Linux, add `--with-deps`). Set `SKLC_SITE_DIR` to the absolute path of the extracted `public/` directory and `SKLC_SITE_REVISION` to the commit used to build it, then run `npm run test:e2e`. The test uses Python on PATH and loopback ports 4173 and 4174.
+
 Open the PR's checks, or select the relevant run on the [CI Actions page](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml). Confirm that the run belongs to the commit you want to inspect. Open a failed job and its failed step to read the log, the recorded output of its commands.
 
 For a failed test or lint check, use the log to identify whether the affected code or file needs correction, or whether the job could not run its tools. An assessment or website-data failure may instead mean missing provider access, a failed review, or reports that do not match the skills. Read the diagnostics before changing anything; do not edit reports to make them appear current.

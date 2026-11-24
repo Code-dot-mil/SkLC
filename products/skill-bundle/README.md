@@ -7,7 +7,7 @@ This download contains these complete skill folders and their supporting files:
 - `inline-documentation`: inline documentation.
 - `code-change-description`: commit messages and pull request descriptions.
 
-To choose a skill and read its assessment, see [Choose and download a SkLC skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). You need an agent that supports skills. Check its documentation for the installation location.
+To choose a skill and read its assessment, see [Choose and download a SkLC skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). These steps require an agent that supports skills and familiarity with running commands. Check the agent's documentation for the installation location.
 
 ## Released product
 

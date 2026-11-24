@@ -12,13 +12,13 @@ SkLC uses Git to keep a history of its files. Contributors save revisions as **c
 
 SkLC uses **GitHub Actions**, GitHub's automation service. A **workflow** is a configured procedure, a **run** is one execution of that procedure, and a **job** is a group of steps within a run. Each **step** performs an action, such as installing a tool or running tests. Jobs can have separate results, which is why a run can show both successful and failed work.
 
-When changes include skills—reusable instructions for AI agents—the automation may also assess those instructions for potential problems. These assessments are separate from tests of SkLC's software.
+When changes include skills, contributors provide assessment reports with the proposed revision. CI verifies those reports before building the exchange.
 
 There are two workflows in this repository:
 
 | Workflow | When it starts | What it produces |
 | --- | --- | --- |
-| **CI** | A pull request is opened or updated, or commits are pushed to `main`. | Check results, assessment reports when needed, and development-preview downloads. |
+| **CI** | A pull request is opened or updated, or commits are pushed to `main`. | Check results and development-preview downloads. |
 | **Release** | A version tag is pushed. A tag is a Git label identifying a particular commit. | An unpublished release draft containing versioned downloads. A maintainer publishes it after verification. |
 
 A change normally progresses through PR review, acceptance into `main`, and eventual selection for a release. A successful CI run creates a preview; it does not publish a release or deploy a website.
@@ -27,14 +27,14 @@ The workflows described here maintain SkLC itself on GitHub. Teams hosting an ex
 
 ## GitHub validation
 
-The [CI workflow](.github/workflows/ci.yml) runs for every PR, including one targeting another development branch, and for pushes to `main`. For a PR, it uses the latest commit on the proposing branch, also called the **PR head**. Product builds are attempted regardless of which files changed; new model-based skill assessments depend on the changes and where the PR originated.
+The [CI workflow](.github/workflows/ci.yml) runs for every PR, including one targeting another development branch, and for pushes to `main`. For a PR, it uses the latest commit on the proposing branch, also called the **PR head**. Product builds are attempted regardless of which files changed. The website build uses matching assessment reports committed with the skills.
 
-The work has three parts: evaluate the code and configuration, obtain assessment reports matching the selected skills, and build downloadable products. Some parts run in parallel:
+The work has three parts: evaluate the code and configuration, verify assessment reports matching the selected skills, and build downloadable products. Some parts run in parallel:
 
 ```mermaid
 flowchart LR
     revision["Proposed or accepted revision"] --> checks["Evaluate code, tests, docs, and configuration"]
-    revision --> evidence["Obtain matching skill assessment reports"]
+    revision --> evidence["Verify committed skill assessment reports"]
     evidence --> generate["Prepare website data and skill downloads"]
     checks --> build["Build and package the website"]
     generate --> build
@@ -68,9 +68,7 @@ Python prepares the website's data and downloads under `products/deployment-kit/
 
 Open the PR's checks, or select the relevant run on the [CI Actions page](https://github.com/Code-dot-mil/SkLC/actions/workflows/ci.yml). Confirm that the run belongs to the commit you want to inspect. Open a failed job and its failed step to read the log, the recorded output of its commands.
 
-For a failed test or lint check, use the log to identify whether the affected code or file needs correction, or whether the job could not run its tools. An assessment or website-data failure may instead mean missing provider access, a failed review, or reports that do not match the skills. Read the diagnostics before changing anything; do not edit reports to make them appear current.
-
-A **skipped** job did not run because its conditions were not met. For example, a PR from a fork does not receive a provider-backed assessment. A **fork** is a separate copy of the repository used to propose changes. The assessment rules below explain how that affects previews.
+For a failed test or lint check, use the log to identify whether the affected code or file needs correction, or whether the job could not run its tools. A website-data failure can indicate missing or outdated assessment reports. Read the diagnostics before changing anything; do not edit reports to make them appear current.
 
 A successful run means the configured work succeeded for that revision. Reviewers still need to judge whether the change meets its purpose, interpret skill findings, and inspect relevant preview downloads.
 
@@ -94,33 +92,13 @@ Bundle packaging reads one saved Git revision, excluding uncommitted edits and f
 
 Contributors who need to package the current commit locally can use the commands under [Local packaging](#local-packaging). You do not need those commands to download CI previews.
 
-## Main bundle assessments
-
-Assessment needs access to a **model provider**, the service hosting the model that reviews skill content. Because that access uses credentials and sends content to the provider, CI treats PRs from this repository differently from PRs originating in a fork.
-
-| Source | What is assessed | Where results go |
-| --- | --- | --- |
-| Push to `main` | The bundle, reusing eligible unchanged reports. | Current report pairs are committed to the repository only after every assessment succeeds. Obsolete reports are then pruned. |
-| PR from a branch in this repository | Changed skill packages, including changes to supporting files. | Temporary reports and summaries attached to the run. The job does not commit them or post PR comments. |
-| PR from a fork | No new provider-backed assessment. A notice explains the skip. | Website generation uses reports already tracked in Git. If those do not match changed skills, generation fails. Ask a maintainer to arrange matching evidence before those skills can build; the [assessment guide](products/assessment-kit/README.md#assess) covers producing reports for the changed package. |
-
-Deleting a file within a surviving skill package counts as a skill change. Deleting the entire package records the removal without scanning it. PRs without changed skill packages require no scanner installation or provider requests.
+## Bundle assessments
 
 ### Pull request assessment review
 
-For a changed-skill PR from this repository, open the **PR assessment review** job and read its summary on the Actions run. For the full files, download `pr-assessments`: `summary.md` combines the results, `summaries/` contains per-skill Markdown explanations, and `reports/` holds reports and available troubleshooting output.
+For a new or changed skill, run the [assessment kit](products/assessment-kit/README.md#assess) in an environment with an approved model provider. Assess the complete package, including its supporting files. Commit the resulting `skillspector.json` and `adjudication.json` under `products/skill-bundle-assessments/<skill-name>/` with the matching skill revision. Remove that skill's report pair when removing a package.
 
-Look for confirmed problems to address, unresolved findings to investigate, and limitations on what was reviewed. Successful execution does not mean the skill has no problems. The job continues across selected skills after a failure so reviewers can see available results rather than losing all feedback.
-
-Website preparation starts from the tracked reports and replaces the changed skills' entries with this run's reports. If a required replacement is missing, preparation fails instead of reusing old evidence. The artifact also contains machine-readable lists of changed packages and packages still present; those lists support automation and are not needed to read the summary.
-
-### How accepted assessments are kept current
-
-On `main`, assessment stops at its first failure. Only after all assessments succeed does automation remove obsolete report pairs and scanner logs and commit updated JSON report pairs under `products/skill-bundle-assessments/<skill-name>/`. Unrelated files are preserved. Available results and failure diagnostics are also retained as run artifacts, and website generation uses the reports from the run for its source revision.
-
-Unchanged skills can reuse eligible reports through the assessment kit's `--if-changed` option. The workflow permits this only when the incoming push did not alter either JSON report. An initial push or incoming edits to reports force assessment rather than trusting the edited evidence.
-
-Automated report commits use GitHub's `GITHUB_TOKEN` credential. Such pushes do not start another push-triggered workflow, which prevents a loop of assessment commits. This also matters when choosing a [release candidate](#check-readiness): a newer report commit may not yet have its own verified CI run. Administrator permissions and concurrent-write behavior are described under [Configure the assessment runner](#configure-the-assessment-runner).
+Use the [assessment summary](products/assessment-kit/README.md#summarize) to review confirmed problems, unresolved findings, and coverage limitations. CI uses the committed reports on both pull requests and `main` and checks that they match the skills before building the website preview.
 
 ## Releases
 
@@ -205,31 +183,11 @@ The sections below are for people configuring the automation or changing its imp
 
 ### Runners and runtime versions
 
-A **runner** is the machine that executes a workflow job. Ordinary checks, packaging, and release preparation use GitHub-hosted Ubuntu machines. Model-based assessments use a **self-hosted runner**, a machine managed by the repository's administrators, so they can provide the required provider and network access.
+A **runner** is the machine that executes a workflow job. SkLC checks, packaging, and release preparation use GitHub-hosted Ubuntu runners.
 
 CI and Release select Node.js with `>=22.23.4 <23`: at least version 22.23.4, but below 23. This meets Astro 7.4.2's minimum and avoids older cached Node 22 versions. Operator builds default to the container image `node:22.23.4`; a custom `NODE_IMAGE` must provide Node.js >=22.23.4 and npm, its package manager.
 
 The release job has a 30-minute limit. Runs for the same tag execute one at a time without cancelling preparation already in progress. Temporary packaging files use the runner's `RUNNER_TEMP` directory. The release checkout does not retain Git credentials, and the draft-creation credential is supplied only to the upload step.
-
-### Configure the assessment runner
-
-The self-hosted runner needs Bash, Git, Python, pip, and network access to SkillSpector's dependencies and the selected model provider. The workflow selects Python 3.12, installs uv, and installs SkillSpector in a temporary environment.
-
-In GitHub Actions configuration, **variables** hold ordinary settings and **secrets** hold sensitive values such as API keys. Configure these repository values:
-
-| Setting | Where and why |
-| --- | --- |
-| `SCANNER_SOURCE` | Required variable identifying the SkillSpector package to install. Pin it to an immutable revision so runs use a known scanner. The documented source is 2.10.0 at NVIDIA commit `e29b16d305b0e738e3d4b952ba102f5522a6f084`. |
-| `SKILLSPECTOR_PROVIDER`, `SKILLSPECTOR_MODEL` | Variables choosing the provider and explicit model. |
-| Provider URL/deployment/API-version settings | Variables telling the scanner and review tool how to reach the selected model service. |
-| Provider API key | Matching Actions secret. Never include it in skills or downloads. |
-| `RUNNER_CA_BUNDLE_PATH` | Optional path to a certificate bundle used to trust HTTPS connections, supplied as `SSL_CERT_FILE` and `NODE_EXTRA_CA_CERTS`. |
-
-The workflow accepts `OPENAI_BASE_URL`/`OPENAI_API_KEY`, the `SKILLSPECTOR_COMPAT_*` URL/key pair, and Azure endpoint/key/deployment/API-version settings. For Azure, use the native `azure_openai` provider and its gateway root URL. Consult [adjudication gateways](products/assessment-kit/README.md#adjudication-gateways) for required settings; a gateway is the service interface through which the review tool reaches the model. The workflow's environment block lists the settings exposed in CI, which are a subset of the local tool's options.
-
-Both main and PR jobs set `SKILL_ASSESSMENT_BASE_DIR` to the checkout root. This shortens matching `skill.source` paths in reports; it does not remove sensitive content from logs or other fields.
-
-Main report updates use `GITHUB_TOKEN` with `contents: write`. Repository branch-protection rules must allow those writes. Main assessment jobs run one at a time. If another writer advances `main` before the report push, Git rejects that push instead of overwriting the other changes. PR assessment checkouts do not retain Git credentials and do not write repository changes.
 
 ### Local packaging
 

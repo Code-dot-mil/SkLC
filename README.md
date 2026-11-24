@@ -1,5 +1,7 @@
 # SkLC
 
+> **RC · Release candidate.** Available for sponsor evaluation and feedback. Wait for release approval before using SkLC or the bundled skills in production.
+
 Skill Lifecycle (SkLC) helps teams use, assess, and share **agent skills**.
 
 An **AI agent** is an AI application that can carry out tasks using instructions and tools. A **skill** gives an agent reusable instructions for a particular task. For example, a team could write a skill to help an agent check a document against a checklist, so people do not have to explain the same process each time.

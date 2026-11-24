@@ -9,170 +9,6 @@ permissions:
   contents: read
 
 jobs:
-  bundle-assessments:
-    name: Main bundle assessments
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: self-hosted
-    timeout-minutes: 60
-    permissions:
-      contents: write
-    concurrency:
-      group: bundle-assessments-main
-      cancel-in-progress: false
-    env: &assessment-provider
-      SKILL_ASSESSMENT_BASE_DIR: ${{ github.workspace }}
-      SKILLSPECTOR_PROVIDER: ${{ vars.SKILLSPECTOR_PROVIDER }}
-      SKILLSPECTOR_MODEL: ${{ vars.SKILLSPECTOR_MODEL }}
-      SKILLSPECTOR_COMPAT_BASE_URL: ${{ vars.SKILLSPECTOR_COMPAT_BASE_URL }}
-      SKILLSPECTOR_COMPAT_API_KEY: ${{ secrets.SKILLSPECTOR_COMPAT_API_KEY }}
-      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
-      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-      AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
-      AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION }}
-      SCANNER_SOURCE: ${{ vars.SCANNER_SOURCE }}
-      SSL_CERT_FILE: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
-      NODE_EXTRA_CA_CERTS: ${{ vars.RUNNER_CA_BUNDLE_PATH }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          # GITHUB_TOKEN pushes do not trigger another push workflow.
-          token: ${{ github.token }}
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-      - name: Install assessment runtime
-        run: &install-scanner |
-          : "${SCANNER_SOURCE:?Set the SCANNER_SOURCE Actions variable}"
-          python -m pip install --no-cache-dir uv
-          uv venv --clear --python "$(command -v python)" "$RUNNER_TEMP/skillspector"
-          GIT_SSL_CAINFO="$SSL_CERT_FILE" uv pip install --python "$RUNNER_TEMP/skillspector/bin/python" "$SCANNER_SOURCE"
-          echo "$RUNNER_TEMP/skillspector/bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/skillspector/bin/skillspector" --version
-      - name: Select bundle skills
-        run: >-
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments select
-          --skills products/skill-bundle --output-dir "$RUNNER_TEMP/bundle-selection"
-      - name: Assess bundle skills
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
-        run: >-
-          PYTHONPATH=maintainer/src uv run --with ./products/assessment-kit
-          python -m sklc_maintainer.assessments assess
-          --selection "$RUNNER_TEMP/bundle-selection/current-skills.nul"
-          --reports products/skill-bundle-assessments --before-sha "$BEFORE_SHA"
-      - name: Prune obsolete assessment reports after successful scans
-        run: >-
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments prune
-          --selection "$RUNNER_TEMP/bundle-selection/current-skills.nul"
-          --reports products/skill-bundle-assessments
-      - name: Commit current assessments
-        shell: bash
-        run: |
-          pairs=(
-            ':(glob)products/skill-bundle-assessments/*/skillspector.json'
-            ':(glob)products/skill-bundle-assessments/*/adjudication.json'
-          )
-          matching=$(git ls-files --cached --others --exclude-standard -- "${pairs[@]}")
-          if [[ -n "$matching" ]]; then
-            git add --all -- "${pairs[@]}"
-          fi
-          if ! git diff --cached --quiet -- "${pairs[@]}"; then
-            git -c user.name='github-actions[bot]' \
-              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-              commit --only -m 'chore(assessments): record current bundle assessments' -- "${pairs[@]}"
-            git push origin HEAD:main
-          fi
-      - name: Retain assessments and failure diagnostics
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: bundle-assessments
-          path: products/skill-bundle-assessments/
-          if-no-files-found: warn
-          include-hidden-files: true
-
-  pr-assessment-notice:
-    name: Fork assessment notice
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-latest
-    steps:
-      - name: Explain skipped provider assessment
-        run: >-
-          printf '%s\n' 'LLM assessment skipped: fork pull requests do not receive provider credentials or run on the assessment runner.'
-          >> "$GITHUB_STEP_SUMMARY"
-
-  pr-assessments:
-    name: PR assessment review
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: self-hosted
-    timeout-minutes: 60
-    env: *assessment-provider
-    steps:
-      - name: Check out PR head
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up Python for skill selection
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-      - name: Select changed skill packages
-        id: changes
-        shell: bash
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          root="$RUNNER_TEMP/pr-assessments"
-          PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments select \
-            --skills products/skill-bundle --output-dir "$root" --base-sha "$BASE_SHA"
-          if test -s "$root/current-skills.nul"; then
-            printf 'assess=true\n' >> "$GITHUB_OUTPUT"
-          else
-            printf 'assess=false\n' >> "$GITHUB_OUTPUT"
-            printf '%s\n' 'No current skill packages changed; no provider assessment requested.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-      - name: Install assessment runtime for changed skills
-        if: steps.changes.outputs.assess == 'true'
-        run: *install-scanner
-      - name: Assess changed skills for review
-        id: assess
-        if: steps.changes.outputs.assess == 'true'
-        run: >-
-          PYTHONPATH=maintainer/src uv run --with ./products/assessment-kit
-          python -m sklc_maintainer.assessments assess
-          --selection "$RUNNER_TEMP/pr-assessments/current-skills.nul"
-          --reports "$RUNNER_TEMP/pr-assessments/reports" --keep-going
-      - name: Summarize findings and required actions
-        if: always() && steps.changes.outputs.assess == 'true'
-        shell: bash
-        env:
-          SCAN_OUTCOME: ${{ steps.assess.outcome }}
-        run: |
-          root="$RUNNER_TEMP/pr-assessments"
-          printf '%s\n' 'Assessment summary could not run; inspect retained diagnostics.' > "$root/summary.md"
-          result=0
-          PYTHONPATH=maintainer/src uv run --with ./products/assessment-kit \
-            python -m sklc_maintainer.assessments summarize \
-            --reports "$root/reports" --output-dir "$root" \
-            --scan-outcome "$SCAN_OUTCOME" || result=$?
-          cat "$root/summary.md" >> "$GITHUB_STEP_SUMMARY"
-          exit "$result"
-      - name: Upload temporary PR assessments and diagnostics
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pr-assessments
-          path: ${{ runner.temp }}/pr-assessments/
-          if-no-files-found: warn
-          include-hidden-files: true
-
   python:
     name: "${{ matrix.check }}"
     runs-on: ubuntu-latest
@@ -325,11 +161,6 @@ jobs:
 
   exchange-data:
     name: Static site exchange data
-    needs: [bundle-assessments, pr-assessments]
-    if: >-
-      always() && !cancelled() &&
-      (needs.bundle-assessments.result == 'success' || needs.pr-assessments.result == 'success' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -345,37 +176,12 @@ jobs:
           python-version: "3.12"
       - name: Install uv
         run: python -m pip install --no-cache-dir uv
-      - name: Stage tracked current assessments
-        run: |
-          mkdir -p "$RUNNER_TEMP/current-assessments"
-          cp -R products/skill-bundle-assessments/. "$RUNNER_TEMP/current-assessments/"
-      - name: Download main assessment output
-        if: github.event_name == 'push'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: bundle-assessments
-          path: ${{ runner.temp }}/current-assessments
-      - name: Download trusted PR assessment output
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: pr-assessments
-          path: ${{ runner.temp }}/pr-assessments
-      - name: Replace changed PR reports in the staged current set
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        shell: bash
-        run: |
-          while IFS= read -r -d '' skill; do
-            name=${skill##*/}
-            rm -rf -- "$RUNNER_TEMP/current-assessments/$name"
-            cp -R "$RUNNER_TEMP/pr-assessments/reports/$name" "$RUNNER_TEMP/current-assessments/$name"
-          done < "$RUNNER_TEMP/pr-assessments/current-skills.nul"
       - name: Generate preview exchange data
         run: >-
           uv run python -m skill_exchange.cli generate
           --skills products/skill-bundle
           --generated products/deployment-kit/operator/.exchange/generated
-          --evidence "$RUNNER_TEMP/current-assessments"
+          --evidence products/skill-bundle-assessments
       - name: Require Safe to use determinations for every catalog skill
         run: >-
           PYTHONPATH=maintainer/src python -m sklc_maintainer.assessments require-safe
@@ -388,8 +194,7 @@ jobs:
       - name: Build operator kit preview
         run: |
           PYTHONPATH=maintainer/src python -m sklc_maintainer.packaging bundle --output "$RUNNER_TEMP/operator-bundle.zip"
-          PYTHONPATH=maintainer/src uv run python -m sklc_maintainer.packaging assessments --output "$RUNNER_TEMP/skill-bundle-assessments.zip" \
-            --source-dir "$RUNNER_TEMP/current-assessments"
+          PYTHONPATH=maintainer/src uv run python -m sklc_maintainer.packaging assessments --output "$RUNNER_TEMP/skill-bundle-assessments.zip"
           uv build --wheel --python 3.12 products/assessment-kit --out-dir "$RUNNER_TEMP/operator"
           version=$(python -c 'import tomllib; print(tomllib.load(open("products/assessment-kit/pyproject.toml", "rb"))["project"]["version"])')
           uv run python -m sklc_maintainer.packaging operator --version "$version" \

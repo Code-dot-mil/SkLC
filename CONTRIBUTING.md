@@ -19,7 +19,7 @@ Exchange-site developers maintain:
 
 Skill packages under `products/skill-bundle/` are exchange content. Treat changes there as skill contributions, not exchange-site platform changes.
 
-For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-review). Trusted same-repository PRs receive assessment; fork PRs receive no provider-backed assessment and need a maintainer to arrange matching evidence before their changed skills can build. Local generation also requires current evidence. Keep report pairs with their exact skill content; do not hand-edit evidence to make generation pass.
+For skill changes, follow [PR assessment review](CI.md#pull-request-assessment-review). Run the assessment in an approved environment and commit matching evidence with the changed skill. Local generation also requires current evidence. Keep report pairs with their exact skill content; do not hand-edit evidence to make generation pass.
 
 ## First-Time Setup
 
@@ -90,7 +90,7 @@ The repository's GitHub Actions workflows must remain self-contained under `.git
 
 When changing CI:
 
-- Keep self-hosted runner settings configurable.
+- Use GitHub-hosted runners for upstream SkLC workflows.
 - Keep customer deployment image registry, repository, tag, and full-image override variables configurable.
 - Keep environment-specific deployment settings in CI variables.
 - Do not introduce organization-specific variable names.

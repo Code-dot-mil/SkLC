@@ -4,7 +4,14 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 async function followDownload(page, link, filename) {
-  const [download] = await Promise.all([page.waitForEvent("download"), link.click()]);
+  const target = await link.evaluate(anchor => anchor.href);
+  const httpFailure = page.waitForResponse(response => response.url() === target && response.status() >= 400).then(response => {
+    throw new Error(`Download failed with HTTP ${response.status()}: ${target}`);
+  });
+  const [download] = await Promise.all([
+    Promise.race([page.waitForEvent("download"), httpFailure]),
+    link.click(),
+  ]);
   expect(download.suggestedFilename()).toBe(filename);
   expect(await download.failure()).toBeNull();
   return download.path();

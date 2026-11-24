@@ -1,6 +1,6 @@
 # Before and after for SkLC PR #132
 
-These 29 comparisons show the documentation reviewed in [PR #132](https://github.com/Code-dot-mil/SkLC/pull/132) across 10 files. They use the committed Markdown and locally rendered diagrams from the [base revision](https://github.com/Code-dot-mil/SkLC/commit/326531668a43e167ad3382ea73d281e71a389bd6) and the [reviewed documentation revision](https://github.com/Code-dot-mil/SkLC/commit/7c63f7f1924c05a1909a2e415bd8f38c407a35b4). Each image labels both revisions. Comparison 5 records the original row 4 download paragraph for reference.
+These 31 comparisons show the documentation reviewed in [PR #132](https://github.com/Code-dot-mil/SkLC/pull/132) across 11 files. Comparisons 1–29 show the [PR base](https://github.com/Code-dot-mil/SkLC/commit/326531668a43e167ad3382ea73d281e71a389bd6) and the [first reviewed revision](https://github.com/Code-dot-mil/SkLC/commit/7c63f7f1924c05a1909a2e415bd8f38c407a35b4). [Comparisons 30 and 31](#follow-up-corrections) show the two subsequent wording fixes. The images use committed Markdown and locally rendered diagrams. Comparison 5 records the original row 4 download paragraph for reference.
 
 ## Project README
 
@@ -157,3 +157,13 @@ These 29 comparisons show the documentation reviewed in [PR #132](https://github
 **29. Architecture introduction.** The architecture guide directs readers choosing a download back to the README and keeps its own introduction focused on product relationships.
 
 ![Architecture introduction before and after](29-architecture-guide-introduction.png)
+
+## Follow-up corrections
+
+**30. Installing the CI preview.** The preview download entry now gives the extraction folder and the point at which to resume the packaged installation guide. [Before](https://github.com/Code-dot-mil/SkLC/blob/89ee7b7eb6b6bf3bb44de339045e44b29886bdcd/CI.md#L86) · [After](https://github.com/Code-dot-mil/SkLC/blob/aeccb556539b5b3c92d4d25179afae65b9ed85d1/CI.md#L86)
+
+![Skill bundle CI preview instructions before and after](30-ci-preview-installation.png)
+
+**31. Skill installation location.** The architecture table directs readers to their agent’s documented location, and the diagram labels the result “Installed skills.” [Before](https://github.com/Code-dot-mil/SkLC/blob/89ee7b7eb6b6bf3bb44de339045e44b29886bdcd/docs/architecture.md#L7) · [After](https://github.com/Code-dot-mil/SkLC/blob/aeccb556539b5b3c92d4d25179afae65b9ed85d1/docs/architecture.md#L7)
+
+![Architecture table and product diagram before and after](31-architecture-skill-location.png)

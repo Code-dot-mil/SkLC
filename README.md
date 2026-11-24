@@ -57,8 +57,6 @@ An exchange lets visitors browse skill descriptions, read instructions and asses
 
 Choose **Prebuilt** to host the supplied example exchange without building the site. Choose **Operator** to maintain your own catalog, select any supplied skills you want to include, and run the assessment, build, and publication pipeline. Operator setup requires GitLab runners, an assessment container image, and access to a configured model provider. The [Operator guide](products/deployment-kit/operator/docs/README.md) walks through those requirements and ongoing updates.
 
-For a catalog you maintain, add existing skill packages, assess them, review the results, and share the skills and their evidence through the exchange.
-
 ```mermaid
 flowchart LR
   add["Add existing skill packages"] --> assess["Run assessments"]

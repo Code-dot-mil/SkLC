@@ -6,7 +6,7 @@ A skill is a directory containing `SKILL.md` and any supporting files. You can a
 
 The kit runs the external SkillSpector scanner and asks a configured model to review its findings in context. That second review is called **adjudication**. Together, the scanner report (`skillspector.json`) and contextual review (`adjudication.json`) form a **report pair** for the assessed skill contents. Keep these two files together; the `summarize` command reads the pair and produces a Markdown explanation of what needs action.
 
-If you want to understand or try a skill before setting up assessment tools, start with [Using a skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). The commands below are for readers comfortable installing Python tools and running commands, or a colleague helping with that setup.
+To browse skills and read their existing results before setting up assessment tools, see [Choose and download a SkLC skill](https://github.com/Code-dot-mil/SkLC/blob/main/docs/using-skills.md). The commands below are for readers comfortable installing Python tools and running commands.
 
 Choose your path:
 
@@ -16,15 +16,15 @@ Choose your path:
 
 ## Review scope
 
-Adjudication examines `SKILL.md` and scanner evidence. Supporting files are not independently reviewed by adjudication. Even `safe_to_use: true` applies only to that scope and does not certify the package. A command can finish successfully while reporting confirmed problems, unresolved findings, or incomplete coverage.
-
 Default assessment sends skill contents to the configured model provider for scanning, followed by a separate adjudication request containing the full `SKILL.md` and scanner evidence. The kit does not execute the skill, follow its links, redact secrets, split the instructions into chunks, or truncate them. Review what you will send before assessing. Input that exceeds the gateway's context limit fails adjudication.
+
+Adjudication examines `SKILL.md` and scanner evidence. Supporting files are not independently reviewed by adjudication. Even `safe_to_use: true` applies only to that scope and does not certify the package. A command can finish successfully while reporting confirmed problems, unresolved findings, or incomplete coverage.
 
 ## Prerequisites
 
 Install [Python 3.12 or later](https://www.python.org/downloads/) and [uv](https://docs.astral.sh/uv/getting-started/installation/), which the commands below use to manage the environment.
 
-For a new assessment, also install [SkillSpector](https://github.com/NVIDIA/SkillSpector#installation) separately. The wheel does not install it. The compatibility target is `>=2.10,<3` through its public CLI and JSON format; 2.10.0 and 2.12.0 have been exercised, while other v2 releases are expected to remain compatible.
+Install [SkillSpector](https://github.com/NVIDIA/SkillSpector#installation) to run scans. The compatibility target is `>=2.10,<3` through its public CLI and JSON format. Versions 2.10.0 and 2.12.0 have been exercised, while other v2 releases are expected to remain compatible.
 
 The scanner must be available as `skillspector` on `PATH` in the shell that runs assessment:
 
@@ -38,13 +38,27 @@ Default scanning uses a model. Configure SkillSpector's [provider environment](h
 
 ## Installation
 
-Download `skill_assessment-<version>-py3-none-any.whl` from [SkLC releases](https://github.com/Code-dot-mil/SkLC/releases). Calculate its SHA-256 and compare it with the digest shown for that asset before installing. For example, on Linux:
+Download `skill_assessment-<version>-py3-none-any.whl` from [SkLC releases](https://github.com/Code-dot-mil/SkLC/releases). Run the checksum command for your operating system in the download folder, replacing `<version>` with the version in the filename.
+
+On Linux, use:
 
 ```sh
 sha256sum 'skill_assessment-<version>-py3-none-any.whl'
 ```
 
-On macOS, use `shasum -a 256` instead; in PowerShell, use `Get-FileHash -Algorithm SHA256`. Compare the hexadecimal result with the release asset's digest, ignoring its `sha256:` prefix. The wheel version corresponds to the release version under Python packaging normalization.
+On macOS, use:
+
+```sh
+shasum -a 256 'skill_assessment-<version>-py3-none-any.whl'
+```
+
+On Windows (PowerShell), use:
+
+```powershell
+Get-FileHash -Algorithm SHA256 -LiteralPath 'skill_assessment-<version>-py3-none-any.whl'
+```
+
+Compare the 64-character result with GitHub's digest for that asset, ignoring letter case and the `sha256:` prefix. The wheel version corresponds to the release version under Python packaging normalization.
 
 Put the downloaded wheel in a separate working directory. From that directory, replace `<version>` with its filename's version, including Python's normalized prerelease spelling where applicable, and run:
 
@@ -75,7 +89,7 @@ Fix validation errors before assessing. A successful assessment writes three fil
 | `adjudication.json` | Contextual review of each finding, safety and coverage judgments, scope, and review status. |
 | `scanner.log` | Diagnostics for troubleshooting the scanner. |
 
-Keep the two JSON reports together. The log is diagnostic output; it is excluded from assessment-evidence downloads and should not be committed with the report pair. Open `assessment.md` to decide what to address next.
+Keep the two JSON reports together. The log is diagnostic output. Open `assessment.md` to decide what to address next.
 
 ## Summarize
 

@@ -15,20 +15,29 @@ sha256sum "deployment-kit-prebuilt-<version>.zip"
 On macOS, use:
 
 ```sh
-shasum -a 256 deployment-kit-prebuilt-<version>.zip
+shasum -a 256 "deployment-kit-prebuilt-<version>.zip"
 ```
 
 On Windows (PowerShell), use:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 "deployment-kit-prebuilt-<version>.zip"
+Get-FileHash -Algorithm SHA256 -LiteralPath "deployment-kit-prebuilt-<version>.zip"
 ```
 
-Compare the 64-character result with the digest GitHub displays for that same asset, ignoring letter case and the `sha256:` prefix. If they differ, stop and download it again. Once they match, unzip it into a new folder:
+Compare the 64-character result with the digest GitHub displays for that same asset, ignoring letter case and the `sha256:` prefix. If they differ, stop and download it again. Once they match, unzip it into a new folder.
+
+On Linux or macOS, use:
 
 ```sh
-unzip deployment-kit-prebuilt-<version>.zip -d deployment-kit-prebuilt-<version>
-cd deployment-kit-prebuilt-<version>
+unzip "deployment-kit-prebuilt-<version>.zip" -d "deployment-kit-prebuilt-<version>"
+cd "deployment-kit-prebuilt-<version>"
+```
+
+On Windows (PowerShell), use:
+
+```powershell
+Expand-Archive -LiteralPath "deployment-kit-prebuilt-<version>.zip" -DestinationPath "deployment-kit-prebuilt-<version>"
+Set-Location -LiteralPath "deployment-kit-prebuilt-<version>"
 ```
 
 The ZIP contains `public/`, `docs/`, `README.md`, and `.gitlab-ci.yml` directly. ZIPs under `public/downloads/` are individual skill downloads served by the site.

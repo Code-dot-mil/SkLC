@@ -25,7 +25,9 @@ Skills declare their name and description in `SKILL.md`; the exchange presents t
 
 An assessed site needs matching reports, successful scanner execution, completed adjudication, and a determination associated with every scanner finding. Missing, stale, or mismatched evidence stops site generation. This prevents the site from presenting a report for different skill contents as current evidence.
 
-Those checks establish report eligibility, not approval or absence of risk. Completed negative safety judgments and nonfatal coverage limitations remain advisory and may appear on a published site. The independent skill-bundle download packages skill files without requiring assessment.
+Those checks establish report eligibility, not approval or absence of risk. Completed negative safety judgments and nonfatal coverage limitations remain advisory and may appear on a published site.
+
+Upstream skill changes require human review and maintainer approval. Before packaging an official skill bundle, [release CI](CI.md#catalog-safety-gate) requires a current assessment with a `SAFE` recommendation for each included skill.
 
 The repository does not define a severity-based approval threshold, a formal risk-acceptance record, or an escalation process for disputed findings. These are policy gaps, not permissions granted by a successful build. Reviewers should surface unresolved decisions for the maintainer rather than infer that the pipeline has settled them. Customer operators must define their own publication authority and decision process.
 

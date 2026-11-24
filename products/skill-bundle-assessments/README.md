@@ -4,12 +4,24 @@ This download contains assessment reports and ready-to-read summaries for the su
 
 It contains evidence, not the skill packages themselves. Obtain the matching `skill-bundle-<version>.zip` if you also want to install the skills. Choose both downloads from the same [SkLC release](https://github.com/Code-dot-mil/SkLC/releases) and compare their SHA-256 checksums with the release-page values before unpacking.
 
-On Linux, use `sha256sum 'skill-bundle-assessments-<version>.zip'`; on macOS, use `shasum -a 256` with that filename. PowerShell provides `Get-FileHash -Algorithm SHA256`. Replace `<version>` with the downloaded version and compare the hexadecimal result with GitHub's value, ignoring the `sha256:` prefix.
+Run the command for your operating system in the download folder, replacing `<version>` with the downloaded version.
 
-After the checksum comparison succeeds, extract the archive, replacing `<version>`:
+- Linux: `sha256sum "skill-bundle-assessments-<version>.zip"`
+- macOS: `shasum -a 256 "skill-bundle-assessments-<version>.zip"`
+- Windows (PowerShell): `Get-FileHash -Algorithm SHA256 -LiteralPath "skill-bundle-assessments-<version>.zip"`
+
+Compare the 64-character result with GitHub's digest, ignoring letter case and the `sha256:` prefix. Once they match, extract the archive using the command for your operating system.
+
+On Linux or macOS, use:
 
 ```sh
-unzip 'skill-bundle-assessments-<version>.zip' -d bundle-assessments
+unzip "skill-bundle-assessments-<version>.zip" -d bundle-assessments
+```
+
+On Windows (PowerShell), use:
+
+```powershell
+Expand-Archive -LiteralPath "skill-bundle-assessments-<version>.zip" -DestinationPath "bundle-assessments"
 ```
 
 ## Find the report pair

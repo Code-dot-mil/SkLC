@@ -83,7 +83,7 @@ On the selected CI run's summary page, find the artifacts produced by successful
 | Download | Contents and next step |
 | --- | --- |
 | `static-site` | A finished Prebuilt website under `public/`, deployment guides, and hidden `.gitlab-ci.yml` configuration. Extract the ZIP once, then follow its deployment guide. |
-| `skill-bundle.zip` | Complete skill folders under `skills/` and their installation README. Follow that README to install them. |
+| `skill-bundle.zip` | Extract the ZIP into a `skill-bundle` folder, then follow the packaged README starting at “Copy the complete skill folders”. |
 | `skill-bundle-assessments.zip` | A README, two original JSON reports, and a generated `summary.md` per selected skill. Open the included summary to read the findings. JSON is the structured data format used for these reports. |
 | `skill_assessment-*.whl` | The standalone assessment command-line tool. A `.whl` file is an installable Python package; follow the [assessment installation guide](products/assessment-kit/README.md#installation). SkillSpector is installed separately. |
 | `deployment-kit-operator-*.zip` | The tools, website source, automation configuration, assessment wheel, and included skills/reports needed to maintain an exchange. Follow its README. |

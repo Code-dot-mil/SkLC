@@ -2,8 +2,6 @@
 
 The Operator kit lets your team assess a catalog of agent skills and publish a website where people can read the instructions, inspect assessment results, and download packages. Use it when you want to maintain your own catalog. The Prebuilt kit is the simpler path when you only want to host the supplied example site.
 
-An assessment scans the skill and asks a configured model to review the findings in context. That second review is called adjudication. A completed review may still identify problems or limits to what was checked.
-
 This guide starts from the extracted `deployment-kit-operator-<version>.zip`. It takes you through **choose skills → configure assessment → run the pipeline → verify the site**, then explains evidence retention and updates.
 
 ## What you will maintain
@@ -33,7 +31,7 @@ Default assessment sends skill contents to the configured model provider. Public
 
 ## 1. Install into an empty GitLab project
 
-Download the Operator ZIP from [SkLC releases](https://github.com/Code-dot-mil/SkLC/releases). Calculate its SHA-256, compare it with GitHub's digest for that asset, and extract it into its own directory. A PR artifact is a development preview; retain its run, commit, and checksum if evaluating one.
+Download `deployment-kit-operator-<version>.zip` from [SkLC releases](https://github.com/Code-dot-mil/SkLC/releases). Follow the [checksum and extraction steps for your operating system](https://github.com/Code-dot-mil/SkLC/blob/main/products/deployment-kit/prebuilt/docs/install.md#check-the-download-and-unzip). In the commands, use your release version and replace `deployment-kit-prebuilt` with `deployment-kit-operator` in both the ZIP filename and the destination directory. A PR artifact is a development preview; retain its run, commit, and checksum if evaluating one.
 
 [Create a blank GitLab project](https://docs.gitlab.com/user/project/). Leave **Initialize repository with a README** unchecked. Use a new empty project so installation does not overwrite existing project files.
 

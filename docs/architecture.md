@@ -6,7 +6,7 @@ See the [README](../README.md#choose-a-starting-point) to choose a download. Thi
 
 | Product | What a consumer gets | Independent use |
 | --- | --- | --- |
-| Skill bundle | Complete skill packages | Install skills in an AI agent's workspace. Assessment and hosting are optional. |
+| Skill bundle | Complete skill packages | Install the skills in your agent’s documented skill location. Assessment and hosting are optional. |
 | Assessment kit | An installable Python CLI | Assess any local skill package and read its results, using an external SkillSpector installation and a configured provider for LLM-assisted assessment. |
 | Deployment kit: Prebuilt | A finished exchange website and deployment instructions | Host the supplied site with a static host, including GitLab Pages. The consumer needs no assessment or site-build toolchain. |
 | Deployment kit: Operator | Site source, build runtime, assessment wheel, reference CI, and included upstream skills and evidence | Build and host an exchange for the operator's own catalog, with any selected upstream skills. |
@@ -21,7 +21,7 @@ flowchart LR
   releases --> prebuilt["Deployment kit: Prebuilt"]
   releases --> operator["Deployment kit: Operator"]
   releases --> evidence["Bundle assessments"]
-  bundle --> workspace["User's agent workspace"]
+  bundle --> installed["Installed skills"]
   assessment --> local["Local skill assessment"]
   prebuilt --> host["Static host / GitLab Pages"]
   operator --> instance["Customer-owned catalog and build"]
